@@ -1228,7 +1228,6 @@ function openScheduleModal(editId){
           ${editing && editing.imageUrl ? `<img src="${editing.imageUrl}" style="width:100%; max-height:160px; object-fit:cover; border-radius:12px; border:1px solid var(--line);">` : ''}
         </div>
         <input type="file" id="schedule-image-input" accept="image/png,image/jpeg,image/gif,image/webp" style="width:100%; padding:9px; border-radius:10px; border:1.5px solid var(--line); background:#f7f9fb; font-size:12.5px;">
-        <p class="small muted" style="margin-top:4px;">Shows up neatly in the mobile app's Activities list — good for campaign posters, health drive announcements, etc. PNG/JPG/GIF/WEBP.</p>
       </div>
       <div class="field"><label>Service</label>
         ${DB.services.length ? `<select name="service" required>${serviceOptions}</select>`
