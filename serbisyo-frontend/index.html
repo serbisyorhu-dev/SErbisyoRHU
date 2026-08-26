@@ -375,16 +375,6 @@
           </div>
 
           <div class="field">
-            <label>Department</label>
-            <select id="signup-dept" style="width:100%; padding:13px 14px; border-radius:12px; border:1.5px solid var(--line); background:#f7f9fb; font-size:14.5px; color:var(--ink);">
-              <option>Outpatient Clinic</option>
-              <option>Pharmacy</option>
-              <option>Administration</option>
-              <option>Nursing &amp; ER</option>
-            </select>
-          </div>
-
-          <div class="field">
             <label>Confirm Password</label>
             <div class="input-wrap">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
@@ -539,16 +529,23 @@ let DB = {
 let currentUser = null;
 
 /* ---------- API layer (fetch -> our Python/Flask backend) ----------
-   CHANGE THIS to your real deployed backend URL once you have one, e.g.
-   "https://serbisyo-backend.onrender.com" — no trailing slash. For now,
-   testing locally, this matches `python app.py` running on your PC. */
-   const BACKEND_URL = 'https://serbisyorhu.onrender.com';
+   Uses TOKEN-based auth, not cookies — the login response hands back an
+   access token, which we store in localStorage and send manually as
+   "Authorization: Bearer <token>" on every request. This is required
+   because the frontend (Vercel) and backend (Render) are on different
+   domains, and mobile browsers routinely block cross-site cookies —
+   token-in-header auth isn't affected by that at all. */
+const BACKEND_URL = 'https://serbisyorhu.onrender.com';
+
+function getToken(){ return localStorage.getItem('serbisyo_token'); }
+function setToken(token){ localStorage.setItem('serbisyo_token', token); }
+function clearToken(){ localStorage.removeItem('serbisyo_token'); localStorage.removeItem('serbisyo_user'); }
 
 async function safeFetch(url, options){
   try{
     return await fetch(url, options);
   } catch(err){
-    throw new Error(`Could not reach "${url}". Make sure BACKEND_URL near the top of this file points at your running backend, and that it's actually running (locally: "python app.py" inside serbisyo-backend-python).`);
+    throw new Error(`Could not reach "${url}". Make sure BACKEND_URL near the top of this file points at your running backend, and that it's actually running.`);
   }
 }
 
@@ -559,10 +556,14 @@ async function api(table, method='GET', { id, body, order, eq, limit } = {}){
   if(eq) params.set('eq', eq);
   if(limit) params.set('limit', limit);
 
+  const token = getToken();
+  const headers = {};
+  if(body) headers['Content-Type'] = 'application/json';
+  if(token) headers['Authorization'] = `Bearer ${token}`;
+
   const res = await safeFetch(`${BACKEND_URL}/api/data?` + params.toString(), {
     method,
-    credentials: 'include', // required cross-origin so the session cookie is sent/received
-    headers: body ? { 'Content-Type':'application/json' } : undefined,
+    headers,
     body: body ? JSON.stringify(body) : undefined
   });
   let data = null;
@@ -574,10 +575,12 @@ async function api(table, method='GET', { id, body, order, eq, limit } = {}){
   return data;
 }
 async function authApi(payload){
+  const token = getToken();
+  const headers = {'Content-Type':'application/json'};
+  if(token) headers['Authorization'] = `Bearer ${token}`;
+
   const res = await safeFetch(`${BACKEND_URL}/api/auth`, {
-    method:'POST', credentials:'include',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(payload)
+    method:'POST', headers, body: JSON.stringify(payload)
   });
   const data = await res.json().catch(()=>({}));
   if(!res.ok){ throw new Error(data.error || 'Request failed.'); }
@@ -636,7 +639,8 @@ async function loadAllData(){
     dbId:r.id, service:r.service, doctor:r.doctor_name, date:r.date,
     startTime:r.start_time||'', endTime:r.end_time||'', time:r.time||'',
     capacity:r.capacity, booked:r.booked, status:r.status,
-    location:r.location||'', description:r.description||'', notes:r.notes||''
+    location:r.location||'', description:r.description||'', notes:r.notes||'',
+    imageUrl:r.image_url||''
   }));
   DB.announcements = (announcements||[]).map(r=>({
     dbId:r.id, title:r.title, message:r.message, scheduleId:r.schedule_id, important:!!r.important, status:r.status
@@ -711,7 +715,7 @@ function showMsg(text, kind){
  * automatically create a row in the "staff" table this page reads from.
  * This bridges the two, same pattern as the patient app's PatientSync.
  */
-async function ensureStaffRecord(name, email, userId, jobRole, position, dept){
+async function ensureStaffRecord(name, email, userId, jobRole, position){
   if(!userId) return;
 
   try{
@@ -725,7 +729,7 @@ async function ensureStaffRecord(name, email, userId, jobRole, position, dept){
       staff_no,
       name: name || email,
       role: jobRole || 'Admin',
-      dept: `${position || 'Staff Member'} · ${dept || 'Administration'}`,
+      dept: position || 'Staff Member',
       status: 'ACTIVE',
       last_login: new Date().toISOString(),
       user_id: userId
@@ -751,7 +755,6 @@ document.getElementById('login-form').addEventListener('submit', async (e)=>{
       const inviteCode = document.getElementById('signup-invite-code').value.trim();
       const staffJobRole = document.getElementById('signup-role').value;
       const staffPosition = document.getElementById('signup-position').value.trim();
-      const staffDept = document.getElementById('signup-dept').value;
 
       if(!name || !email || !pass){ showMsg('Please fill in all fields.', 'err'); return; }
       if(pass.length < 6){ showMsg('Password must be at least 6 characters.', 'err'); return; }
@@ -761,7 +764,9 @@ document.getElementById('login-form').addEventListener('submit', async (e)=>{
       const data = await authApi({ action:'signup', email, password:pass, name, role:'staff', invite_code:inviteCode });
       if(data.authenticated){
         currentUser = data.user;
-        ensureStaffRecord(name, email, currentUser.id, staffJobRole, staffPosition, staffDept);
+        setToken(data.access_token);
+        localStorage.setItem('serbisyo_user', JSON.stringify(data.user));
+        ensureStaffRecord(name, email, currentUser.id, staffJobRole, staffPosition);
         showMsg('Account created! Signing you in…', 'ok');
         setTimeout(()=> enterApp(), 500);
       } else {
@@ -775,6 +780,8 @@ document.getElementById('login-form').addEventListener('submit', async (e)=>{
     if(!email || !pass){ showMsg('Please enter your username/email and password.', 'err'); return; }
     const data = await authApi({ action:'login', email, password:pass });
     currentUser = data.user;
+    setToken(data.access_token);
+    localStorage.setItem('serbisyo_user', JSON.stringify(data.user));
     await enterApp();
   } catch(err){
     showMsg(err.message || 'Something went wrong. Please try again.', 'err');
@@ -797,12 +804,18 @@ async function enterApp(){
     // whose staff record didn't get created at signup time (e.g. email
     // confirmation was pending back then).
     if(currentUser?.user_metadata?.role === 'staff' && currentUser?.id){
-      ensureStaffRecord(name, currentUser.email, currentUser.id, null, null, null);
+      ensureStaffRecord(name, currentUser.email, currentUser.id, null, null);
     }
 
     navigate('dashboard');
   } catch(err){
-    showMsg('Could not load data: ' + err.message, 'err');
+    // If loading data failed because the stored token is no longer valid,
+    // don't strand the user on a broken screen — send them back to login.
+    clearToken();
+    currentUser = null;
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('app-screen').classList.add('hidden');
+    showMsg('Your session expired — please log in again.', 'err');
   } finally {
     showLoading(false);
   }
@@ -810,6 +823,7 @@ async function enterApp(){
 
 document.getElementById('logout-btn').addEventListener('click', async ()=>{
   try{ await authApi({ action:'logout' }); } catch(e){ /* ignore */ }
+  clearToken();
   currentUser = null;
   document.getElementById('app-screen').classList.add('hidden');
   document.getElementById('login-screen').classList.remove('hidden');
@@ -1154,13 +1168,14 @@ function renderSchedules(){
         <div class="muted small" style="margin-left:auto;">Showing ${rows.length} of ${DB.schedules.length}</div>
       </div>
       <table class="table">
-        <thead><tr><th>Date</th><th>Time</th><th>Service</th><th>Doctor</th><th>Slots</th><th>Booked</th><th>Remaining</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th></th><th>Date</th><th>Time</th><th>Service</th><th>Doctor</th><th>Slots</th><th>Booked</th><th>Remaining</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
           ${rows.length ? rows.map(s=>{
             const eff = scheduleEffectiveStatus(s);
             const remaining = Math.max(0, s.capacity - s.booked);
             return `
             <tr>
+              <td>${s.imageUrl ? `<img src="${s.imageUrl}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;">` : `<div style="width:40px;height:40px;border-radius:8px;background:var(--blue-light);"></div>`}</td>
               <td>${fmtDate(s.date)}</td>
               <td>${fmtTimeRange(s.startTime, s.endTime)}</td>
               <td><span class="pill pill-blue">${s.service}</span></td>
@@ -1186,7 +1201,7 @@ function renderSchedules(){
                 </div>
               </td>
             </tr>`;
-          }).join('') : `<tr><td colspan="9"><div class="empty-state">No schedules match this view.</div></td></tr>`}
+          }).join('') : `<tr><td colspan="10"><div class="empty-state">No schedules match this view.</div></td></tr>`}
         </tbody>
       </table>
     </div>
@@ -1208,6 +1223,13 @@ function openScheduleModal(editId){
     <div class="modal-head"><h3>${editing?'Edit Schedule':'Add Schedule'}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
     <p class="muted small" style="margin-bottom:6px;">Publish an available slot patients can book against.</p>
     <form id="schedule-form">
+      <div class="field"><label>Schedule Image / Ad (optional)</label>
+        <div id="schedule-image-preview" style="margin-bottom:8px;">
+          ${editing && editing.imageUrl ? `<img src="${editing.imageUrl}" style="width:100%; max-height:160px; object-fit:cover; border-radius:12px; border:1px solid var(--line);">` : ''}
+        </div>
+        <input type="file" id="schedule-image-input" accept="image/png,image/jpeg,image/gif,image/webp" style="width:100%; padding:9px; border-radius:10px; border:1.5px solid var(--line); background:#f7f9fb; font-size:12.5px;">
+        <p class="small muted" style="margin-top:4px;">Shows up neatly in the mobile app's Activities list — good for campaign posters, health drive announcements, etc. PNG/JPG/GIF/WEBP.</p>
+      </div>
       <div class="field"><label>Service</label>
         ${DB.services.length ? `<select name="service" required>${serviceOptions}</select>`
           : `<div class="small" style="color:var(--red);">No services yet — add one from Service Availability first.</div>`}
@@ -1230,10 +1252,19 @@ function openScheduleModal(editId){
       <div id="schedule-error" class="small" style="display:none; background:var(--red-light); color:var(--red); padding:10px 12px; border-radius:10px; margin-top:8px;"></div>
       <div class="modal-actions">
         <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary">${editing?'Save Changes':'Publish Schedule'}</button>
+        <button type="submit" class="btn btn-primary" id="schedule-submit-btn">${editing?'Save Changes':'Publish Schedule'}</button>
       </div>
     </form>
   `);
+
+  // Show an instant local preview the moment a file is picked, before it's uploaded.
+  document.getElementById('schedule-image-input').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    const preview = document.getElementById('schedule-image-preview');
+    if(file){
+      preview.innerHTML = `<img src="${URL.createObjectURL(file)}" style="width:100%; max-height:160px; object-fit:cover; border-radius:12px; border:1px solid var(--line);">`;
+    }
+  });
 
   document.getElementById('schedule-form').addEventListener('submit', async (e)=>{
     e.preventDefault();
@@ -1276,15 +1307,51 @@ function openScheduleModal(editId){
       errEl.style.display='block'; return;
     }
 
+    // If a new image was picked, upload it first — it needs to finish before
+    // we can save its URL onto the schedule row.
+    const submitBtn = document.getElementById('schedule-submit-btn');
+    const imageFile = document.getElementById('schedule-image-input').files[0];
+    let imageUrl = editing ? editing.imageUrl : null;
+
+    if(imageFile){
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Uploading image…';
+      try{
+        const fd = new FormData();
+        fd.append('file', imageFile);
+        const token = getToken();
+        const uploadRes = await safeFetch(`${BACKEND_URL}/api/upload`, {
+          method:'POST',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
+          body: fd
+        });
+        const uploadData = await uploadRes.json().catch(()=>({}));
+        if(!uploadRes.ok){
+          errEl.textContent = 'Image upload error: ' + (uploadData.error || 'failed');
+          errEl.style.display = 'block';
+          submitBtn.disabled = false; submitBtn.textContent = editing?'Save Changes':'Publish Schedule';
+          return;
+        }
+        imageUrl = uploadData.url;
+      } catch(err){
+        errEl.textContent = 'Image upload error: ' + err.message;
+        errEl.style.display = 'block';
+        submitBtn.disabled = false; submitBtn.textContent = editing?'Save Changes':'Publish Schedule';
+        return;
+      }
+      submitBtn.textContent = editing?'Save Changes':'Publish Schedule';
+    }
+
     const payload = {
       service, doctor_name:doctorName, date, start_time:startTime, end_time:endTime,
-      capacity, location: f.get('location')||null, description: f.get('description')||null, notes: f.get('notes')||null
+      capacity, location: f.get('location')||null, description: f.get('description')||null, notes: f.get('notes')||null,
+      image_url: imageUrl || null
     };
 
     try{
       if(editing){
         await api('schedules','PATCH',{ id:editing.dbId, body: payload });
-        Object.assign(editing, { service, doctor:doctorName, date, startTime, endTime, capacity, location:payload.location||'', description:payload.description||'', notes:payload.notes||'' });
+        Object.assign(editing, { service, doctor:doctorName, date, startTime, endTime, capacity, location:payload.location||'', description:payload.description||'', notes:payload.notes||'', imageUrl:payload.image_url||'' });
         closeModal(); toast('Schedule updated.'); navigate('schedules');
       } else {
         payload.booked = 0; payload.status = 'Available';
@@ -1294,11 +1361,15 @@ function openScheduleModal(editId){
           dbId:row.id, service:row.service, doctor:row.doctor_name, date:row.date,
           startTime:row.start_time, endTime:row.end_time, time:row.time||'',
           capacity:row.capacity, booked:row.booked, status:row.status,
-          location:row.location||'', description:row.description||'', notes:row.notes||''
+          location:row.location||'', description:row.description||'', notes:row.notes||'',
+          imageUrl:row.image_url||''
         });
         closeModal(); toast('Schedule published.'); navigate('schedules');
       }
-    } catch(err){ errEl.textContent = 'Error: '+err.message; errEl.style.display='block'; }
+    } catch(err){
+      errEl.textContent = 'Error: '+err.message; errEl.style.display='block';
+      submitBtn.disabled = false;
+    }
   });
 }
 
@@ -1307,6 +1378,7 @@ function viewSchedule(dbId){
   const eff = scheduleEffectiveStatus(s);
   openModal(`
     <div class="modal-head"><h3>Schedule Details</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    ${s.imageUrl ? `<img src="${s.imageUrl}" style="width:100%; max-height:220px; object-fit:cover; border-radius:14px; margin-top:10px;">` : ''}
     <div class="row gap12" style="margin:14px 0 18px;">
       <div class="avatar-sm" style="width:52px;height:52px;border-radius:14px;font-size:18px;background:${colorFor(s.doctor)}">${initials(s.doctor)}</div>
       <div><h3 style="font-size:17px;">${s.service}</h3><span class="muted small">with ${s.doctor}</span></div>
@@ -1438,7 +1510,7 @@ function renderDoctorAvailability(){
     </div>
     <div class="card" style="padding:20px;">
       <table class="table">
-        <thead><tr><th>Doctor</th><th>Specialty</th><th>Available Days</th><th>Available Time</th><th>Schedules</th><th>Appointments</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Doctor</th><th>Position</th><th>Available Days</th><th>Available Time</th><th>Schedules</th><th>Appointments</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
           ${doctors.length ? doctors.map(d=>{
             const schedCount = DB.schedules.filter(s=>s.doctor===d.name).length;
@@ -1612,7 +1684,6 @@ async function deleteAnnouncement(dbId){
    ========================================================= */
 let patientSearch = '';
 function renderPatients(){
-  const statusColor = { 'Active Recovery':'pill-green', 'Follow-up Pending':'pill-amber', 'Critical':'pill-red', 'Vaccination':'pill-blue' };
   const rows = DB.patients.filter(p=>{
     if(!patientSearch) return true;
     const q = patientSearch;
@@ -1630,7 +1701,7 @@ function renderPatients(){
       </div>
       <div class="row between" style="margin-bottom:10px;"><h4 style="font-size:14px;">Recent Admissions</h4><span class="muted small">Showing ${rows.length} of ${DB.patients.length}</span></div>
       <table class="table">
-        <thead><tr><th>Full Name</th><th>Age</th><th>Contact</th><th>Email</th><th>Status</th><th>Action</th></tr></thead>
+        <thead><tr><th>Full Name</th><th>Age</th><th>Contact</th><th>Email</th><th>Action</th></tr></thead>
         <tbody>
           ${rows.length ? rows.map(p=>`
             <tr>
@@ -1639,7 +1710,6 @@ function renderPatients(){
               <td>${p.age} yrs</td>
               <td>${p.contact}</td>
               <td>${p.email}</td>
-              <td><span class="pill ${statusColor[p.status]||'pill-gray'}">${p.status}</span></td>
               <td>
                 <div class="row gap8">
                   <button class="icon-btn" title="View" onclick="viewPatient(${p.dbId})">
@@ -1650,7 +1720,7 @@ function renderPatients(){
                   </button>
                 </div>
               </td>
-            </tr>`).join('') : `<tr><td colspan="6"><div class="empty-state">${DB.patients.length ? 'No patients match your search.' : 'No patients registered yet. Click "Register New Patient" to add the first one.'}</div></td></tr>`}
+            </tr>`).join('') : `<tr><td colspan="5"><div class="empty-state">${DB.patients.length ? 'No patients match your search.' : 'No patients registered yet. Click "Register New Patient" to add the first one.'}</div></td></tr>`}
         </tbody>
       </table>
     </div>
@@ -1670,11 +1740,10 @@ function viewPatient(dbId){
     </div>
     <div class="grid grid-2" style="gap:12px;">
       <div class="small"><span class="muted">Age</span><br><b>${p.age} years</b></div>
-      <div class="small"><span class="muted">Status</span><br><b>${p.status}</b></div>
       <div class="small"><span class="muted">Contact</span><br><b>${p.contact}</b></div>
       <div class="small"><span class="muted">Email</span><br><b>${p.email}</b></div>
       <div class="small"><span class="muted">Barangay</span><br><b>${p.barangay||'—'}</b></div>
-      <div class="small"><span class="muted">Address</span><br><b>${p.address||'—'}</b></div>
+      <div class="small" style="grid-column:1/-1;"><span class="muted">Address</span><br><b>${p.address||'—'}</b></div>
     </div>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">Close</button></div>
   `);
@@ -1730,9 +1799,6 @@ function openPatientModal(){
       <div class="field"><label>Contact Number</label><input name="contact" required placeholder="+63 9XX XXX XXXX"></div>
       <div class="field"><label>Email</label><input name="email" type="email" placeholder="name@example.com"></div>
       <div class="field"><label>Address</label><input name="address" placeholder="Street, purok, etc."></div>
-      <div class="field"><label>Initial Status</label>
-        <select name="status"><option>Active Recovery</option><option>Follow-up Pending</option><option>Critical</option><option>Vaccination</option></select>
-      </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
         <button type="submit" class="btn btn-primary">Register Patient</button>
@@ -1747,7 +1813,7 @@ function openPatientModal(){
     const patient_no = `${year}-${seq}`;
     const payload = {
       patient_no, name:f.get('name'), age:Number(f.get('age')), contact:f.get('contact'),
-      email:f.get('email')||null, status:f.get('status'), barangay:f.get('barangay'), address:f.get('address')||null
+      email:f.get('email')||null, barangay:f.get('barangay'), address:f.get('address')||null
     };
     try{
       const data = await api('patients','POST',{ body: payload });
@@ -1909,11 +1975,9 @@ function renderStaff(){
   });
   const active = DB.staff.filter(s=>s.status==='ACTIVE').length;
   const onLeave = DB.staff.filter(s=>s.status==='ON LEAVE').length;
-  const deptCount = {};
-  DB.staff.forEach(s=>{ const d = (s.dept||'').split('·').pop().trim() || 'Unassigned'; deptCount[d]=(deptCount[d]||0)+1; });
   return `
     <div class="page-head row between">
-      <div><h1>Staff Directory</h1><p>Manage and monitor the clinical sanctuary's personnel and departments.</p></div>
+      <div><h1>Staff Directory</h1><p>Manage and monitor the clinical sanctuary's personnel.</p></div>
       <button class="btn btn-primary" onclick="openStaffModal()">+ Register New Staff</button>
     </div>
     <div class="grid grid-main">
@@ -1927,7 +1991,7 @@ function renderStaff(){
           </select>
         </div>
         <table class="table">
-          <thead><tr><th>Full Name</th><th>Role &amp; Dept</th><th>Status</th><th>Last Login</th><th>Action</th></tr></thead>
+          <thead><tr><th>Full Name</th><th>Role &amp; Position</th><th>Status</th><th>Last Login</th><th>Action</th></tr></thead>
           <tbody>
             ${rows.length ? rows.map(s=>`
               <tr>
@@ -1957,13 +2021,6 @@ function renderStaff(){
           <div class="grid grid-2" style="gap:12px;">
             <div><div class="stat-value">${active}</div><div class="stat-label">Active Personnel</div></div>
             <div><div class="stat-value">${onLeave}</div><div class="stat-label">On Leave</div></div>
-          </div>
-          <div style="margin-top:16px;">
-            <div class="small muted" style="text-transform:uppercase; letter-spacing:.4px; font-size:10.5px; margin-bottom:8px;">Department Distribution</div>
-            ${Object.keys(deptCount).length ? Object.entries(deptCount).map(([d,c])=>`
-              <div class="row between" style="font-size:12.5px; margin-bottom:8px;">
-                <span>${d}</span><b>${c} Staff</b>
-              </div>`).join('') : `<div class="small muted">No departments yet.</div>`}
           </div>
         </div>
         <div class="card" style="margin-top:18px; padding:18px; background:var(--teal-light); border:1px solid #b7e6de;">
@@ -1999,9 +2056,6 @@ function openStaffModal(){
         </div>
         <div class="field"><label>Position</label><input name="position" required placeholder="e.g. Resident Physician"></div>
       </div>
-      <div class="field"><label>Department</label>
-        <select name="dept"><option>Outpatient Clinic</option><option>Pharmacy</option><option>Administration</option><option>Nursing &amp; ER</option></select>
-      </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
         <button type="submit" class="btn btn-primary">Register Staff</button>
@@ -2012,7 +2066,7 @@ function openStaffModal(){
     e.preventDefault();
     const f = new FormData(e.target);
     const staff_no = `${new Date().getFullYear()}-${String(Date.now()).slice(-3)}`;
-    const payload = { staff_no, name:f.get('name'), role:f.get('role'), dept:`${f.get('position')} · ${f.get('dept')}`, status:'ACTIVE', last_login:new Date().toISOString() };
+    const payload = { staff_no, name:f.get('name'), role:f.get('role'), dept:f.get('position'), status:'ACTIVE', last_login:new Date().toISOString() };
     try{
       const data = await api('staff','POST',{ body: payload });
       const row = Array.isArray(data) ? data[0] : data;
@@ -2186,17 +2240,25 @@ function setupMobileToggle(){
 setupMobileToggle();
 
 /* =========================================================
-   BOOTSTRAP — check for an existing backend session on load
+   BOOTSTRAP — check for a locally-stored token on load, and
+   verify with the backend that it's still valid.
    ========================================================= */
 renderAuthMode();
 
 (async function boot(){
+  const token = getToken();
+  if(!token) return; // never logged in, or already logged out — show login screen as-is
+
   try{
-    const res = await safeFetch(`${BACKEND_URL}/api/auth?action=session`, { credentials:'include' });
+    const res = await safeFetch(`${BACKEND_URL}/api/auth?action=session`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     const data = await res.json();
     if(data.authenticated){
       currentUser = data.user;
       await enterApp();
+    } else {
+      clearToken(); // stored token is expired/invalid — clean up quietly
     }
   } catch(err){
     // Only surface this if it's a real connectivity problem, not just "not logged in yet".
