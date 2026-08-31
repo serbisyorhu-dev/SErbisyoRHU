@@ -437,6 +437,10 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg>
         Appointments
       </button>
+      <button class="nav-item" data-page="verifyCode">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 10h18"/><path d="M8 15h2"/></svg>
+        Verify Code
+      </button>
       <button class="nav-item" data-page="schedules">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/><circle cx="9" cy="14" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="1.4" fill="currentColor" stroke="none"/></svg>
         Schedules
@@ -524,7 +528,7 @@ function initials(name){ return (name||'?').split(' ').filter(Boolean).slice(0,2
    a brand-new install starts completely empty until real records are added. */
 let DB = {
   patients: [], appointments: [], staff: [], schedules: [], announcements: [], services: [],
-  queue: { currentNumber:'A-100', currentPatient:'—', currentService:'—', nextNumber:'A-101', waiting:0, paused:false, stations:[], activity:[] }
+  queue: { currentNumber:'A-0', currentPatient:'—', currentService:'—', nextNumber:'A-1', waiting:0, paused:false, stations:[], activity:[] }
 };
 let currentUser = null;
 
@@ -628,7 +632,7 @@ async function loadAllData(){
   }));
   DB.appointments = (appointments||[]).map(r=>({
     dbId:r.id, patient:r.patient, date:r.date, time:r.time, service:r.service, status:r.status,
-    scheduleId:r.schedule_id, doctor:r.doctor_name||'', bookedAt:r.created_at
+    scheduleId:r.schedule_id, doctor:r.doctor_name||'', bookedAt:r.created_at, confirmationCode:r.confirmation_code||''
   }));
   DB.staff = (staff||[]).map(r=>({
     dbId:r.id, id:r.staff_no, name:r.name, role:r.role, dept:r.dept, status:r.status, lastLogin:r.last_login,
@@ -648,10 +652,10 @@ async function loadAllData(){
   DB.services = (services||[]).map(r=>({ dbId:r.id, name:r.name, status:r.status }));
 
   const q = (queueStateArr && queueStateArr[0]) || {};
-  DB.queue.currentNumber = q.current_number || 'A-100';
+  DB.queue.currentNumber = q.current_number || 'A-0';
   DB.queue.currentPatient = q.current_patient || '—';
   DB.queue.currentService = q.current_service || '—';
-  DB.queue.nextNumber = q.next_number || 'A-101';
+  DB.queue.nextNumber = q.next_number || 'A-1';
   DB.queue.waiting = q.waiting ?? 0;
   DB.queue.paused = !!q.paused;
   DB.queue.stations = (stations||[]).map(r=>({ dbId:r.id, name:r.name, status:r.status }));
@@ -799,18 +803,12 @@ async function enterApp(){
     const name = currentUser?.user_metadata?.name || currentUser?.email || 'Admin';
     document.getElementById('user-avatar').textContent = initials(name);
 
-    // Safety net: only for accounts actually tagged staff — never for
-    // patient accounts that might mistakenly log in here. Catches accounts
-    // whose staff record didn't get created at signup time (e.g. email
-    // confirmation was pending back then).
     if(currentUser?.user_metadata?.role === 'staff' && currentUser?.id){
       ensureStaffRecord(name, currentUser.email, currentUser.id, null, null);
     }
 
     navigate('dashboard');
   } catch(err){
-    // If loading data failed because the stored token is no longer valid,
-    // don't strand the user on a broken screen — send them back to login.
     clearToken();
     currentUser = null;
     document.getElementById('login-screen').classList.remove('hidden');
@@ -844,6 +842,7 @@ document.getElementById('refresh-btn').addEventListener('click', async ()=>{
 const PAGE_META = {
   dashboard:{ title:'SERbisyo — San Enrique RHU', path:'Dashboard' },
   appointments:{ title:'Appointments', path:'Dashboard / Appointments' },
+  verifyCode:{ title:'Verify Code', path:'Dashboard / Verify Code' },
   schedules:{ title:'Schedules', path:'Dashboard / Schedules' },
   serviceAvailability:{ title:'Service Availability', path:'Dashboard / Service Availability' },
   doctorAvailability:{ title:'Doctor Availability', path:'Dashboard / Doctor Availability' },
@@ -866,6 +865,7 @@ document.getElementById('new-entry-btn').addEventListener('click', ()=>{
   else if(currentPage==='announcements') openAnnouncementModal();
   else if(currentPage==='serviceAvailability') openServiceModal();
   else if(currentPage==='doctorAvailability') toast('Add doctors from Staff Directory — availability is set per doctor from this page.');
+  else if(currentPage==='verifyCode') { const inp = document.getElementById('verify-code-input'); if(inp) inp.focus(); }
   else openAppointmentModal();
 });
 
@@ -875,7 +875,7 @@ function navigate(page){
   document.getElementById('topbar-title').textContent = PAGE_META[page].title;
   document.getElementById('topbar-path').textContent = PAGE_META[page].path;
   const renderers = {
-    dashboard:renderDashboard, appointments:renderAppointments, schedules:renderSchedules,
+    dashboard:renderDashboard, appointments:renderAppointments, verifyCode:renderVerifyCode, schedules:renderSchedules,
     serviceAvailability:renderServiceAvailability, doctorAvailability:renderDoctorAvailability,
     announcements:renderAnnouncements, patients:renderPatients, queue:renderQueue, staff:renderStaff, reports:renderReports
   };
@@ -976,7 +976,7 @@ function renderAppointments(){
         <div class="muted small" style="margin-left:auto;">Showing ${rows.length} of ${DB.appointments.length}</div>
       </div>
       <table class="table">
-        <thead><tr><th>Patient</th><th>Service</th><th>Doctor</th><th>Date</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Patient</th><th>Service</th><th>Doctor</th><th>Date</th><th>Time</th><th>Code</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
           ${rows.length ? rows.map(a=>`
             <tr>
@@ -985,6 +985,7 @@ function renderAppointments(){
               <td>${a.doctor||'—'}</td>
               <td>${fmtDate(a.date)}</td>
               <td>${a.time}</td>
+              <td><span class="pill pill-gray" style="font-family:var(--font-mono);">${a.confirmationCode||'—'}</span></td>
               <td><span class="pill ${statusColor[a.status]||'pill-gray'}">${a.status}</span></td>
               <td>
                 <div class="row gap8">
@@ -996,15 +997,13 @@ function renderAppointments(){
                   </button>
                 </div>
               </td>
-            </tr>`).join('') : `<tr><td colspan="7"><div class="empty-state">No appointments match this view.</div></td></tr>`}
+            </tr>`).join('') : `<tr><td colspan="8"><div class="empty-state">No appointments match this view.</div></td></tr>`}
         </tbody>
       </table>
     </div>
   `;
 }
 
-/** If an appointment tied to a schedule stops being active (cancelled/deleted),
- * give the slot back so the schedule isn't stuck showing Full forever. */
 async function freeScheduleSlotIfNeeded(appt){
   if(!appt.scheduleId) return;
   const sched = DB.schedules.find(s=>s.dbId===appt.scheduleId);
@@ -1023,7 +1022,7 @@ async function setApptStatus(dbId, status){
     const wasActive = a.status==='Pending' || a.status==='Approved';
     a.status = status;
     if(status==='Cancelled' && wasActive) await freeScheduleSlotIfNeeded(a);
-    toast(`Marked as ${status}.`); navigate('appointments');
+    toast(`Marked as ${status}.`); navigate(currentPage);
   } catch(err){ toast('Error: '+err.message, true); }
 }
 async function deleteAppt(dbId){
@@ -1045,11 +1044,6 @@ function fmtTimeRange(startHHMM, endHHMM){
   return `${to12h(startHHMM)} – ${to12h(endHHMM)}`;
 }
 
-/**
- * Admin manually books a walk-in patient — but exactly like a patient would,
- * they can ONLY pick from an already-published, Available schedule with open
- * slots. This is the same rule the mobile app's booking flow will follow.
- */
 function openAppointmentModal(){
   const patientSuggestions = DB.patients.map(p=>`<option value="${p.name}">`).join('');
   const bookable = DB.schedules.filter(s=> s.status==='Available' && s.booked < s.capacity);
@@ -1099,10 +1093,9 @@ function openAppointmentModal(){
     try{
       const data = await api('appointments','POST',{ body: payload });
       const row = Array.isArray(data) ? data[0] : data;
-      DB.appointments.unshift({ dbId:row.id, patient:row.patient, date:row.date, time:row.time, service:row.service, status:row.status, scheduleId:row.schedule_id, doctor:row.doctor_name||'', bookedAt:row.created_at });
+      DB.appointments.unshift({ dbId:row.id, patient:row.patient, date:row.date, time:row.time, service:row.service, status:row.status, scheduleId:row.schedule_id, doctor:row.doctor_name||'', bookedAt:row.created_at, confirmationCode:row.confirmation_code||'' });
       closeModal(); toast('Appointment booked.'); navigate('appointments');
     } catch(err){
-      // Roll back the slot we just reserved, since the booking itself failed.
       try{ await api('schedules','PATCH',{ id:sched.dbId, body:{ booked:sched.booked-1 } }); sched.booked -= 1; } catch(e2){}
       errEl.textContent = 'Error: '+err.message; errEl.style.display='block';
     }
@@ -1115,6 +1108,67 @@ function to12h(t){
   const ampm = h>=12 ? 'PM' : 'AM';
   h = h%12; if(h===0) h=12;
   return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+/* =========================================================
+   VERIFY CODE — the patient's 4-digit confirmation code (generated
+   automatically by the database when their appointment was created)
+   lets front-desk staff pull up exactly who they are and which
+   appointment they're here for, without searching by name.
+   ========================================================= */
+function renderVerifyCode(){
+  return `
+    <div class="page-head">
+      <h1>Verify Code</h1>
+      <p>Ask the patient for their 4-digit appointment code and enter it below to identify them.</p>
+    </div>
+    <div class="card" style="padding:28px; max-width:460px;">
+      <label style="display:block; font-size:11px; font-weight:700; letter-spacing:.6px; color:#7c8a97; text-transform:uppercase; margin-bottom:8px;">4-Digit Code</label>
+      <input id="verify-code-input" maxlength="4" inputmode="numeric" placeholder="0000"
+        style="width:100%; padding:16px; border-radius:12px; border:1.5px solid var(--line); background:#f7f9fb; font-size:28px; font-family:var(--font-mono); letter-spacing:10px; text-align:center;">
+      <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:14px; padding:13px;" onclick="lookupVerifyCode()">Look Up Patient</button>
+      <div id="verify-result" style="margin-top:20px;"></div>
+    </div>
+  `;
+}
+
+function lookupVerifyCode(){
+  const input = document.getElementById('verify-code-input');
+  const resultEl = document.getElementById('verify-result');
+  const code = input.value.trim();
+
+  if(!/^\d{4}$/.test(code)){
+    resultEl.innerHTML = `<p class="small" style="color:var(--red);">Enter a valid 4-digit code.</p>`;
+    return;
+  }
+
+  const match = DB.appointments.find(a => a.confirmationCode === code);
+  if(!match){
+    resultEl.innerHTML = `<p class="small" style="color:var(--red);">No appointment found with that code.</p>`;
+    return;
+  }
+
+  const statusColor = { Pending:'pill-amber', Approved:'pill-green', Completed:'pill-blue', Cancelled:'pill-red' };
+  resultEl.innerHTML = `
+    <div class="card" style="padding:18px; background:var(--blue-light); border:none;">
+      <div class="row gap12">
+        <div class="avatar-sm" style="width:44px;height:44px;border-radius:12px;font-size:15px;background:${colorFor(match.patient)}">${initials(match.patient)}</div>
+        <div>
+          <b style="font-size:15px; color:var(--navy);">${match.patient}</b>
+          <div class="small muted">${match.service} · ${match.doctor||'—'}</div>
+        </div>
+      </div>
+      <div class="grid grid-2" style="gap:10px; margin-top:14px;">
+        <div class="small"><span class="muted">Date</span><br><b>${fmtDate(match.date)}</b></div>
+        <div class="small"><span class="muted">Time</span><br><b>${match.time}</b></div>
+      </div>
+      <div style="margin-top:12px;"><span class="pill ${statusColor[match.status]||'pill-gray'}">${match.status}</span></div>
+      <div class="row gap8" style="margin-top:16px;">
+        ${match.status==='Pending'?`<button class="btn btn-sm btn-primary" onclick="setApptStatus(${match.dbId},'Approved'); document.getElementById('verify-code-input').value='';">Confirm Arrival</button>`:''}
+        ${match.status==='Approved'?`<button class="btn btn-sm btn-primary" onclick="setApptStatus(${match.dbId},'Completed'); document.getElementById('verify-code-input').value='';">Mark Completed</button>`:''}
+      </div>
+    </div>
+  `;
 }
 
 /* =========================================================
@@ -1212,7 +1266,6 @@ function timesOverlap(startA, endA, startB, endB){
   return startA < endB && startB < endA;
 }
 
-/** editId omitted = creating a new schedule; passed = editing an existing one. */
 function openScheduleModal(editId){
   const editing = DB.schedules.find(s=>s.dbId===editId);
   const doctors = DB.staff.filter(s=>s.role==='Medical Doctor');
@@ -1256,7 +1309,6 @@ function openScheduleModal(editId){
     </form>
   `);
 
-  // Show an instant local preview the moment a file is picked, before it's uploaded.
   document.getElementById('schedule-image-input').addEventListener('change', (e)=>{
     const file = e.target.files[0];
     const preview = document.getElementById('schedule-image-preview');
@@ -1278,7 +1330,6 @@ function openScheduleModal(editId){
     const endTime = f.get('end_time');
     const capacity = Number(f.get('capacity'));
 
-    // --- Validation, in the order the adviser's spec lists them ---
     const serviceRow = DB.services.find(s=>s.name===service);
     if(serviceRow && serviceRow.status!=='Available'){
       errEl.textContent = `"${service}" is currently marked Unavailable — enable it from Service Availability first.`;
@@ -1306,8 +1357,6 @@ function openScheduleModal(editId){
       errEl.style.display='block'; return;
     }
 
-    // If a new image was picked, upload it first — it needs to finish before
-    // we can save its URL onto the schedule row.
     const submitBtn = document.getElementById('schedule-submit-btn');
     const imageFile = document.getElementById('schedule-image-input').files[0];
     let imageUrl = editing ? editing.imageUrl : null;
@@ -1923,10 +1972,10 @@ async function queuePause(){
   toast(DB.queue.paused ? 'Queue paused.' : 'Queue resumed.'); navigate('queue');
 }
 async function queueReset(){
-  if(!confirm('Reset the queue back to A-100?')) return;
-  const ok = await updateQueueState({ current_number:'A-100', next_number:'A-101', waiting:0 });
+  if(!confirm('Reset the queue back to A-0?')) return;
+  const ok = await updateQueueState({ current_number:'A-0', next_number:'A-1', waiting:0 });
   if(!ok) return;
-  DB.queue.currentNumber='A-100'; DB.queue.nextNumber='A-101'; DB.queue.waiting=0;
+  DB.queue.currentNumber='A-0'; DB.queue.nextNumber='A-1'; DB.queue.waiting=0;
   await addActivity('Queue Reset', 'warn');
   toast('Queue has been reset.'); navigate('queue');
 }
@@ -2202,6 +2251,14 @@ function afterRender(page){
     if(docF) docF.addEventListener('change', (e)=>{ apptFilters.doctor = e.target.value; navigate('appointments'); });
     const svcF = document.getElementById('appt-service-filter');
     if(svcF) svcF.addEventListener('change', (e)=>{ apptFilters.service = e.target.value; navigate('appointments'); });
+  }
+  if(page==='verifyCode'){
+    const input = document.getElementById('verify-code-input');
+    if(input){
+      input.focus();
+      input.addEventListener('keydown', (e)=>{ if(e.key==='Enter') lookupVerifyCode(); });
+      input.addEventListener('input', (e)=>{ e.target.value = e.target.value.replace(/\D/g,'').slice(0,4); });
+    }
   }
   if(page==='schedules'){
     const dateF = document.getElementById('sched-date-filter');
