@@ -99,7 +99,7 @@ def chat():
     if services_context:
         system_instruction += "\n\nLIVE DATA (real, subong nga impormasyon halin sa database):\n" + services_context
 
-    url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
+    url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent'
     payload = {
         'system_instruction': {'parts': [{'text': system_instruction}]},
         'contents': [{'role': 'user', 'parts': [{'text': message}]}],
