@@ -123,8 +123,9 @@ def chat():
         result = {}
 
     if resp.status_code >= 400:
-        msg = (result.get('error') or {}).get('message', 'Gemini request failed.')
-        return json_response({'error': msg}, 500)
+    msg = (result.get('error') or {}).get('message', 'Gemini request failed.')
+    print(f"GEMINI ERROR (status {resp.status_code}): {msg}", flush=True)
+    return json_response({'error': msg}, 500)
 
     try:
         reply = result['candidates'][0]['content']['parts'][0]['text']
