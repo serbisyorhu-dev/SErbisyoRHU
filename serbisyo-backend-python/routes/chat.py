@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify
 from config import GEMINI_API_KEY
 from supabase_helper import supabase_request
 
+
 chat_bp = Blueprint('chat', __name__)
 
 SYSTEM_INSTRUCTION_BASE = (
