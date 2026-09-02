@@ -1,3 +1,4 @@
+import time
 import requests
 from flask import Blueprint, request, jsonify
 from config import GEMINI_API_KEY
@@ -107,15 +108,32 @@ def chat():
     }
     headers = {'x-goog-api-key': GEMINI_API_KEY}
 
-    try:
-        resp = requests.post(url, json=payload, headers=headers, timeout=30)
-    except requests.RequestException as e:
-        return json_response({'error': f'Could not reach Gemini: {e}'}, 502)
+    resp = None
+    for attempt in range(2):
+        try:
+            resp = requests.post(url, json=payload, headers=headers, timeout=30)
+            if resp.status_code != 503:
+                break
+            time.sleep(2)  # brief pause, then retry once
+        except requests.RequestException as e:
+            return json_response({'error': f'Could not reach Gemini: {e}'}, 502)
+
+    if resp is None:
+        return json_response({'error': 'Could not reach Gemini.'}, 502)
 
     try:
         result = resp.json()
     except ValueError:
         result = {}
+
+    if resp.status_code == 503:
+        # Still busy even after retrying — reply as Enrique himself, not a raw error.
+        friendly_message = (
+            "Pasensya na, medyo daghan gid ang nagapamangkot sa akon subong — pareho ako sang "
+            "operator nga puno ang linya. Palihug hulaton lang ang pila ka segundo dayon sulayan "
+            "liwat. Salamat sa pasensya!"
+        )
+        return json_response({'reply': friendly_message})
 
     if resp.status_code >= 400:
         msg = (result.get('error') or {}).get('message', 'Gemini request failed.')
