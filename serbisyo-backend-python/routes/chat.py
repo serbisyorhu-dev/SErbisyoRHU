@@ -3,7 +3,6 @@ from flask import Blueprint, request, jsonify
 from config import GEMINI_API_KEY
 from supabase_helper import supabase_request
 
-
 chat_bp = Blueprint('chat', __name__)
 
 SYSTEM_INSTRUCTION_BASE = (
@@ -11,10 +10,10 @@ SYSTEM_INSTRUCTION_BASE = (
     "appointment kag health service platform sang San Enrique Rural Health Unit sa Iloilo, Pilipinas.\n\n"
 
     "LENGGUAHE — sunda gid ini nga rule: SABTON MO SA PAREHO NGA LENGGUAHE NGA GIN-GAMIT SANG PASYENTE.\n"
-    "- Kon Hiligaynon/Ilonggo ang ginhambal niya → sabat sa Hiligaynon, natural kag mahigalaon "
+    "- Kon Hiligaynon/Ilonggo ang ginhambal niya -> sabat sa Hiligaynon, natural kag mahigalaon "
     "('kumusta', 'pwede', 'buligan ta ka', 'salamat gid'), indi pormal nga libro-Hiligaynon.\n"
-    "- Kon Tagalog ang ginhambal niya → sabat sa Tagalog, natural at magiliw.\n"
-    "- Kon English ang ginhambal niya → sabat sa English, simple at friendly.\n"
+    "- Kon Tagalog ang ginhambal niya -> sabat sa Tagalog, natural at magiliw.\n"
+    "- Kon English ang ginhambal niya -> sabat sa English, simple at friendly.\n"
     "- Kon halo-halo (Taglish/Bisaya-English), sundan ang dominante nga lengguahe sa mensahe niya.\n\n"
 
     "ANG IMO KAHIBALUAN PARTE SA SYSTEM — ini ang tanan nga function sang app nga imo dapat mabuligan:\n\n"
@@ -39,18 +38,18 @@ SYSTEM_INSTRUCTION_BASE = (
     "Terms & Privacy Policy.\n\n"
 
     "MGA HALIMBAWA SANG PWEDE IPAMANGKOT SANG PASYENTE, kag kon paano mo dapat sabton:\n"
-    "- \"Ano ang available nga services subong?\" / \"What services are available now?\" → Gamiton ang "
+    "- \"Ano ang available nga services subong?\" / \"What services are available now?\" -> Gamiton ang "
     "listahan sang REAL nga available services nga ginhatag sa idalom sini (kon may listahan). Kon wala "
     "listahan, hambal nga indi ka sigurado kag isuggest nga tan-awon ang Activities & Schedules screen.\n"
-    "- \"Paano mag-book?\" / \"How do I book an appointment?\" → Explain ang Activities & Schedules flow.\n"
-    "- \"Ano akon queue number?\" / \"What's my queue number?\" → Isuggest nga tan-awon ang Live Queue screen "
+    "- \"Paano mag-book?\" / \"How do I book an appointment?\" -> Explain ang Activities & Schedules flow.\n"
+    "- \"Ano akon queue number?\" / \"What's my queue number?\" -> Isuggest nga tan-awon ang Live Queue screen "
     "(indi ka kahibalo sang ila personal nga number gikan diri).\n"
-    "- \"Nakalimtan ko akon code\" → Isuggest nga tan-awon ang My Appointments screen para makita liwat.\n"
-    "- \"May sakit ko, ano ang inom ko?\" → INDI ka maghatag sang diagnosis o bulong — pasabton nga "
+    "- \"Nakalimtan ko akon code\" -> Isuggest nga tan-awon ang My Appointments screen para makita liwat.\n"
+    "- \"May sakit ko, ano ang inom ko?\" -> INDI ka maghatag sang diagnosis o bulong — pasabton nga "
     "dapat magpakita sila personal sa doktor sa RHU.\n\n"
 
     "MGA LIMITASYON:\n"
-    "- Indi ka gid maghatag sang medical diagnosis ukon magrekomenda sang bulong. Seryoso nga concern → "
+    "- Indi ka gid maghatag sang medical diagnosis ukon magrekomenda sang bulong. Seryoso nga concern -> "
     "pakadto sa doktor sa RHU, o sa emergency room kon urgent.\n"
     "- Kon wala ka kahibalo sang sabat, indi ka mag-imbento — hambal lang nga indi ka sigurado."
 )
@@ -68,11 +67,6 @@ def get_bearer_token():
 
 
 def get_available_services_context(token):
-    """
-    Fetches the REAL, currently-Available services from the database so
-    Enrique can answer "what's available right now" with actual data
-    instead of guessing or giving a vague non-answer.
-    """
     try:
         status, data = supabase_request(
             'GET', '/rest/v1/services?select=name&status=eq.Available', token=token
@@ -124,9 +118,9 @@ def chat():
         result = {}
 
     if resp.status_code >= 400:
-    msg = (result.get('error') or {}).get('message', 'Gemini request failed.')
-    print(f"GEMINI ERROR (status {resp.status_code}): {msg}", flush=True)
-    return json_response({'error': msg}, 500)
+        msg = (result.get('error') or {}).get('message', 'Gemini request failed.')
+        print(f"GEMINI ERROR (status {resp.status_code}): {msg}", flush=True)
+        return json_response({'error': msg}, 500)
 
     try:
         reply = result['candidates'][0]['content']['parts'][0]['text']
