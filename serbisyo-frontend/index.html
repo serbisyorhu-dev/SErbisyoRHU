@@ -511,6 +511,7 @@
 <div id="toast"></div>
 <div id="modal-root"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 /* =========================================================
    SERbisyo RHU System — frontend
@@ -797,6 +798,11 @@ document.getElementById('login-form').addEventListener('submit', async (e)=>{
 async function enterApp(){
   showLoading(true);
   try{
+    // Always re-confirm who's actually logged in via this token,
+    // rather than trusting whatever object is already in currentUser.
+    const sessionCheck = await authApi({ action:'session' });
+    if(sessionCheck.authenticated){ currentUser = sessionCheck.user; }
+
     await loadAllData();
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('app-screen').classList.remove('hidden');
@@ -823,6 +829,7 @@ document.getElementById('logout-btn').addEventListener('click', async ()=>{
   try{ await authApi({ action:'logout' }); } catch(e){ /* ignore */ }
   clearToken();
   currentUser = null;
+  document.getElementById('user-avatar').textContent = '';
   document.getElementById('app-screen').classList.add('hidden');
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('login-form').reset();
@@ -2166,6 +2173,87 @@ function computeReportData(){
 
   return { intake, volumeByDay, serviceDist, byBarangay, totalAppts, totalPatients, completed, vaccinationRate };
 }
+
+/**
+ * Builds an actual downloadable PDF from whatever's currently in DB —
+ * the exact same numbers already shown on this page, just formatted
+ * for printing/filing. Uses jsPDF (loaded via CDN at the top of this file).
+ */
+function generatePDFReport(){
+  if(!window.jspdf){
+    toast('PDF library did not load — check your internet connection and try again.', true);
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const r = computeReportData();
+  const today = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  let y = 20;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(16);
+  doc.text('SERbisyo RHU System', 14, y);
+  y += 7;
+  doc.setFontSize(12);
+  doc.text('Clinical Analytics Report', 14, y);
+  y += 6;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(100);
+  doc.text(`San Enrique Rural Health Unit  ·  Generated ${today}`, 14, y);
+  doc.setTextColor(0);
+  y += 12;
+
+  doc.setDrawColor(220); doc.line(14, y, 196, y); y += 10;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(12);
+  doc.text('Overview', 14, y); y += 8;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10.5);
+  const overview = [
+    ['Total Patients', String(r.totalPatients)],
+    ['Appointments Completed', String(r.completed)],
+    ['Vaccination Rate', r.vaccinationRate===null ? 'No data yet' : r.vaccinationRate+'%']
+  ];
+  overview.forEach(([label,val])=>{
+    doc.text(label, 18, y);
+    doc.text(val, 120, y);
+    y += 7;
+  });
+  y += 6;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(12);
+  doc.text('Service Distribution', 14, y); y += 8;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10.5);
+  if(r.serviceDist.length){
+    r.serviceDist.forEach(d=>{
+      doc.text(d.label, 18, y);
+      doc.text(d.pct+'%', 120, y);
+      y += 7;
+    });
+  } else {
+    doc.setTextColor(140); doc.text('No appointments recorded yet.', 18, y); doc.setTextColor(0); y += 7;
+  }
+  y += 6;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(12);
+  doc.text('Patient Volume by Barangay', 14, y); y += 8;
+  doc.setFont('helvetica','normal'); doc.setFontSize(10.5);
+  if(r.byBarangay.length){
+    r.byBarangay.forEach(b=>{
+      doc.text(b.label, 18, y);
+      doc.text(b.pct+'%', 120, y);
+      y += 7;
+    });
+  } else {
+    doc.setTextColor(140); doc.text('No patients registered yet.', 18, y); doc.setTextColor(0); y += 7;
+  }
+  y += 10;
+
+  doc.setFontSize(8.5); doc.setTextColor(150);
+  doc.text('Generated automatically by SERbisyo RHU System — ISUFST BSIT Thesis Project', 14, 285);
+
+  const filename = `SERbisyo-Report-${new Date().toISOString().slice(0,10)}.pdf`;
+  doc.save(filename);
+  toast('Report downloaded.');
+}
+
 function donutGradient(dist){
   let acc = 0; const stops = [];
   dist.forEach(d=>{ stops.push(`${d.color} ${acc}% ${acc+d.pct}%`); acc += d.pct; });
@@ -2180,7 +2268,7 @@ function renderReports(){
   return `
     <div class="page-head row between">
       <div><h1>Clinical Analytics</h1><p>Historical data and performance metrics — computed live from your records.</p></div>
-      <button class="btn btn-primary" onclick="toast('PDF export isn\\'t wired up yet in this build.')">⬇ Generate PDF Report</button>
+      <button class="btn btn-primary" onclick="generatePDFReport()">⬇ Generate PDF Report</button>
     </div>
     <div class="grid grid-4" style="margin-bottom:18px;">
       <div class="card stat-card"><div class="stat-icon" style="background:var(--blue-light); color:var(--blue-deep);">👥</div><div class="stat-value">${r.totalPatients}</div><div class="stat-label">Total Patients</div></div>
