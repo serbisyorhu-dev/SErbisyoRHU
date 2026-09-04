@@ -797,11 +797,6 @@ document.getElementById('login-form').addEventListener('submit', async (e)=>{
 async function enterApp(){
   showLoading(true);
   try{
-    // Always re-confirm who's actually logged in via this token,
-    // rather than trusting whatever object is already in currentUser.
-    const sessionCheck = await authApi({ action:'session' });
-    if(sessionCheck.authenticated){ currentUser = sessionCheck.user; }
-
     await loadAllData();
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('app-screen').classList.remove('hidden');
@@ -828,7 +823,6 @@ document.getElementById('logout-btn').addEventListener('click', async ()=>{
   try{ await authApi({ action:'logout' }); } catch(e){ /* ignore */ }
   clearToken();
   currentUser = null;
-  document.getElementById('user-avatar').textContent = '';
   document.getElementById('app-screen').classList.add('hidden');
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('login-form').reset();
