@@ -13,7 +13,6 @@ def json_response(data, status=200):
 
 
 def get_bearer_token():
-    """Pulls the access token from the Authorization: Bearer <token> header."""
     header = request.headers.get('Authorization', '')
     if header.startswith('Bearer '):
         return header[7:]
@@ -22,21 +21,14 @@ def get_bearer_token():
 
 @auth_bp.route('/api/auth', methods=['GET'])
 def auth_session_check():
-    """
-    Called on app launch to verify a locally-stored token is still valid.
-    No server-side session involved — the token itself is the proof.
-    """
     if request.args.get('action') == 'session':
         token = get_bearer_token()
         if not token:
             return json_response({'authenticated': False})
-
         status, res = supabase_request('GET', '/auth/v1/user', token=token)
-        if status >= 400 or not res or not res.get('id'):
+        if status >= 400 or not res:
             return json_response({'authenticated': False})
-
         return json_response({'authenticated': True, 'user': res})
-
     return json_response({'error': 'Unknown action.'}, 400)
 
 
@@ -57,11 +49,6 @@ def auth_actions():
             msg = (res or {}).get('error_description') or (res or {}).get('msg') or (res or {}).get('error') or 'Invalid credentials.'
             return json_response({'error': msg}, 401)
 
-        # The token itself is handed back to the app to store locally —
-        # nothing is remembered server-side, so this works correctly even
-        # when the frontend and backend are on completely different domains
-        # (no reliance on cookies, which mobile browsers often block
-        # cross-site anyway).
         return json_response({
             'authenticated': True,
             'user': res['user'],
@@ -107,12 +94,24 @@ def auth_actions():
 
         return json_response({'authenticated': False, 'message': 'Account created. Check your email to confirm it, then log in.'})
 
+    if action == 'refresh':
+        refresh_token = body.get('refresh_token')
+        if not refresh_token:
+            return json_response({'error': 'Missing refresh token.'}, 400)
+
+        status, res = supabase_request('POST', '/auth/v1/token?grant_type=refresh_token',
+                                        {'refresh_token': refresh_token})
+        if status >= 400 or not res or not res.get('access_token'):
+            return json_response({'error': 'Session could not be refreshed. Please log in again.'}, 401)
+
+        return json_response({
+            'authenticated': True,
+            'user': res['user'],
+            'access_token': res['access_token'],
+            'refresh_token': res.get('refresh_token'),
+        })
+
     if action == 'logout':
-        # No server-side session to clear. Best-effort: tell Supabase to
-        # invalidate the refresh token too, if one was provided.
-        token = get_bearer_token()
-        if token:
-            supabase_request('POST', '/auth/v1/logout', token=token)
         return json_response({'ok': True})
 
     if action == 'forgot_password':
