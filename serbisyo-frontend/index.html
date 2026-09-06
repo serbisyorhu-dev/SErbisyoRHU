@@ -544,7 +544,30 @@ const BACKEND_URL = 'https://serbisyorhu.onrender.com';
 
 function getToken(){ return localStorage.getItem('serbisyo_token'); }
 function setToken(token){ localStorage.setItem('serbisyo_token', token); }
-function clearToken(){ localStorage.removeItem('serbisyo_token'); localStorage.removeItem('serbisyo_user'); }
+function getRefreshToken(){ return localStorage.getItem('serbisyo_refresh_token'); }
+function setRefreshToken(token){ if(token) localStorage.setItem('serbisyo_refresh_token', token); }
+function clearToken(){
+  localStorage.removeItem('serbisyo_token');
+  localStorage.removeItem('serbisyo_refresh_token');
+  localStorage.removeItem('serbisyo_user');
+}
+
+/** Silently trades the stored refresh token for a fresh access token —
+ * no password needed. Returns true if it worked. */
+async function attemptTokenRefresh(){
+  const refreshToken = getRefreshToken();
+  if(!refreshToken) return false;
+  try{
+    const data = await authApi({ action:'refresh', refresh_token: refreshToken });
+    if(data.authenticated && data.access_token){
+      setToken(data.access_token);
+      setRefreshToken(data.refresh_token);
+      currentUser = data.user;
+      return true;
+    }
+  } catch(err){ /* fall through to false */ }
+  return false;
+}
 
 async function safeFetch(url, options){
   try{
@@ -770,6 +793,7 @@ document.getElementById('login-form').addEventListener('submit', async (e)=>{
       if(data.authenticated){
         currentUser = data.user;
         setToken(data.access_token);
+        setRefreshToken(data.refresh_token);
         localStorage.setItem('serbisyo_user', JSON.stringify(data.user));
         ensureStaffRecord(name, email, currentUser.id, staffJobRole, staffPosition);
         showMsg('Account created! Signing you in…', 'ok');
@@ -786,6 +810,7 @@ document.getElementById('login-form').addEventListener('submit', async (e)=>{
     const data = await authApi({ action:'login', email, password:pass });
     currentUser = data.user;
     setToken(data.access_token);
+    setRefreshToken(data.refresh_token);
     localStorage.setItem('serbisyo_user', JSON.stringify(data.user));
     await enterApp();
   } catch(err){
@@ -800,8 +825,21 @@ async function enterApp(){
   try{
     // Always re-confirm who's actually logged in via this token,
     // rather than trusting whatever object is already in currentUser.
-    const sessionCheck = await authApi({ action:'session' });
-    if(sessionCheck.authenticated){ currentUser = sessionCheck.user; }
+    // This MUST be a GET — the backend's session-check route only exists as GET.
+    const token = getToken();
+    const sessionRes = await safeFetch(`${BACKEND_URL}/api/auth?action=session`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+    const sessionCheck = await sessionRes.json().catch(()=>({authenticated:false}));
+
+    if(sessionCheck.authenticated){
+      currentUser = sessionCheck.user;
+    } else {
+      // Access token's genuinely no good anymore — try a silent refresh
+      // before giving up and showing the login screen.
+      const refreshed = await attemptTokenRefresh();
+      if(!refreshed) throw new Error('Session expired.');
+    }
 
     await loadAllData();
     document.getElementById('login-screen').classList.add('hidden');
@@ -2402,7 +2440,13 @@ renderAuthMode();
       currentUser = data.user;
       await enterApp();
     } else {
-      clearToken(); // stored token is expired/invalid — clean up quietly
+      // Stored access token's no good — try a silent refresh before giving up.
+      const refreshed = await attemptTokenRefresh();
+      if(refreshed){
+        await enterApp();
+      } else {
+        clearToken(); // refresh token's also dead — genuinely need to log in again
+      }
     }
   } catch(err){
     // Only surface this if it's a real connectivity problem, not just "not logged in yet".
