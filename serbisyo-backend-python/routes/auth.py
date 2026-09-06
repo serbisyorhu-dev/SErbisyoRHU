@@ -147,4 +147,30 @@ def auth_actions():
 
         return json_response({'ok': True})
 
+    if action == 'verify_reset_code':
+        email = (body.get('email') or '').strip()
+        code = (body.get('code') or '').strip()
+        new_password = body.get('password') or ''
+
+        if not email or not code:
+            return json_response({'error': 'Email and code are required.'}, 400)
+        if len(new_password) < 6:
+            return json_response({'error': 'Password must be at least 6 characters.'}, 400)
+
+        # Step 1: verify the 6-digit code — this returns a short-lived session.
+        status, res = supabase_request('POST', '/auth/v1/verify', {
+            'type': 'recovery', 'email': email, 'token': code
+        })
+        if status >= 400 or not res or not res.get('access_token'):
+            msg = (res or {}).get('error_description') or (res or {}).get('msg') or (res or {}).get('error') or 'Invalid or expired code.'
+            return json_response({'error': msg}, 400)
+
+        # Step 2: use that session to actually set the new password.
+        status2, res2 = supabase_request('PUT', '/auth/v1/user', {'password': new_password}, token=res['access_token'])
+        if status2 >= 400:
+            msg = (res2 or {}).get('error_description') or (res2 or {}).get('msg') or (res2 or {}).get('error') or 'Could not update password.'
+            return json_response({'error': msg}, 400)
+
+        return json_response({'ok': True, 'message': 'Password updated. You can now log in with your new password.'})
+
     return json_response({'error': 'Unknown action.'}, 400)
