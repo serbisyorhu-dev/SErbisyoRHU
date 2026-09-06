@@ -7,8 +7,25 @@ from supabase_helper import supabase_request
 chat_bp = Blueprint('chat', __name__)
 
 SYSTEM_INSTRUCTION_BASE = (
-    "Ikaw si Enrique, ang opisyal nga AI assistant sang SERbisyo RHU System — ang online nga "
-    "appointment kag health service platform sang San Enrique Rural Health Unit sa Iloilo, Pilipinas.\n\n"
+    "Ikaw si Enrique, ang AI assistant sang SERbisyo RHU System — ang online nga appointment kag "
+    "health service platform sang San Enrique Rural Health Unit sa Iloilo, Pilipinas.\n\n"
+
+    "IMPORTANTE — PAG-INTRODUCE:\n"
+    "Indi ka na dapat mag-hambal sang 'Ako si Enrique' ukon mag-introduce sang kaugalingon sa kada "
+    "sabat mo. Ang app na lang ang nagapakita sang greeting sa una nga pagbukas sang chat. Ikaw, "
+    "diretso lang sa sabat, pareho sang tawo nga nagareply sa iya kaupod nga nagachat — indi pareho "
+    "sang customer-service bot nga nagapakilala permi.\n\n"
+
+    "TONO — sunda gid ini:\n"
+    "- Maghambal pareho sang normal nga tawo, indi pareho sang script ukon menu. Short kag natural "
+    "nga mga tinaga, indi robotic.\n"
+    "- Indi ka mag-gamit sang bullet list / asterisk formatting kon simple lang ang pamangkot (ex. "
+    "'saan', 'kanus-a', 'pila'). I-explain lang sa isa ka natural nga sentence o duha, pareho sang "
+    "may nagasabat sa imo personal.\n"
+    "- Gamiton lang ang listahan/bullets kon may pila ka lain-lain nga topic nga ginpamangkot sang "
+    "pasyente sa sulod sang isa ka mensahe (ex. ginpamangkot niya duha ukon tatlo ka bagay dungan).\n"
+    "- Indi ka ma-repeat sang parehas nga pattern/greeting sa kada sabat. Basaha ang kada mensahe kag "
+    "sabton ang ginpamangkot gid, indi ang generic nga script.\n\n"
 
     "LENGGUAHE — sunda gid ini nga rule: SABTON MO SA PAREHO NGA LENGGUAHE NGA GIN-GAMIT SANG PASYENTE.\n"
     "- Kon Hiligaynon/Ilonggo ang ginhambal niya -> sabat sa Hiligaynon, natural kag mahigalaon "
@@ -38,13 +55,14 @@ SYSTEM_INSTRUCTION_BASE = (
     "6. PROFILE & SETTINGS: Diri mabag-o ang password, ma-toggle ang notifications, kag mabasa ang "
     "Terms & Privacy Policy.\n\n"
 
-    "MGA HALIMBAWA SANG PWEDE IPAMANGKOT SANG PASYENTE, kag kon paano mo dapat sabton:\n"
-    "- \"Ano ang available nga services subong?\" / \"What services are available now?\" -> Gamiton ang "
-    "listahan sang REAL nga available services nga ginhatag sa idalom sini (kon may listahan). Kon wala "
-    "listahan, hambal nga indi ka sigurado kag isuggest nga tan-awon ang Activities & Schedules screen.\n"
-    "- \"Paano mag-book?\" / \"How do I book an appointment?\" -> Explain ang Activities & Schedules flow.\n"
-    "- \"Ano akon queue number?\" / \"What's my queue number?\" -> Isuggest nga tan-awon ang Live Queue screen "
-    "(indi ka kahibalo sang ila personal nga number gikan diri).\n"
+    "MGA HALIMBAWA SANG PWEDE IPAMANGKOT SANG PASYENTE, kag kon paano mo dapat sabton (natural, indi "
+    "kinahanglan i-copy ang mismo nga sentence structure):\n"
+    "- \"Ano ang available nga services subong?\" -> Gamiton ang REAL nga listahan sang available "
+    "services nga ginhatag sa idalom sini (kon may listahan). Kon wala, hambal nga indi ka sigurado "
+    "kag isuggest nga tan-awon ang Activities & Schedules screen.\n"
+    "- \"Paano mag-book?\" -> Explain ang Activities & Schedules flow sa simple nga paagi.\n"
+    "- \"Ano akon queue number?\" -> Isuggest nga tan-awon ang Live Queue screen (indi ka kahibalo "
+    "sang ila personal nga number gikan diri).\n"
     "- \"Nakalimtan ko akon code\" -> Isuggest nga tan-awon ang My Appointments screen para makita liwat.\n"
     "- \"May sakit ko, ano ang inom ko?\" -> INDI ka maghatag sang diagnosis o bulong — pasabton nga "
     "dapat magpakita sila personal sa doktor sa RHU.\n\n"
@@ -82,6 +100,32 @@ def get_available_services_context(token):
         return None
 
 
+def build_contents(history, message):
+    """
+    Convert a client-supplied history array into Gemini's `contents` format,
+    then append the new user message. This is what gives Enrique memory of
+    the conversation so far -- without it, every message looks like the
+    start of a brand-new chat, which is why it kept re-introducing itself.
+
+    Expected history item shape from the client:
+        {"role": "user" | "model", "text": "..."}
+    Any malformed items are skipped rather than rejected, so a bad entry
+    doesn't break the whole request.
+    """
+    contents = []
+    if isinstance(history, list):
+        for item in history[-20:]:  # cap history to last 20 turns to control token usage
+            if not isinstance(item, dict):
+                continue
+            role = item.get('role')
+            text = item.get('text')
+            if role not in ('user', 'model') or not text:
+                continue
+            contents.append({'role': role, 'parts': [{'text': str(text).strip()}]})
+    contents.append({'role': 'user', 'parts': [{'text': message}]})
+    return contents
+
+
 @chat_bp.route('/api/chat', methods=['POST'])
 def chat():
     token = get_bearer_token()
@@ -92,6 +136,7 @@ def chat():
 
     body = request.get_json(silent=True) or {}
     message = (body.get('message') or '').strip()
+    history = body.get('history')  # optional list of {"role": "user"/"model", "text": "..."}
     if not message:
         return json_response({'error': 'Message is required.'}, 400)
 
@@ -103,7 +148,7 @@ def chat():
     url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent'
     payload = {
         'system_instruction': {'parts': [{'text': system_instruction}]},
-        'contents': [{'role': 'user', 'parts': [{'text': message}]}],
+        'contents': build_contents(history, message),
         'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 500},
     }
     headers = {'x-goog-api-key': GEMINI_API_KEY}
@@ -127,7 +172,7 @@ def chat():
         result = {}
 
     if resp.status_code == 503:
-        # Still busy even after retrying — reply as Enrique himself, not a raw error.
+        # Still busy even after retrying -- reply as Enrique himself, not a raw error.
         friendly_message = (
             "Pasensya na, medyo daghan gid ang nagapamangkot sa akon subong — pareho ako sang "
             "operator nga puno ang linya. Palihug hulaton lang ang pila ka segundo dayon sulayan "
