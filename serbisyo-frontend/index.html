@@ -2272,11 +2272,40 @@ function computeReportData(period, anchorDate){
     star, count: ratedAppts.filter(a=>a.rating===star).length
   }));
 
+  // Age distribution of patients booking within this period — matched by
+  // patient name against the patients table, since appointments store the
+  // patient's name rather than a direct foreign key. A best-effort match:
+  // fine for a single rural clinic's scale, though two patients sharing
+  // an exact name would be counted together.
+  const ageBuckets = [
+    { label:'0–12', min:0, max:12 },
+    { label:'13–17', min:13, max:17 },
+    { label:'18–30', min:18, max:30 },
+    { label:'31–45', min:31, max:45 },
+    { label:'46–60', min:46, max:60 },
+    { label:'61+', min:61, max:200 }
+  ];
+  let ageMatchedCount = 0;
+  const ageCounts = ageBuckets.map(()=>0);
+  periodAppts.forEach(a=>{
+    const match = patients.find(p => p.name === a.patient && p.age != null);
+    if(match){
+      ageMatchedCount++;
+      const idx = ageBuckets.findIndex(b => match.age >= b.min && match.age <= b.max);
+      if(idx >= 0) ageCounts[idx]++;
+    }
+  });
+  const ageDistribution = ageBuckets.map((b,i)=>({
+    label: b.label, count: ageCounts[i],
+    pct: ageMatchedCount ? Math.round(ageCounts[i]/ageMatchedCount*100) : 0
+  }));
+
   return {
     period, range, periodLabel: range.label,
     intake, volumeByDay, serviceDist, byBarangay,
     totalAppts, totalPatients, completed, vaccinationRate,
-    patientsCatered, avgRating, ratingCount, ratingBreakdown
+    patientsCatered, avgRating, ratingCount, ratingBreakdown,
+    ageDistribution, ageMatchedCount
   };
 }
 
@@ -2529,6 +2558,15 @@ function renderReports(){
               <div class="row between small" style="margin-bottom:4px;"><span>${b.label}</span><b>${b.pct}%</b></div>
               <div style="height:6px; background:#eef1f4; border-radius:4px; overflow:hidden;"><div style="height:100%; width:${Math.min(100,b.pct*2.6)}%; background:var(--blue-mid); border-radius:4px;"></div></div>
             </div>`).join('') : `<p class="small muted">No patients registered yet.</p>`}
+        </div>
+        <div class="card" style="padding:20px; margin-top:18px;">
+          <h4 style="font-size:14.5px; margin-bottom:2px;">Age Groups — ${r.periodLabel}</h4>
+          <p class="small muted" style="margin-bottom:12px;">Which age ranges are actually booking appointments (not included in the PDF export)</p>
+          ${r.ageMatchedCount ? r.ageDistribution.map(a=>`
+            <div style="margin-bottom:10px;">
+              <div class="row between small" style="margin-bottom:4px;"><span>${a.label}</span><b>${a.pct}% <span class="muted">(${a.count})</span></b></div>
+              <div style="height:6px; background:#eef1f4; border-radius:4px; overflow:hidden;"><div style="height:100%; width:${a.pct}%; background:var(--teal); border-radius:4px;"></div></div>
+            </div>`).join('') : `<p class="small muted">No age data available for appointments in this period yet — patients can set their age from Profile &gt; Edit Profile in the mobile app.</p>`}
         </div>
       </div>
     </div>
