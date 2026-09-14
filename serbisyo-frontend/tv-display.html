@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SERbisyo RHU — Live Queue</title>
+<link rel="icon" type="image/png" href="assets/logo-full.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0B2A45; --blue-deep:#0F3D63; --blue:#1D6FA5;
+    --green:#1E9E5A; --amber:#D99A2B; --white:#ffffff; --ink-soft:#7C8A97;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    height:100%; font-family:'Inter',sans-serif;
+    background: linear-gradient(160deg, #0B2A45 0%, #0F3D63 55%, #1D6FA5 100%);
+    color:#fff; overflow:hidden;
+  }
+  .wrap{
+    height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:40px; text-align:center;
+  }
+  .brand{ display:flex; align-items:center; gap:16px; position:absolute; top:40px; left:50px; }
+  .brand img{ width:56px; height:56px; object-fit:contain; }
+  .brand-text b{ display:block; font-family:'Poppins',sans-serif; font-size:22px; font-weight:800; }
+  .brand-text span{ font-size:14px; opacity:.8; }
+  .clock{ position:absolute; top:44px; right:50px; font-size:20px; font-weight:600; opacity:.85; }
+
+  .live-tag{
+    display:inline-flex; align-items:center; gap:10px; background:rgba(255,255,255,.12);
+    padding:10px 24px; border-radius:999px; font-size:16px; font-weight:700; letter-spacing:1px;
+  }
+  .live-dot{ width:10px; height:10px; border-radius:50%; background:#4ADE80; animation:pulse 1.4s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+  .now-serving-label{ margin-top:36px; font-size:26px; font-weight:600; opacity:.85; letter-spacing:2px; }
+  .queue-number{
+    font-family:'Poppins',sans-serif; font-weight:800; font-size:220px; line-height:1;
+    margin-top:8px; text-shadow: 0 8px 40px rgba(0,0,0,.35);
+  }
+  .queue-service{ font-size:26px; margin-top:14px; opacity:.9; }
+
+  .mini-stats{ display:flex; gap:60px; margin-top:56px; }
+  .mini-stats div{ text-align:center; }
+  .mini-stats b{ display:block; font-family:'Poppins',sans-serif; font-size:56px; font-weight:800; }
+  .mini-stats span{ font-size:16px; opacity:.75; text-transform:uppercase; letter-spacing:1px; }
+
+  .footer{ position:absolute; bottom:30px; font-size:14px; opacity:.6; }
+  .error-banner{
+    position:absolute; bottom:80px; background:rgba(216,76,70,.9); padding:10px 20px;
+    border-radius:10px; font-size:14px; display:none;
+  }
+</style>
+</head>
+<body>
+
+<div class="brand">
+  <img src="assets/logo-full.png" alt="San Enrique RHU">
+  <div class="brand-text"><b>San Enrique RHU</b><span>Live Queue Display</span></div>
+</div>
+
+<div class="clock" id="clock">--:--</div>
+
+<div class="wrap">
+  <div class="live-tag"><span class="live-dot"></span> NOW SERVING</div>
+  <div class="queue-number" id="currentNumber">—</div>
+  <div class="queue-service" id="currentService">Waiting for the next patient…</div>
+
+  <div class="mini-stats">
+    <div><b id="nextNumber">—</b><span>Next Number</span></div>
+    <div><b id="waitingCount">0</b><span>Patients Waiting</span></div>
+  </div>
+</div>
+
+<div class="error-banner" id="errorBanner">Could not reach the server — retrying…</div>
+<div class="footer">SERbisyo RHU System — updates automatically every 5 seconds</div>
+
+<script>
+  const BACKEND_URL = 'https://serbisyorhu.onrender.com';
+
+  function updateClock(){
+    document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  async function refreshQueue(){
+    const errorBanner = document.getElementById('errorBanner');
+    try{
+      const res = await fetch(`${BACKEND_URL}/api/public/queue-status`);
+      if(!res.ok) throw new Error('Bad response');
+      const data = await res.json();
+
+      document.getElementById('currentNumber').textContent = data.current_number || 'A-0';
+      document.getElementById('currentService').textContent =
+        (data.current_patient && data.current_service) ? `${data.current_patient} · ${data.current_service}` : 'Waiting for the next patient…';
+      document.getElementById('nextNumber').textContent = data.next_number || 'A-1';
+      document.getElementById('waitingCount').textContent = data.waiting ?? 0;
+
+      errorBanner.style.display = 'none';
+    } catch(err){
+      errorBanner.style.display = 'block';
+    }
+  }
+
+  refreshQueue();
+  setInterval(refreshQueue, 5000);
+</script>
+</body>
+</html>
