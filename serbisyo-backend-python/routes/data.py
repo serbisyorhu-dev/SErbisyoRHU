@@ -23,6 +23,23 @@ def get_bearer_token():
     return None
 
 
+@data_bp.route('/api/public/queue-status', methods=['GET'])
+def public_queue_status():
+    """
+    No login required — this is what the RHU's waiting-room TV display
+    calls. Reads only queue_state (never patient-identifying data), using
+    just the anon key rather than a user's Bearer token.
+    """
+    status, res = supabase_request(
+        'GET',
+        '/rest/v1/queue_state?id=eq.1&select=current_number,next_number,waiting,current_patient,current_service'
+    )
+    if status >= 400 or not res:
+        return json_response({'error': 'Could not load queue status.'}, 500)
+    row = res[0] if isinstance(res, list) and res else {}
+    return json_response(row)
+
+
 @data_bp.route('/api/data', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
 def data_proxy():
     token = get_bearer_token()
