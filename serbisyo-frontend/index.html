@@ -659,6 +659,7 @@ async function loadAllData(){
   DB.appointments = (appointments||[]).map(r=>({
     dbId:r.id, patient:r.patient, date:r.date, time:r.time, service:r.service, status:r.status,
     scheduleId:r.schedule_id, doctor:r.doctor_name||'', bookedAt:r.created_at, confirmationCode:r.confirmation_code||'',
+    queueNumber:r.queue_number||'',
     rating:r.rating||null, ratingComment:r.rating_comment||''
   }));
   DB.staff = (staff||[]).map(r=>({
@@ -1024,7 +1025,7 @@ function renderAppointments(){
         <div class="muted small" style="margin-left:auto;">Showing ${rows.length} of ${DB.appointments.length}</div>
       </div>
       <table class="table">
-        <thead><tr><th>Patient</th><th>Service</th><th>Doctor</th><th>Date</th><th>Time</th><th>Code</th><th>Status</th><th>Actions</th></tr></thead>
+        <thead><tr><th>Patient</th><th>Service</th><th>Doctor</th><th>Date</th><th>Time</th><th>Code</th><th>Queue #</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody>
           ${rows.length ? rows.map(a=>`
             <tr>
@@ -1034,10 +1035,11 @@ function renderAppointments(){
               <td>${fmtDate(a.date)}</td>
               <td>${a.time}</td>
               <td><span class="pill pill-gray" style="font-family:var(--font-mono);">${a.confirmationCode||'—'}</span></td>
+              <td>${a.queueNumber ? `<span class="pill pill-blue" style="font-family:var(--font-mono); font-weight:800;">${a.queueNumber}</span>` : '<span class="muted small">—</span>'}</td>
               <td><span class="pill ${statusColor[a.status]||'pill-gray'}">${a.status}</span></td>
               <td>
                 <div class="row gap8">
-                  ${a.status==='Pending'?`<button class="btn btn-sm btn-outline" onclick="setApptStatus(${a.dbId},'Approved')">Confirm</button>`:''}
+                  ${a.status==='Pending'?`<button class="btn btn-sm btn-outline" onclick="confirmArrivalAndAssignQueue(${a.dbId})">Confirm</button>`:''}
                   ${a.status==='Approved'?`<button class="btn btn-sm btn-outline" onclick="setApptStatus(${a.dbId},'Completed')">Complete</button>`:''}
                   ${(a.status==='Pending'||a.status==='Approved')?`<button class="btn btn-sm btn-outline" style="color:var(--red);" onclick="setApptStatus(${a.dbId},'Cancelled')">Cancel</button>`:''}
                   <button class="icon-btn" title="Delete" onclick="deleteAppt(${a.dbId})">
@@ -1045,7 +1047,7 @@ function renderAppointments(){
                   </button>
                 </div>
               </td>
-            </tr>`).join('') : `<tr><td colspan="8"><div class="empty-state">No appointments match this view.</div></td></tr>`}
+            </tr>`).join('') : `<tr><td colspan="9"><div class="empty-state">No appointments match this view.</div></td></tr>`}
         </tbody>
       </table>
     </div>
@@ -1073,6 +1075,33 @@ async function setApptStatus(dbId, status){
     toast(`Marked as ${status}.`); navigate(currentPage);
   } catch(err){ toast('Error: '+err.message, true); }
 }
+
+/**
+ * The real "check-in" action — confirms the patient arrived AND assigns
+ * them an actual queue number, pulled from the live queue_state ticker.
+ * This is what makes "your number" mean something specific to a patient,
+ * instead of just watching a shared counter with no connection to them.
+ */
+async function confirmArrivalAndAssignQueue(dbId){
+  const a = DB.appointments.find(x=>x.dbId===dbId); if(!a) return;
+  try{
+    const assignedNumber = DB.queue.nextNumber;
+    const newNext = incQueueNum(DB.queue.nextNumber);
+    const newWaiting = (DB.queue.waiting||0) + 1;
+
+    await api('appointments','PATCH',{ id:dbId, body:{ status:'Approved', queue_number:assignedNumber } });
+    await updateQueueState({ next_number:newNext, waiting:newWaiting });
+
+    a.status = 'Approved';
+    a.queueNumber = assignedNumber;
+    DB.queue.nextNumber = newNext;
+    DB.queue.waiting = newWaiting;
+
+    toast(`Checked in — assigned ${assignedNumber}.`);
+    navigate(currentPage);
+  } catch(err){ toast('Error: '+err.message, true); }
+}
+
 async function deleteAppt(dbId){
   const a = DB.appointments.find(x=>x.dbId===dbId); if(!a) return;
   try{
@@ -1141,7 +1170,7 @@ function openAppointmentModal(){
     try{
       const data = await api('appointments','POST',{ body: payload });
       const row = Array.isArray(data) ? data[0] : data;
-      DB.appointments.unshift({ dbId:row.id, patient:row.patient, date:row.date, time:row.time, service:row.service, status:row.status, scheduleId:row.schedule_id, doctor:row.doctor_name||'', bookedAt:row.created_at, confirmationCode:row.confirmation_code||'', rating:null, ratingComment:'' });
+      DB.appointments.unshift({ dbId:row.id, patient:row.patient, date:row.date, time:row.time, service:row.service, status:row.status, scheduleId:row.schedule_id, doctor:row.doctor_name||'', bookedAt:row.created_at, confirmationCode:row.confirmation_code||'', rating:null, ratingComment:'', queueNumber:'' });
       closeModal(); toast('Appointment booked.'); navigate('appointments');
     } catch(err){
       try{ await api('schedules','PATCH',{ id:sched.dbId, body:{ booked:sched.booked-1 } }); sched.booked -= 1; } catch(e2){}
@@ -1211,8 +1240,9 @@ function lookupVerifyCode(){
         <div class="small"><span class="muted">Time</span><br><b>${match.time}</b></div>
       </div>
       <div style="margin-top:12px;"><span class="pill ${statusColor[match.status]||'pill-gray'}">${match.status}</span></div>
+      ${match.queueNumber ? `<div style="margin-top:12px; text-align:center; background:var(--white); border-radius:12px; padding:14px;"><div class="small muted">Assigned Queue Number</div><div style="font-size:26px; font-weight:800; color:var(--navy); font-family:var(--font-mono);">${match.queueNumber}</div></div>` : ''}
       <div class="row gap8" style="margin-top:16px;">
-        ${match.status==='Pending'?`<button class="btn btn-sm btn-primary" onclick="setApptStatus(${match.dbId},'Approved'); document.getElementById('verify-code-input').value='';">Confirm Arrival</button>`:''}
+        ${match.status==='Pending'?`<button class="btn btn-sm btn-primary" onclick="confirmArrivalAndAssignQueue(${match.dbId}); document.getElementById('verify-code-input').value='';">Confirm Arrival</button>`:''}
         ${match.status==='Approved'?`<button class="btn btn-sm btn-primary" onclick="setApptStatus(${match.dbId},'Completed'); document.getElementById('verify-code-input').value='';">Mark Completed</button>`:''}
       </div>
     </div>
