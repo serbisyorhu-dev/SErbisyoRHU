@@ -675,7 +675,7 @@ async function loadAllData(){
     imageUrl:r.image_url||''
   }));
   DB.announcements = (announcements||[]).map(r=>({
-    dbId:r.id, title:r.title, message:r.message, scheduleId:r.schedule_id, important:!!r.important, status:r.status
+    dbId:r.id, title:r.title, message:r.message, scheduleId:r.schedule_id, important:!!r.important, status:r.status, imageUrl:r.image_url||''
   }));
   DB.services = (services||[]).map(r=>({ dbId:r.id, name:r.name, status:r.status }));
 
@@ -1307,7 +1307,7 @@ function renderSchedules(){
             const remaining = Math.max(0, s.capacity - s.booked);
             return `
             <tr>
-              <td>${s.imageUrl ? `<img src="${s.imageUrl}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;">` : `<div style="width:40px;height:40px;border-radius:8px;background:var(--blue-light);"></div>`}</td>
+              <td><div style="width:40px;height:40px;border-radius:8px;background:var(--blue-light);"></div></td>
               <td>${fmtDate(s.date)}</td>
               <td>${fmtTimeRange(s.startTime, s.endTime)}</td>
               <td><span class="pill pill-blue">${s.service}</span></td>
@@ -1354,12 +1354,6 @@ function openScheduleModal(editId){
     <div class="modal-head"><h3>${editing?'Edit Schedule':'Add Schedule'}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
     <p class="muted small" style="margin-bottom:6px;">Publish an available slot patients can book against.</p>
     <form id="schedule-form">
-      <div class="field"><label>Schedule Image / Ad (optional)</label>
-        <div id="schedule-image-preview" style="margin-bottom:8px;">
-          ${editing && editing.imageUrl ? `<img src="${editing.imageUrl}" style="width:100%; max-height:160px; object-fit:cover; border-radius:12px; border:1px solid var(--line);">` : ''}
-        </div>
-        <input type="file" id="schedule-image-input" accept="image/png,image/jpeg,image/gif,image/webp" style="width:100%; padding:9px; border-radius:10px; border:1.5px solid var(--line); background:#f7f9fb; font-size:12.5px;">
-      </div>
       <div class="field"><label>Service</label>
         ${DB.services.length ? `<select name="service" required>${serviceOptions}</select>`
           : `<div class="small" style="color:var(--red);">No services yet — add one from Service Availability first.</div>`}
@@ -1386,14 +1380,6 @@ function openScheduleModal(editId){
       </div>
     </form>
   `);
-
-  document.getElementById('schedule-image-input').addEventListener('change', (e)=>{
-    const file = e.target.files[0];
-    const preview = document.getElementById('schedule-image-preview');
-    if(file){
-      preview.innerHTML = `<img src="${URL.createObjectURL(file)}" style="width:100%; max-height:160px; object-fit:cover; border-radius:12px; border:1px solid var(--line);">`;
-    }
-  });
 
   document.getElementById('schedule-form').addEventListener('submit', async (e)=>{
     e.preventDefault();
@@ -1436,48 +1422,16 @@ function openScheduleModal(editId){
     }
 
     const submitBtn = document.getElementById('schedule-submit-btn');
-    const imageFile = document.getElementById('schedule-image-input').files[0];
-    let imageUrl = editing ? editing.imageUrl : null;
-
-    if(imageFile){
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Uploading image…';
-      try{
-        const fd = new FormData();
-        fd.append('file', imageFile);
-        const token = getToken();
-        const uploadRes = await safeFetch(`${BACKEND_URL}/api/upload`, {
-          method:'POST',
-          headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
-          body: fd
-        });
-        const uploadData = await uploadRes.json().catch(()=>({}));
-        if(!uploadRes.ok){
-          errEl.textContent = 'Image upload error: ' + (uploadData.error || 'failed');
-          errEl.style.display = 'block';
-          submitBtn.disabled = false; submitBtn.textContent = editing?'Save Changes':'Publish Schedule';
-          return;
-        }
-        imageUrl = uploadData.url;
-      } catch(err){
-        errEl.textContent = 'Image upload error: ' + err.message;
-        errEl.style.display = 'block';
-        submitBtn.disabled = false; submitBtn.textContent = editing?'Save Changes':'Publish Schedule';
-        return;
-      }
-      submitBtn.textContent = editing?'Save Changes':'Publish Schedule';
-    }
 
     const payload = {
       service, doctor_name:doctorName, date, start_time:startTime, end_time:endTime,
-      capacity, location: f.get('location')||null, description: f.get('description')||null, notes: f.get('notes')||null,
-      image_url: imageUrl || null
+      capacity, location: f.get('location')||null, description: f.get('description')||null, notes: f.get('notes')||null
     };
 
     try{
       if(editing){
         await api('schedules','PATCH',{ id:editing.dbId, body: payload });
-        Object.assign(editing, { service, doctor:doctorName, date, startTime, endTime, capacity, location:payload.location||'', description:payload.description||'', notes:payload.notes||'', imageUrl:payload.image_url||'' });
+        Object.assign(editing, { service, doctor:doctorName, date, startTime, endTime, capacity, location:payload.location||'', description:payload.description||'', notes:payload.notes||'' });
         closeModal(); toast('Schedule updated.'); navigate('schedules');
       } else {
         payload.booked = 0; payload.status = 'Available';
@@ -1487,8 +1441,7 @@ function openScheduleModal(editId){
           dbId:row.id, service:row.service, doctor:row.doctor_name, date:row.date,
           startTime:row.start_time, endTime:row.end_time, time:row.time||'',
           capacity:row.capacity, booked:row.booked, status:row.status,
-          location:row.location||'', description:row.description||'', notes:row.notes||'',
-          imageUrl:row.image_url||''
+          location:row.location||'', description:row.description||'', notes:row.notes||''
         });
         closeModal(); toast('Schedule published.'); navigate('schedules');
       }
@@ -1504,7 +1457,6 @@ function viewSchedule(dbId){
   const eff = scheduleEffectiveStatus(s);
   openModal(`
     <div class="modal-head"><h3>Schedule Details</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
-    ${s.imageUrl ? `<img src="${s.imageUrl}" style="width:100%; max-height:220px; object-fit:cover; border-radius:14px; margin-top:10px;">` : ''}
     <div class="row gap12" style="margin:14px 0 18px;">
       <div class="avatar-sm" style="width:52px;height:52px;border-radius:14px;font-size:18px;background:${colorFor(s.doctor)}">${initials(s.doctor)}</div>
       <div><h3 style="font-size:17px;">${s.service}</h3><span class="muted small">with ${s.doctor}</span></div>
@@ -1750,6 +1702,10 @@ function openAnnouncementModal(){
   openModal(`
     <div class="modal-head"><h3>New Announcement</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
     <form id="announcement-form">
+      <div class="field"><label>Photo (optional — shown as the background on the patient's phone)</label>
+        <div id="announcement-image-preview" style="margin-bottom:8px;"></div>
+        <input type="file" id="announcement-image-input" accept="image/png,image/jpeg,image/gif,image/webp" style="width:100%; padding:9px; border-radius:10px; border:1.5px solid var(--line); background:#f7f9fb; font-size:12.5px;">
+      </div>
       <div class="field"><label>Title</label><input name="title" required placeholder="e.g. New Activity Announcement"></div>
       <div class="field"><label>Message</label>
         <textarea name="message" rows="3" required placeholder="e.g. Immunization will be available every Tuesday. Please bring your health card." style="width:100%; padding:11px 13px; border-radius:10px; border:1.5px solid var(--line); background:#f7f9fb; font-size:13.5px; outline:none; font-family:inherit; resize:vertical;"></textarea>
@@ -1761,28 +1717,78 @@ function openAnnouncementModal(){
       <div class="field"><label>Status</label>
         <select name="status"><option>Active</option><option>Inactive</option><option>Cancelled</option></select>
       </div>
+      <div id="announcement-error" class="small" style="display:none; background:var(--red-light); color:var(--red); padding:10px 12px; border-radius:10px; margin-top:8px;"></div>
       <div class="modal-actions">
         <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary">Post Announcement</button>
+        <button type="submit" class="btn btn-primary" id="announcement-submit-btn">Post Announcement</button>
       </div>
     </form>
   `);
+
+  document.getElementById('announcement-image-input').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    const preview = document.getElementById('announcement-image-preview');
+    if(file){
+      preview.innerHTML = `<img src="${URL.createObjectURL(file)}" style="width:100%; max-height:160px; object-fit:cover; border-radius:12px; border:1px solid var(--line);">`;
+    }
+  });
+
   document.getElementById('announcement-form').addEventListener('submit', async (e)=>{
     e.preventDefault();
+    const errEl = document.getElementById('announcement-error');
+    errEl.style.display = 'none';
     const f = new FormData(e.target);
+    const submitBtn = document.getElementById('announcement-submit-btn');
+
+    const imageFile = document.getElementById('announcement-image-input').files[0];
+    let imageUrl = null;
+
+    if(imageFile){
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Uploading photo…';
+      try{
+        const fd = new FormData();
+        fd.append('file', imageFile);
+        const token = getToken();
+        const uploadRes = await safeFetch(`${BACKEND_URL}/api/upload`, {
+          method:'POST',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : undefined,
+          body: fd
+        });
+        const uploadData = await uploadRes.json().catch(()=>({}));
+        if(!uploadRes.ok){
+          errEl.textContent = 'Photo upload error: ' + (uploadData.error || 'failed');
+          errEl.style.display = 'block';
+          submitBtn.disabled = false; submitBtn.textContent = 'Post Announcement';
+          return;
+        }
+        imageUrl = uploadData.url;
+      } catch(err){
+        errEl.textContent = 'Photo upload error: ' + err.message;
+        errEl.style.display = 'block';
+        submitBtn.disabled = false; submitBtn.textContent = 'Post Announcement';
+        return;
+      }
+      submitBtn.textContent = 'Post Announcement';
+    }
+
     const payload = {
       title: f.get('title'),
       message: f.get('message'),
       schedule_id: f.get('schedule_id') ? Number(f.get('schedule_id')) : null,
       important: f.get('important') === 'on',
-      status: f.get('status')
+      status: f.get('status'),
+      image_url: imageUrl || null
     };
     try{
       const data = await api('announcements','POST',{ body: payload });
       const row = Array.isArray(data) ? data[0] : data;
-      DB.announcements.unshift({ dbId:row.id, title:row.title, message:row.message, scheduleId:row.schedule_id, important:!!row.important, status:row.status });
+      DB.announcements.unshift({ dbId:row.id, title:row.title, message:row.message, scheduleId:row.schedule_id, important:!!row.important, status:row.status, imageUrl:row.image_url||'' });
       closeModal(); toast('Announcement posted.'); navigate('announcements');
-    } catch(err){ toast('Error: '+err.message, true); }
+    } catch(err){
+      errEl.textContent = 'Error: '+err.message; errEl.style.display='block';
+      submitBtn.disabled = false;
+    }
   });
 }
 
