@@ -293,7 +293,7 @@ def chat():
         'contents': build_contents(history, message),
         'generationConfig': {
             'temperature': 0.7,
-            'maxOutputTokens': 500
+            'maxOutputTokens': 1000
         }
     }
 
