@@ -154,17 +154,14 @@ SYSTEM_INSTRUCTION_BASE = (
     "proper medical evaluation."
 )
 
-
 def json_response(data, status=200):
     return jsonify(data), status
-
 
 def get_bearer_token():
     header = request.headers.get('Authorization', '')
     if header.startswith('Bearer '):
         return header[7:]
     return None
-
 
 def get_available_services_context(token):
     try:
@@ -173,10 +170,15 @@ def get_available_services_context(token):
             '/rest/v1/services?select=name&status=eq.Available',
             token=token
         )
+
         if status >= 400 or not data:
             return None
 
-        names = [row.get('name') for row in data if row.get('name')]
+        names = [
+            row.get('name')
+            for row in data
+            if isinstance(row, dict) and row.get('name')
+        ]
 
         if not names:
             return "Wala sing currently-Available nga services nga naka-list sa system subong."
@@ -185,13 +187,17 @@ def get_available_services_context(token):
     except Exception:
         return None
 
-
 def build_contents(history, message):
     """
     Convert client-supplied conversation history into Gemini contents.
-    The client may send:
+
+    The client sends:
         {"role": "user" | "model", "text": "..."}
+
     Only the last 20 entries are used.
+
+    If the current message is already the last user message in history,
+    it is not added a second time.
     """
     contents = []
 
@@ -206,18 +212,29 @@ def build_contents(history, message):
             if role not in ('user', 'model') or not text:
                 continue
 
+            clean_text = str(text).strip()
+
+            if not clean_text:
+                continue
+
             contents.append({
                 'role': role,
-                'parts': [{'text': str(text).strip()}]
+                'parts': [{'text': clean_text}]
             })
 
-    contents.append({
-        'role': 'user',
-        'parts': [{'text': message}]
-    })
+    current_message = message.strip()
+
+    if not contents or not (
+        contents[-1].get('role') == 'user'
+        and contents[-1].get('parts')
+        and contents[-1]['parts'][0].get('text') == current_message
+    ):
+        contents.append({
+            'role': 'user',
+            'parts': [{'text': current_message}]
+        })
 
     return contents
-
 
 @chat_bp.route('/api/chat', methods=['POST'])
 def chat():
