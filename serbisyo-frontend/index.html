@@ -1092,6 +1092,10 @@ function doctorQueueList(doctor){
   return DB.appointments.filter(a=>doctorKey(a.doctor)===doctorKey(doctor)&&a.status==='Approved'&&a.queueNumber)
     .sort((a,b)=>(parseInt(String(a.queueNumber).split('-').pop(),10)||0)-(parseInt(String(b.queueNumber).split('-').pop(),10)||0));
 }
+/* Ini nagakuha sang current Serving patient sang isa lang ka doctor para indi mag-overlap ang queues. */
+function doctorServingPatient(doctor){
+  return DB.appointments.find(a=>doctorKey(a.doctor)===doctorKey(doctor)&&a.status==='Serving'&&a.queueNumber);
+}
 function nextDoctorQueueNumber(doctor){
   const prefix=doctorCode(doctor);
   if(!prefix)throw new Error('Doctor was not found in Staff Directory.');
@@ -1911,29 +1915,73 @@ function incQueueNum(code){
   return `${m[1]}-${n}`;
 }
 function renderQueue(){
-  const q=DB.queue, doctors=queueDoctors();
+  const q=DB.queue,doctors=queueDoctors();
   return `
     <div class="page-head"><h1>Queue Management</h1><p>Live Patient Flow Control</p></div>
     <div class="grid grid-main">
       <div>
-        ${doctors.length ? doctors.map(doctor=>{ const list=doctorQueueList(doctor),cur=list[0],next=list[1]; return `
+        ${doctors.length?doctors.map(doctor=>{const waiting=doctorQueueList(doctor),cur=doctorServingPatient(doctor),next=waiting[0];return `
           <div class="card queue-hero" style="margin-bottom:18px;">
             <span class="queue-live-tag">● ${doctor}</span>
             <div class="queue-num">${cur?.queueNumber||'—'}</div>
-            <div class="queue-sub">👤 ${cur?`${cur.patient} · ${cur.service}`:'No checked-in patient'}</div>
-            <div class="queue-mini"><div><b>${next?.queueNumber||'—'}</b><span>Next Queue</span></div><div><b>${list.length}</b><span>Waiting Patients</span></div></div>
-          </div>`; }).join('') : `<div class="card queue-hero"><span class="queue-live-tag">● QUEUE</span><div class="queue-num">—</div><div class="queue-sub">No doctors found.</div></div>`}
-        <div class="card" style="margin-top:18px; padding:20px;">
+            <div class="queue-sub">👤 ${cur?`${cur.patient} · ${cur.service}`:'No patient currently being served'}</div>
+            <div class="queue-mini"><div><b>${next?.queueNumber||'—'}</b><span>Next Queue</span></div><div><b>${waiting.length}</b><span>Waiting Patients</span></div></div>
+            <div class="row gap8" style="justify-content:center;flex-wrap:wrap;margin-top:18px;">
+              <button class="btn btn-primary" onclick="adminDoctorNext('${encodeURIComponent(doctor)}')">Next</button>
+              <button class="btn btn-outline" onclick="adminDoctorRecall('${encodeURIComponent(doctor)}')">Recall</button>
+              <button class="btn btn-outline" onclick="adminDoctorNoShow('${encodeURIComponent(doctor)}')">No Show</button>
+              <button class="btn btn-danger" onclick="adminDoctorReset('${encodeURIComponent(doctor)}')">Reset</button>
+            </div>
+          </div>`;}).join(''):`<div class="card queue-hero"><span class="queue-live-tag">● QUEUE</span><div class="queue-num">—</div><div class="queue-sub">No doctors found.</div></div>`}
+        <div class="card" style="margin-top:18px;padding:20px;">
           <div class="row between" style="margin-bottom:10px;"><h4 style="font-size:14.5px;">Recent Activity</h4></div>
-          ${q.activity.length ? q.activity.map(a=>`<div class="activity-row"><div class="activity-dot" style="background:${a.type==='ok'?'var(--green-light)':'var(--amber-light)'};color:${a.type==='ok'?'var(--green)':'#96721e'};">${a.type==='ok'?'✓':'!'}</div><div><b style="font-size:13.5px;">${a.label}</b><div class="small muted">${a.meta}</div></div></div>`).join('') : `<div class="empty-state small">No activity yet.</div>`}
+          ${q.activity.length?q.activity.map(a=>`<div class="activity-row"><div class="activity-dot" style="background:${a.type==='ok'?'var(--green-light)':'var(--amber-light)'};color:${a.type==='ok'?'var(--green)':'#96721e'};">${a.type==='ok'?'✓':'!'}</div><div><b style="font-size:13.5px;">${a.label}</b><div class="small muted">${a.meta}</div></div></div>`).join(''):`<div class="empty-state small">No activity yet.</div>`}
         </div>
       </div>
       <div>
-        <div class="card queue-actions-card"><h4 style="font-size:14.5px;margin-bottom:14px;">Queue Actions</h4><p class="small muted">Doctors control their own patient queue from the Doctor Portal.</p></div>
+        <div class="card queue-actions-card"><h4 style="font-size:14.5px;margin-bottom:8px;">Queue Actions</h4><p class="small muted">Admin controls are separated per doctor. Pause/Resume is intentionally disabled.</p></div>
         <div class="card" style="margin-top:18px;padding:18px;"><div class="row between" style="margin-bottom:6px;"><h4 style="font-size:14.5px;">Station Assignment</h4><button class="icon-btn" style="width:28px;height:28px;" title="Add station" onclick="openStationModal()">+</button></div>${q.stations.length?q.stations.map(st=>`<div class="station-row"><span>🏥 ${st.name}</span><button class="pill ${st.status==='ACTIVE'?'pill-green':'pill-gray'}" style="border:none;" onclick="toggleStation(${st.dbId})">${st.status}</button></div>`).join(''):`<div class="empty-state small">No stations yet.</div>`}</div>
       </div>
     </div>`;
 }
+/* Ini nga admin controls naga-move lang sang queue sang napilian nga doctor kag wala naga-apekto sa iban. */
+async function adminDoctorNext(encodedDoctor){
+  const doctor=decodeURIComponent(encodedDoctor),current=doctorServingPatient(doctor),waiting=doctorQueueList(doctor),next=waiting[0];
+  if(!current&&!next)return toast(`No waiting patients for ${doctor}.`,true);
+  try{
+    if(current){await api('appointments','PATCH',{id:current.dbId,body:{status:'Completed'}});current.status='Completed';await addActivity(`${current.queueNumber} Completed · ${doctor}`,'ok');}
+    if(next){await api('appointments','PATCH',{id:next.dbId,body:{status:'Serving'}});next.status='Serving';await addActivity(`${next.queueNumber} Now Serving · ${doctor}`,'ok');toast(`Now serving ${next.queueNumber} · ${doctor}.`);}
+    else toast(`${doctor}'s queue is now clear.`);
+    navigate('queue');
+  }catch(err){toast('Error: '+err.message,true);}
+}
+function adminDoctorRecall(encodedDoctor){
+  const doctor=decodeURIComponent(encodedDoctor),current=doctorServingPatient(doctor);
+  if(!current)return toast(`No patient is currently being served by ${doctor}.`,true);
+  addActivity(`${current.queueNumber} Recalled · ${doctor}`,'ok');
+  toast(`Recalling ${current.queueNumber} · ${doctor}.`);navigate('queue');
+}
+async function adminDoctorNoShow(encodedDoctor){
+  const doctor=decodeURIComponent(encodedDoctor),current=doctorServingPatient(doctor),waiting=doctorQueueList(doctor),next=waiting[0];
+  if(!current&&!next)return toast(`No active queue for ${doctor}.`,true);
+  try{
+    if(current){await api('appointments','PATCH',{id:current.dbId,body:{status:'No Show'}});current.status='No Show';await addActivity(`${current.queueNumber} No Show · ${doctor}`,'warn');}
+    if(next){await api('appointments','PATCH',{id:next.dbId,body:{status:'Serving'}});next.status='Serving';await addActivity(`${next.queueNumber} Now Serving · ${doctor}`,'ok');toast(`No show recorded. Now serving ${next.queueNumber}.`);}
+    else toast(`No show recorded. No more waiting patients for ${doctor}.`);
+    navigate('queue');
+  }catch(err){toast('Error: '+err.message,true);}
+}
+async function adminDoctorReset(encodedDoctor){
+  const doctor=decodeURIComponent(encodedDoctor),current=doctorServingPatient(doctor),waiting=doctorQueueList(doctor),active=[...(current?[current]:[]),...waiting].sort((a,b)=>(parseInt(String(a.queueNumber).split('-').pop(),10)||0)-(parseInt(String(b.queueNumber).split('-').pop(),10)||0));
+  if(!active.length)return toast(`No active queue to reset for ${doctor}.`,true);
+  if(!confirm(`Reset ${doctor}'s active queue back to ${doctorCode(doctor)}-0?`))return;
+  const prefix=doctorCode(doctor);if(!prefix)return toast('Doctor prefix could not be found.',true);
+  try{
+    for(let i=0;i<active.length;i++){const a=active[i],queueNumber=`${prefix}-${i}`;await api('appointments','PATCH',{id:a.dbId,body:{status:'Approved',queue_number:queueNumber}});a.status='Approved';a.queueNumber=queueNumber;}
+    await addActivity(`Queue Reset · ${doctor}`,'warn');toast(`${doctor}'s active queue has been reset.`);navigate('queue');
+  }catch(err){toast('Error: '+err.message,true);}
+}
+
 async function addActivity(label, type){
   const meta = 'Just now · ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
   try{ await api('queue_activity','POST',{ body:{ label, meta, type } }); } catch(e){ /* non-critical */ }
