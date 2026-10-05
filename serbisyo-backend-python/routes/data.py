@@ -58,6 +58,12 @@ def public_queue_status():
         'GET',
         '/rest/v1/appointments?select=id,doctor_name,service,status,queue_number'
     )
+    station_status, station_rows = supabase_request(
+        'GET',
+        '/rest/v1/queue_stations?select=id,name,status,doctor_id,doctor_name&order=sort_order.asc'
+    )
+    if station_status >= 400:
+        station_rows = []
 
     # Kon indi mabasa ang doctor data, gamiton gihapon ang daan nga single queue response.
     if staff_status >= 400 or appointment_status >= 400:
@@ -72,25 +78,19 @@ def public_queue_status():
 
     staff_rows = staff_rows if isinstance(staff_rows, list) else []
     appointment_rows = appointment_rows if isinstance(appointment_rows, list) else []
+    station_rows = station_rows if isinstance(station_rows, list) else []
     doctors = []
+    doctor_rows = [row for row in staff_rows if 'doctor' in str(row.get('role') or '').lower()]
+    doctor_rows.sort(key=lambda row: int(row.get('id') or 0))
 
-    # Tagsa ka doctor may kaugalingon nga current, next kag waiting count.
-    for doctor in staff_rows:
-        if 'doctor' not in str(doctor.get('role') or '').lower():
-            continue
+    # Tagsa ka doctor may kaugalingon nga current, next, waiting kag assigned room.
+    for doctor_index, doctor in enumerate(doctor_rows, start=1):
         doctor_id = doctor.get('id')
         doctor_name = str(doctor.get('name') or '').strip()
         if not doctor_id or not doctor_name:
             continue
-        prefix = queue_prefix(doctor_id)
+        prefix = queue_prefix(doctor_index)
         if not prefix:
             continue
 
         doctor_appointments = []
-        for appointment in appointment_rows:
-            if str(appointment.get('doctor_name') or '').strip().lower() != doctor_name.lower():
-                continue
-            if not appointment.get('queue_number'):
-                continue
-            status_name = str(appointment.get('status') or '').strip().lower()
-            if status_name not in ('approved', 'serving'):
