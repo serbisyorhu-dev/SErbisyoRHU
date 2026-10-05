@@ -1087,8 +1087,9 @@ function queuePrefixFromId(id){
   return prefix;
 }
 function doctorCode(name){
-  const st=DB.staff.find(x=>doctorKey(x.name)===doctorKey(name));
-  return st&&st.dbId!=null?queuePrefixFromId(st.dbId):null;
+  const doctors=DB.staff.filter(x=>isDoctorRole(x.role)&&x.name).sort((a,b)=>(Number(a.dbId)||999999)-(Number(b.dbId)||999999));
+  const index=doctors.findIndex(x=>doctorKey(x.name)===doctorKey(name));
+  return index>=0?queuePrefixFromId(index+1):null;
 }
 function doctorQueueList(doctor){
   return DB.appointments.filter(a=>doctorKey(a.doctor)===doctorKey(doctor)&&a.status==='Approved'&&a.queueNumber)
@@ -1981,7 +1982,7 @@ async function adminDoctorNoShow(encodedDoctor){
 async function adminDoctorReset(encodedDoctor){
   const doctor=decodeURIComponent(encodedDoctor),current=doctorServingPatient(doctor),waiting=doctorQueueList(doctor),active=[...(current?[current]:[]),...waiting].sort((a,b)=>(parseInt(String(a.queueNumber).split('-').pop(),10)||0)-(parseInt(String(b.queueNumber).split('-').pop(),10)||0));
   if(!active.length)return toast(`No active queue to reset for ${doctor}.`,true);
-  if(!confirm(`Reset ${doctor}'s active queue back to ${doctorCode(doctor)}-0?`))return;
+  if(!confirm(`Reset ${doctor}'s active queue back to ${doctorCode(doctor)}-1?`))return;
   const prefix=doctorCode(doctor);if(!prefix)return toast('Doctor prefix could not be found.',true);
   try{
     for(let i=0;i<active.length;i++){const a=active[i],queueNumber=`${prefix}-${i+1}`;await api('appointments','PATCH',{id:a.dbId,body:{status:'Approved',queue_number:queueNumber}});a.status='Approved';a.queueNumber=queueNumber;}
