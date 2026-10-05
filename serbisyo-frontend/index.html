@@ -684,7 +684,7 @@ async function loadAllData(){
   DB.queue.nextNumber = q.next_number || 'A-2';
   DB.queue.waiting = q.waiting ?? 0;
   DB.queue.paused = !!q.paused;
-  DB.queue.stations = (stations||[]).map(r=>({ dbId:r.id, name:r.name, status:r.status }));
+  DB.queue.stations = (stations||[]).map(r=>({ dbId:r.id, name:r.name, status:r.status, doctorId:r.doctor_id||null, doctorName:r.doctor_name||'' }));
   DB.queue.activity = (activity||[]).map(r=>({ label:r.label, meta:r.meta, type:r.type }));
 }
 
@@ -1922,6 +1922,11 @@ function incQueueNum(code){
   const n = String(Number(m[2])+1).padStart(m[2].length,'0');
   return `${m[1]}-${n}`;
 }
+/* Ini nagapangita sang room/station nga gin-assign sa isa ka doctor. */
+function stationForDoctor(doctor){
+  const st=DB.queue.stations.find(x=>String(x.doctorName||'').trim().toLowerCase()===String(doctor||'').trim().toLowerCase());
+  return st||null;
+}
 function renderQueue(){
   const q=DB.queue,doctors=queueDoctors();
   return `
@@ -1932,7 +1937,7 @@ function renderQueue(){
           <div class="card queue-hero" style="margin-bottom:18px;">
             <span class="queue-live-tag">● ${doctor}</span>
             <div class="queue-num">${cur?.queueNumber||'—'}</div>
-            <div class="queue-sub">👤 ${cur?`${cur.patient} · ${cur.service}`:'No patient currently being served'}</div>
+            <div class="queue-sub">👤 ${cur?`${cur.patient} · ${cur.service}`:'No patient currently being served'}</div><div class="small muted" style="margin-top:8px;">🏥 ${stationForDoctor(doctor)?`${stationForDoctor(doctor).name} · ${stationForDoctor(doctor).status}`:'No station assigned'}</div>
             <div class="queue-mini"><div><b>${next?.queueNumber||'—'}</b><span>Next Queue</span></div><div><b>${waiting.length}</b><span>Waiting Patients</span></div></div>
             <div class="row gap8" style="justify-content:center;flex-wrap:wrap;margin-top:18px;">
               <button class="btn btn-primary" onclick="adminDoctorNext('${encodeURIComponent(doctor)}')">Next</button>
@@ -1948,7 +1953,7 @@ function renderQueue(){
       </div>
       <div>
         <div class="card queue-actions-card"><h4 style="font-size:14.5px;margin-bottom:8px;">Queue Actions</h4><p class="small muted">Admin controls are separated per doctor. Pause/Resume is intentionally disabled.</p></div>
-        <div class="card" style="margin-top:18px;padding:18px;"><div class="row between" style="margin-bottom:6px;"><h4 style="font-size:14.5px;">Station Assignment</h4><button class="icon-btn" style="width:28px;height:28px;" title="Add station" onclick="openStationModal()">+</button></div>${q.stations.length?q.stations.map(st=>`<div class="station-row"><span>🏥 ${st.name}</span><button class="pill ${st.status==='ACTIVE'?'pill-green':'pill-gray'}" style="border:none;" onclick="toggleStation(${st.dbId})">${st.status}</button></div>`).join(''):`<div class="empty-state small">No stations yet.</div>`}</div>
+        <div class="card" style="margin-top:18px;padding:18px;"><div class="row between" style="margin-bottom:6px;"><h4 style="font-size:14.5px;">Station Assignment</h4><button class="icon-btn" style="width:28px;height:28px;" title="Add station" onclick="openStationModal()">+</button></div>${q.stations.length?q.stations.map(st=>`<div class="station-row"><div><b>🏥 ${st.name}</b><div class="small muted" style="margin-top:3px;">${st.doctorName?`Assigned to ${st.doctorName}`:'Unassigned'}</div></div><div class="row gap8"><button class="btn btn-outline" style="padding:6px 9px;font-size:11px;" onclick="openStationAssignModal(${st.dbId})">Assign</button><button class="pill ${st.status==='ACTIVE'?'pill-green':'pill-gray'}" style="border:none;" onclick="toggleStation(${st.dbId})">${st.status}</button></div></div>`).join(''):`<div class="empty-state small">No stations yet.</div>`}</div>
       </div>
     </div>`;
 }
@@ -2043,27 +2048,49 @@ async function toggleStation(dbId){
   try{ await api('queue_stations','PATCH',{ id:dbId, body:{ status:newStatus } }); s.status = newStatus; navigate('queue'); }
   catch(err){ toast('Error: '+err.message, true); }
 }
+function doctorStationOptions(selectedId=''){
+  return `<option value="">Unassigned</option>`+queueDoctors().map(name=>{const st=DB.staff.find(x=>String(x.name||'').trim().toLowerCase()===String(name).trim().toLowerCase());const id=st?.dbId||'';return `<option value="${id}" ${String(id)===String(selectedId)?'selected':''}>${name}</option>`;}).join('');
+}
+/* Ini nagabukas sang station form kag pwede dayon i-assign ang room sa doctor. */
 function openStationModal(){
   openModal(`
     <div class="modal-head"><h3>Add Station</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
     <form id="station-form">
       <div class="field"><label>Station Name</label><input name="name" required placeholder="Room 01"></div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary">Add Station</button>
-      </div>
-    </form>
-  `);
-  document.getElementById('station-form').addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const f = new FormData(e.target);
-    const sort_order = DB.queue.stations.length + 1;
+      <div class="field"><label>Assign Doctor</label><select name="doctor_id">${doctorStationOptions()}</select></div>
+      <div class="modal-actions"><button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary">Add Station</button></div>
+    </form>`);
+  document.getElementById('station-form').addEventListener('submit',async(e)=>{
+    e.preventDefault();const f=new FormData(e.target),doctorId=f.get('doctor_id')||null,doctor=DB.staff.find(x=>String(x.dbId)===String(doctorId)),sort_order=DB.queue.stations.length+1;
     try{
-      const data = await api('queue_stations','POST',{ body:{ name:f.get('name'), status:'CLOSED', sort_order } });
-      const row = Array.isArray(data) ? data[0] : data;
-      DB.queue.stations.push({ dbId:row.id, name:row.name, status:row.status });
-      closeModal(); toast('Station added.'); navigate('queue');
-    } catch(err){ toast('Error: '+err.message, true); }
+      if(doctorId)await clearDoctorStationAssignment(doctorId,null);
+      const body={name:f.get('name'),status:'CLOSED',sort_order,doctor_id:doctorId,doctor_name:doctor?.name||null};
+      const data=await api('queue_stations','POST',{body}),row=Array.isArray(data)?data[0]:data;
+      DB.queue.stations.push({dbId:row.id,name:row.name,status:row.status,doctorId:row.doctor_id||null,doctorName:row.doctor_name||''});
+      closeModal();toast('Station added.');navigate('queue');
+    }catch(err){toast('Error: '+err.message,true);}
+  });
+}
+async function clearDoctorStationAssignment(doctorId,exceptStationId){
+  const matches=DB.queue.stations.filter(st=>String(st.doctorId||'')===String(doctorId)&&String(st.dbId)!==String(exceptStationId||''));
+  for(const st of matches){await api('queue_stations','PATCH',{id:st.dbId,body:{doctor_id:null,doctor_name:null}});st.doctorId=null;st.doctorName='';}
+}
+/* Ini naga-assign ukon naga-transfer sang existing room sa napilian nga doctor. */
+function openStationAssignModal(dbId){
+  const st=DB.queue.stations.find(x=>x.dbId===dbId);if(!st)return;
+  openModal(`
+    <div class="modal-head"><h3>Assign ${st.name}</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <form id="station-assign-form">
+      <div class="field"><label>Doctor</label><select name="doctor_id">${doctorStationOptions(st.doctorId)}</select></div>
+      <div class="modal-actions"><button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button><button type="submit" class="btn btn-primary">Save Assignment</button></div>
+    </form>`);
+  document.getElementById('station-assign-form').addEventListener('submit',async(e)=>{
+    e.preventDefault();const f=new FormData(e.target),doctorId=f.get('doctor_id')||null,doctor=DB.staff.find(x=>String(x.dbId)===String(doctorId));
+    try{
+      if(doctorId)await clearDoctorStationAssignment(doctorId,dbId);
+      await api('queue_stations','PATCH',{id:dbId,body:{doctor_id:doctorId,doctor_name:doctor?.name||null}});
+      st.doctorId=doctorId;st.doctorName=doctor?.name||'';closeModal();toast(doctor?`${st.name} assigned to ${doctor.name}.`:`${st.name} is now unassigned.`);navigate('queue');
+    }catch(err){toast('Error: '+err.message,true);}
   });
 }
 
