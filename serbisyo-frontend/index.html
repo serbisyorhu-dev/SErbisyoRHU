@@ -1075,22 +1075,29 @@ async function setApptStatus(dbId, status){
  * instead of just watching a shared counter with no connection to them.
  */
 
-function doctorKey(name){ return String(name||'').trim().toLowerCase(); }
+/* Ini nagahimo sang permanent A, B, C ... AA prefix gamit ang staff ID sang doctor. */
+function doctorKey(name){return String(name||'').trim().toLowerCase();}
+function queuePrefixFromId(id){
+  let n=parseInt(id,10);
+  if(!n||n<1)return null;
+  let prefix='';
+  while(n>0){n--;prefix=String.fromCharCode(65+(n%26))+prefix;n=Math.floor(n/26);}
+  return prefix;
+}
 function doctorCode(name){
   const st=DB.staff.find(x=>doctorKey(x.name)===doctorKey(name));
-  if(st && st.dbId!=null){ const d=String(st.dbId).replace(/\D/g,''); if(d) return 'D'+d.padStart(3,'0').slice(-3); }
-  let h=0; for(const c of String(name||'Doctor')) h=(h*31+c.charCodeAt(0))>>>0;
-  return 'D'+String(h%1000).padStart(3,'0');
+  return st&&st.dbId!=null?queuePrefixFromId(st.dbId):null;
 }
 function doctorQueueList(doctor){
-  return DB.appointments.filter(a=>doctorKey(a.doctor)===doctorKey(doctor) && a.status==='Approved' && a.queueNumber)
-    .sort((a,b)=>String(a.queueNumber).localeCompare(String(b.queueNumber)));
+  return DB.appointments.filter(a=>doctorKey(a.doctor)===doctorKey(doctor)&&a.status==='Approved'&&a.queueNumber)
+    .sort((a,b)=>(parseInt(String(a.queueNumber).split('-').pop(),10)||0)-(parseInt(String(b.queueNumber).split('-').pop(),10)||0));
 }
 function nextDoctorQueueNumber(doctor){
   const prefix=doctorCode(doctor);
-  const nums=DB.appointments.filter(a=>doctorKey(a.doctor)===doctorKey(doctor) && String(a.queueNumber||'').startsWith(prefix+'-'))
-    .map(a=>Number(String(a.queueNumber).split('-').pop())||0);
-  return `${prefix}-${String(Math.max(0,...nums)+1).padStart(3,'0')}`;
+  if(!prefix)throw new Error('Doctor was not found in Staff Directory.');
+  const nums=DB.appointments.filter(a=>doctorKey(a.doctor)===doctorKey(doctor)&&String(a.queueNumber||'').startsWith(prefix+'-'))
+    .map(a=>parseInt(String(a.queueNumber).split('-').pop(),10)).filter(Number.isFinite);
+  return `${prefix}-${nums.length?Math.max(...nums)+1:0}`;
 }
 function queueDoctors(){
   return [...new Set([...DB.staff.filter(x=>/doctor/i.test(String(x.role||''))).map(x=>x.name),...DB.schedules.map(x=>x.doctor),...DB.appointments.map(x=>x.doctor)].filter(Boolean))].sort((a,b)=>a.localeCompare(b));
