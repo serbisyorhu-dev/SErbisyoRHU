@@ -82,10 +82,13 @@ function doctorCard(doctor,index){
   const prefix=doctor.prefix||prefixFromIndex(index);
   const name=doctor.doctor_name||doctor.name||doctor.doctor||`Doctor ${index+1}`;
   const department=doctor.department||doctor.position||doctor.service||doctor.specialization||'Medical Doctor';
-  const current=doctor.current_number||doctor.current_queue||doctor.queue_number||'—';
-  const next=doctor.next_number||doctor.next_queue||'—';
+  const current=doctor.current_number||doctor.current_queue||doctor.queue_number||'';
+  const next=doctor.next_number||doctor.next_queue||'';
+  const displayNumber=current||next||'—';
+  const displayLabel=current?'NOW SERVING':(next?'NEXT QUEUE':'QUEUE NUMBER');
+  const nextDisplay=current?(next||'—'):'—';
   const waiting=doctor.waiting??doctor.waiting_count??0;
-  const service=doctor.current_service||'Waiting for the next patient…';
+  const service=current?(doctor.current_service||'Patient is being served.'):(next?'Waiting to be called…':'Waiting for the next patient…');
   const stationName=doctor.station_name||doctor.station||'';
   const stationStatus=doctor.station_status||'';
   const stationHtml=stationName?`<div class="station">🏥 ${escapeHtml(stationName)}${stationStatus?` · ${escapeHtml(stationStatus)}`:''}</div>`:'';
@@ -93,12 +96,12 @@ function doctorCard(doctor,index){
     <div class="doctor-name">${escapeHtml(name)}</div>
     <div class="doctor-department">${escapeHtml(department)}</div>
     ${stationHtml}
-    <div class="live-tag"><span class="live-dot"></span> NOW SERVING</div>
+    <div class="live-tag"><span class="live-dot"></span> ${escapeHtml(displayLabel)}</div>
     <div class="now-serving-label">QUEUE NUMBER</div>
-    <div class="queue-number">${escapeHtml(current)}</div>
+    <div class="queue-number">${escapeHtml(displayNumber)}</div>
     <div class="queue-service">${escapeHtml(service)}</div>
     <div class="mini-stats">
-      <div><b>${escapeHtml(next)}</b><span>Next Number</span></div>
+      <div><b>${escapeHtml(nextDisplay)}</b><span>Next Number</span></div>
       <div><b>${escapeHtml(waiting)}</b><span>Patients Waiting</span></div>
     </div>
   </div>`;
