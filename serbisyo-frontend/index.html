@@ -364,6 +364,8 @@
               <label>Role</label>
               <select id="signup-role" style="width:100%; padding:13px 14px; border-radius:12px; border:1.5px solid var(--line); background:#f7f9fb; font-size:14.5px; color:var(--ink);">
                 <option>Medical Doctor</option>
+                <option>Doctor</option>
+                <option>Staff</option>
                 <option>Nursing</option>
                 <option>Admin</option>
               </select>
@@ -1103,8 +1105,13 @@ function nextDoctorQueueNumber(doctor){
     .map(a=>parseInt(String(a.queueNumber).split('-').pop(),10)).filter(Number.isFinite);
   return `${prefix}-${nums.length?Math.max(...nums)+1:0}`;
 }
+/* Ini nagacheck nga Doctor ukon Medical Doctor lang gid ang doctor role. */
+function isDoctorRole(role){
+  const r=String(role||'').trim().toLowerCase();
+  return r==='doctor'||r==='medical doctor';
+}
 function queueDoctors(){
-  return [...new Set([...DB.staff.filter(x=>/doctor/i.test(String(x.role||''))).map(x=>x.name),...DB.schedules.map(x=>x.doctor),...DB.appointments.map(x=>x.doctor)].filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  return [...new Set(DB.staff.filter(x=>isDoctorRole(x.role)).map(x=>x.name).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
 }
 
 async function confirmArrivalAndAssignQueue(dbId){
@@ -1283,7 +1290,7 @@ function scheduleEffectiveStatus(s){
 }
 
 function renderSchedules(){
-  const doctorNames = [...new Set(DB.staff.filter(s=>s.role==='Medical Doctor').map(s=>s.name))];
+  const doctorNames = [...new Set(DB.staff.filter(s=>isDoctorRole(s.role)).map(s=>s.name))];
   const serviceNames = DB.services.map(s=>s.name);
   const statusColor = { Available:'pill-green', Full:'pill-amber', Cancelled:'pill-red', Completed:'pill-blue' };
 
@@ -1364,7 +1371,7 @@ function timesOverlap(startA, endA, startB, endB){
 
 function openScheduleModal(editId){
   const editing = DB.schedules.find(s=>s.dbId===editId);
-  const doctors = DB.staff.filter(s=>s.role==='Medical Doctor');
+  const doctors = DB.staff.filter(s=>isDoctorRole(s.role));
   const doctorOptions = doctors.map(d=>`<option value="${d.name}" ${editing&&editing.doctor===d.name?'selected':''}>${d.name} (${d.availabilityStatus})</option>`).join('');
   const serviceOptions = DB.services.map(s=>`<option value="${s.name}" ${editing&&editing.service===s.name?'selected':''}>${s.name} (${s.status})</option>`).join('');
 
@@ -1417,7 +1424,7 @@ function openScheduleModal(editId){
       errEl.textContent = `"${service}" is currently marked Unavailable — enable it from Service Availability first.`;
       errEl.style.display='block'; return;
     }
-    const doctorRow = DB.staff.find(s=>s.name===doctorName && s.role==='Medical Doctor');
+    const doctorRow = DB.staff.find(s=>s.name===doctorName && isDoctorRole(s.role));
     if(doctorRow && doctorRow.availabilityStatus!=='Available'){
       errEl.textContent = `${doctorName} is currently marked Unavailable — update this from Doctor Availability first.`;
       errEl.style.display='block'; return;
@@ -1598,7 +1605,7 @@ async function deleteService(dbId){
 const WEEKDAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
 function renderDoctorAvailability(){
-  const doctors = DB.staff.filter(s=>s.role==='Medical Doctor');
+  const doctors = DB.staff.filter(s=>isDoctorRole(s.role));
   return `
     <div class="page-head">
       <h1>Doctor Availability</h1>
@@ -1624,7 +1631,7 @@ function renderDoctorAvailability(){
               <td><span class="pill ${d.availabilityStatus==='Available'?'pill-green':'pill-red'}">${d.availabilityStatus}</span></td>
               <td><button class="btn btn-sm btn-outline" onclick="openDoctorAvailabilityModal(${d.dbId})">Edit</button></td>
             </tr>`;
-          }).join('') : `<tr><td colspan="8"><div class="empty-state">No doctors yet. Register one from Staff Directory (Role: Medical Doctor).</div></td></tr>`}
+          }).join('') : `<tr><td colspan="8"><div class="empty-state">No doctors yet. Create an account with Role: Doctor or Medical Doctor.</div></td></tr>`}
         </tbody>
       </table>
     </div>
