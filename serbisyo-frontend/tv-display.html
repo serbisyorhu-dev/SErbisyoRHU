@@ -4,23 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SERbisyo RHU — Live Queue</title>
-
-<!-- Amo ni ang logo kag fonts nga ginagamit sang aton queue display. -->
 <link rel="icon" type="image/png" href="assets/logo-full.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
-/* Diri naton ginabutang ang main colors para hapos lang mag-ilis sang theme. */
+/* Amo ni ang main colors kag general design sang aton TV queue display. */
 :root{
-  --navy:#0B2A45;--blue-deep:#0F3D63;--blue:#1D6FA5;--green:#1E9E5A;
-  --amber:#D99A2B;--white:#fff;--ink-soft:#7C8A97;
+  --navy:#0B2A45;--blue-deep:#0F3D63;--blue:#1D6FA5;
+  --green:#1E9E5A;--amber:#D99A2B;--white:#fff;--ink-soft:#7C8A97;
 }
-
-/* Ini naga-reset sang default spacing para limpyo kag pareho ang layout sa tanan nga browser. */
 *{box-sizing:border-box;margin:0;padding:0;}
-
-/* Amo ni ang main background kag font sang bilog nga TV queue page. */
 html,body{
   min-height:100%;font-family:'Inter',sans-serif;
   background:linear-gradient(160deg,#0B2A45 0%,#0F3D63 55%,#1D6FA5 100%);
@@ -28,7 +22,7 @@ html,body{
 }
 body{min-height:100vh;}
 
-/* Ini ang pwesto kag itsura sang RHU logo kag pangalan sa ibabaw. */
+/* Ini ang logo kag pangalan sang RHU nga ara sa ibabaw sa wala. */
 .brand{
   display:flex;align-items:center;gap:12px;position:fixed;
   top:22px;left:30px;z-index:10;
@@ -40,75 +34,71 @@ body{min-height:100vh;}
 }
 .brand-text span{display:block;font-size:12px;opacity:.8;margin-top:1px;}
 
-/* Ini ang design sang live nga oras sa tuo nga bahin sang screen. */
+/* Ini ang live clock nga makita sa ibabaw sa tuo. */
 .clock{
   position:fixed;top:31px;right:35px;font-size:18px;
   font-weight:600;opacity:.85;z-index:10;
 }
 
-/* Ini ang main container para indi magdikit-dikit ang sulod sang page. */
+/* Ini ang main area nga nagakupot sang title kag doctor queue cards. */
 .wrap{
-  min-height:100vh;padding:90px 25px 50px;
+  min-height:100vh;padding:90px 25px 55px;
   display:flex;flex-direction:column;align-items:center;
 }
-
-/* Ini ang title nga "Now Serving" kag ang gamay nga instruction sa idalom. */
 .title{text-align:center;margin-bottom:15px;}
 .title h1{font-family:'Poppins',sans-serif;font-size:25px;font-weight:800;}
 .title p{margin-top:2px;font-size:13px;opacity:.75;}
 
-/* Diri ginahilera automatically ang cards depende kon pila ka doktor ang ara. */
+/* Diri automatic nga ginahilera ang mga doktor depende kon pila sila. */
 .doctor-grid{
   width:100%;max-width:1700px;display:grid;
   grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
   gap:14px;align-items:stretch;
 }
 
-/* Amo ni ang design sang tagsa ka card para sa tagsa ka doktor. */
+/* Amo ni ang card sang tagsa ka doktor kag iya independent nga queue. */
 .doctor-card{
   background:rgba(255,255,255,.10);
   border:1px solid rgba(255,255,255,.18);
   border-radius:18px;padding:18px;text-align:center;
-  backdrop-filter:blur(8px);box-shadow:0 8px 25px rgba(0,0,0,.12);
+  backdrop-filter:blur(8px);
+  box-shadow:0 8px 25px rgba(0,0,0,.12);
 }
-
-/* Ini ang style sang pangalan kag department sang doktor. */
-.doctor-name{font-family:'Poppins',sans-serif;font-size:19px;font-weight:800;}
+.doctor-name{
+  font-family:'Poppins',sans-serif;
+  font-size:19px;font-weight:800;
+}
 .doctor-department{margin-top:2px;font-size:12px;opacity:.72;}
 
-/* Ini ang gamay nga NOW SERVING badge para klaro kon sin-o ang gina-serve subong. */
+/* Ini ang NOW SERVING badge kag green nga nagapulse nga dot. */
 .live-tag{
   display:inline-flex;align-items:center;gap:7px;
   background:rgba(255,255,255,.12);padding:6px 14px;
   border-radius:999px;font-size:11px;font-weight:700;
   letter-spacing:1px;margin-top:14px;
 }
-
-/* Ini ang green nga nagapulse nga dot para daw live gid tan-awon ang queue. */
 .live-dot{
   width:8px;height:8px;border-radius:50%;
   background:#4ADE80;animation:pulse 1.4s infinite;
 }
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
 
-/* Ini ang label sa ibabaw sang dako nga current queue number. */
+/* Ini ang dako nga current queue number pareho sang A-0 ukon B-0. */
 .now-serving-label{
   margin-top:12px;font-size:11px;font-weight:600;
   opacity:.7;letter-spacing:1.5px;
 }
-
-/* Amo ni ang dako nga A-0, B-0 ukon iban pa nga current queue number. */
 .queue-number{
   font-family:'Poppins',sans-serif;font-weight:800;
   font-size:62px;line-height:1;margin-top:4px;
   text-shadow:0 6px 20px rgba(0,0,0,.25);
-  word-break:break-word;
+}
+.queue-service{
+  font-size:14px;margin-top:6px;opacity:.9;
+  min-height:22px;
 }
 
-/* Diri makita ang patient kag service nga ginahandle sang doktor subong. */
-.queue-service{font-size:14px;margin-top:6px;opacity:.9;min-height:25px;}
-
-/* Ini ang section para sa sunod nga number kag pila pa ang nagahulat. */
+/* Ini ang next queue number kag pila pa ka patients ang nagahulat. */
 .mini-stats{
   display:flex;justify-content:center;gap:35px;
   margin-top:16px;padding-top:14px;
@@ -120,33 +110,39 @@ body{min-height:100vh;}
   font-size:25px;font-weight:800;
 }
 .mini-stats span{
-  font-size:10px;opacity:.7;text-transform:uppercase;letter-spacing:.7px;
+  font-size:10px;opacity:.7;text-transform:uppercase;
+  letter-spacing:.7px;
 }
 
-/* Ini ang makita kon wala pa doktor ukon queue data nga available. */
+/* Ini ang loading ukon empty message kon wala pa queue data nga nabaton. */
 .empty-state{
   width:100%;max-width:850px;text-align:center;
   background:rgba(255,255,255,.10);
   border:1px solid rgba(255,255,255,.18);
-  border-radius:18px;padding:40px 25px;
+  border-radius:18px;padding:35px 25px;
 }
-.empty-state h2{font-family:'Poppins',sans-serif;font-size:22px;}
+.empty-state h2{
+  font-family:'Poppins',sans-serif;
+  font-size:22px;
+}
 .empty-state p{margin-top:5px;font-size:13px;opacity:.7;}
 
-/* Ini ang pula nga warning kon indi makakonek ang TV display sa server. */
+/* Ini ang warning nga magwa kon indi makakonek sa backend server. */
 .error-banner{
-  position:fixed;bottom:60px;left:50%;transform:translateX(-50%);
-  background:rgba(216,76,70,.95);padding:9px 18px;
-  border-radius:9px;font-size:13px;display:none;z-index:20;
+  position:fixed;bottom:60px;left:50%;
+  transform:translateX(-50%);
+  background:rgba(216,76,70,.95);
+  padding:9px 18px;border-radius:9px;
+  font-size:13px;display:none;z-index:20;
 }
 
-/* Ini ang gamay nga system message sa pinakadalom sang TV display. */
+/* Ini ang gamay nga system information sa pinakadalom sang screen. */
 .footer{
   position:fixed;bottom:18px;left:0;right:0;
   text-align:center;font-size:12px;opacity:.6;
 }
 
-/* Ini naga-adjust sang layout kon gamay ang screen pareho sang cellphone ukon tablet. */
+/* Ini naga-adjust sang display kon cellphone ukon mas gamay nga screen ang ginagamit. */
 @media(max-width:800px){
   .brand{left:15px;top:15px;}
   .brand img{width:40px;height:40px;}
@@ -164,7 +160,7 @@ body{min-height:100vh;}
 
 <body>
 
-<!-- Ini ang RHU branding nga makita sa upper-left sang TV. -->
+<!-- Ini ang RHU logo kag pangalan nga makita pirmi sa upper-left sang TV. -->
 <div class="brand">
   <img src="assets/logo-full.png" alt="San Enrique RHU">
   <div class="brand-text">
@@ -173,15 +169,16 @@ body{min-height:100vh;}
   </div>
 </div>
 
-<!-- Ini ang live clock nga permi naga-update samtang bukas ang display. -->
+<!-- Ini ang oras nga automatic naga-update kada segundo. -->
 <div class="clock" id="clock">--:--</div>
 
-<!-- Diri ginapakita ang title kag tanan nga queue cards sang mga doktor. -->
+<!-- Diri naton ipakita ang tanan nga doctor queues halin sa backend. -->
 <div class="wrap">
   <div class="title">
     <h1>Now Serving</h1>
     <p>Please wait for your queue number to be called.</p>
   </div>
+
   <div class="doctor-grid" id="doctorGrid">
     <div class="empty-state">
       <h2>Loading Queue…</h2>
@@ -190,31 +187,27 @@ body{min-height:100vh;}
   </div>
 </div>
 
-<!-- Ini ang error message nga magwa kon may problema sa connection sa backend. -->
+<!-- Ini lang ang magwa kon may problema sa pag-connect sa backend. -->
 <div class="error-banner" id="errorBanner">Could not reach the server — retrying…</div>
 
-<!-- Ini ang footer nga nagasiling nga automatic naga-refresh ang queue kada 5 seconds. -->
+<!-- Ini nagapahanumdom nga automatic naga-refresh ang queue kada lima ka segundo. -->
 <div class="footer">SERbisyo RHU System — updates automatically every 5 seconds</div>
 
 <script>
-/* Amo ni ang address sang backend server nga ginakuhaan sang live queue data. */
+/* Amo ni ang existing Render backend sang SERbisyo RHU nga ginagamit sang original TV code mo. */
 const BACKEND_URL='https://serbisyorhu.onrender.com';
 
-/* Ini naga-update sang oras kada segundo para pirmi sakto ang clock sa TV. */
+/* Ini naga-update sang oras kada segundo para live pirmi ang clock sa TV. */
 function updateClock(){
   document.getElementById('clock').textContent=new Date().toLocaleTimeString('en-US',{
-    hour:'2-digit',minute:'2-digit'
+    hour:'2-digit',
+    minute:'2-digit'
   });
 }
-setInterval(updateClock,1000);
 updateClock();
+setInterval(updateClock,1000);
 
-/* Ini naga-standardize sang doctor name para indi magkaproblema sa comparison sang pangalan. */
-function doctorKey(name){
-  return String(name||'').trim().toLowerCase();
-}
-
-/* Ini nagaprotektar sang text halin sa database antes naton siya ipakita sa HTML. */
+/* Ini nagaprotektar sang database text antes naton siya ibutang sa HTML display. */
 function escapeHtml(value){
   return String(value??'')
     .replace(/&/g,'&amp;')
@@ -224,193 +217,99 @@ function escapeHtml(value){
     .replace(/'/g,'&#039;');
 }
 
-/* Ini nagakuha sang numero sa A-0 ukon B-3 para masort naton ang queue sa insakto nga order. */
-function queueSequence(queueNumber){
-  if(!queueNumber)return 999999;
-  const number=parseInt(String(queueNumber).split('-').pop(),10);
-  return Number.isNaN(number)?999999:number;
+/* Ini nagahimo sang isa ka doctor card gamit ang current, next kag waiting queue data. */
+function doctorCard(doctor,index){
+  const prefix=String.fromCharCode(65+(index%26));
+  const name=doctor.doctor_name||doctor.name||doctor.doctor||`Doctor ${index+1}`;
+  const department=doctor.department||doctor.service||doctor.specialization||'Medical Doctor';
+  const current=doctor.current_number||doctor.current_queue||doctor.queue_number||`${prefix}-0`;
+  const next=doctor.next_number||doctor.next_queue||'—';
+  const waiting=doctor.waiting??doctor.waiting_count??0;
+  const service=doctor.current_service||doctor.service||'Waiting for the next patient…';
+
+  return `
+    <div class="doctor-card">
+      <div class="doctor-name">${escapeHtml(name)}</div>
+      <div class="doctor-department">${escapeHtml(department)}</div>
+
+      <div class="live-tag">
+        <span class="live-dot"></span>
+        NOW SERVING
+      </div>
+
+      <div class="now-serving-label">QUEUE NUMBER</div>
+      <div class="queue-number">${escapeHtml(current)}</div>
+      <div class="queue-service">${escapeHtml(service)}</div>
+
+      <div class="mini-stats">
+        <div>
+          <b>${escapeHtml(next)}</b>
+          <span>Next Number</span>
+        </div>
+        <div>
+          <b>${escapeHtml(waiting)}</b>
+          <span>Patients Waiting</span>
+        </div>
+      </div>
+    </div>`;
 }
 
-/* Ini nagakuha sang letter sa queue number, halimbawa A halin sa A-0. */
-function queuePrefix(queueNumber){
-  if(!queueNumber)return '';
-  return String(queueNumber).split('-')[0].toUpperCase();
-}
+/* Ini nagapakita sang doctor-separated queues kon ang backend nagabalik na sang doctors array. */
+function renderDoctorQueues(doctors){
+  const grid=document.getElementById('doctorGrid');
 
-/* Ini nagakuha sang listahan sang mga doktor halin sa public staff endpoint sang backend. */
-async function getDoctors(){
-  try{
-    const res=await fetch(`${BACKEND_URL}/api/public/staff`);
-    if(res.ok){
-      const rows=await res.json();
-      if(Array.isArray(rows)){
-        return rows.filter(row=>/doctor/i.test(String(row.role||'')));
-      }
-    }
-  }catch(err){
-    console.warn('Public staff endpoint unavailable.');
-  }
-  return [];
-}
-
-/* Ini nagakuha sang appointments para mahibaluan kon sin-o ang ara sa queue sang tagsa ka doktor. */
-async function getAppointments(){
-  try{
-    const res=await fetch(`${BACKEND_URL}/api/public/appointments`);
-    if(res.ok){
-      const rows=await res.json();
-      if(Array.isArray(rows))return rows;
-    }
-  }catch(err){
-    console.warn('Public appointment endpoint unavailable.');
-  }
-
-  /* Kon wala ang public endpoint, diri siya matry sa existing appointments data endpoint. */
-  try{
-    const res=await fetch(`${BACKEND_URL}/api/data?table=appointments`);
-    if(res.ok){
-      const rows=await res.json();
-      if(Array.isArray(rows))return rows;
-    }
-  }catch(err){
-    console.warn('Appointment fallback unavailable.');
-  }
-
-  throw new Error('Could not load appointments.');
-}
-
-/* Ini nagabulag sang patients suno sa ila doktor para independent ang A, B, C kag iban pa nga queues. */
-function buildDoctorQueues(doctors,appointments){
-  const groups={};
-
-  /* Una, ginahimo naton ang queue group sang tagsa ka doktor kag ginahatagan sila sang letter pareho A, B kag C. */
-  doctors.forEach((doctor,index)=>{
-    const name=doctor.name||doctor.full_name||doctor.doctor_name;
-    if(!name)return;
-
-    const key=doctorKey(name);
-    groups[key]={
-      name,
-      department:doctor.department||doctor.dept||doctor.specialization||'Medical Doctor',
-      prefix:String.fromCharCode(65+index),
-      appointments:[]
-    };
-  });
-
-  /* Diri ginabutang ang tagsa ka approved patient sa queue sang doktor nga naka-assign sa iya. */
-  appointments.forEach(appointment=>{
-    const doctor=appointment.doctor_name||appointment.doctor||'';
-    if(!doctor)return;
-
-    const key=doctorKey(doctor);
-
-    /* Kon wala sa staff list ang doktor, himuon gihapon naton iya queue gamit ang appointment data. */
-    if(!groups[key]){
-      const usedPrefixes=Object.values(groups).map(g=>g.prefix);
-      let prefix=queuePrefix(appointment.queue_number);
-
-      if(!prefix){
-        for(let i=0;i<26;i++){
-          const candidate=String.fromCharCode(65+i);
-          if(!usedPrefixes.includes(candidate)){
-            prefix=candidate;
-            break;
-          }
-        }
-      }
-
-      groups[key]={
-        name:doctor,
-        department:appointment.department||appointment.service||'Medical Doctor',
-        prefix:prefix||'A',
-        appointments:[]
-      };
-    }
-
-    /* Approved lang nga may queue number ang pasudlon naton sa live waiting queue. */
-    if(appointment.status==='Approved'&&appointment.queue_number){
-      groups[key].appointments.push(appointment);
-    }
-  });
-
-  /* Ini nagasort sang A-0, A-1, A-2 kag pareho man sini sa tagsa ka doctor queue. */
-  Object.values(groups).forEach(group=>{
-    group.appointments.sort((a,b)=>{
-      return queueSequence(a.queue_number)-queueSequence(b.queue_number);
-    });
-  });
-
-  return Object.values(groups);
-}
-
-/* Ini amo ang nagahimo kag nagapakita sang actual doctor cards kag queue numbers sa TV. */
-function renderDoctorQueues(groups){
-  const container=document.getElementById('doctorGrid');
-
-  /* Kon wala gid doctor data, simple nga message lang anay ang ipakita sa screen. */
-  if(!groups.length){
-    container.innerHTML=`
+  if(!doctors.length){
+    grid.innerHTML=`
       <div class="empty-state">
-        <h2>No Doctors Available</h2>
-        <p>No doctor queues are available right now.</p>
+        <h2>No Active Queue</h2>
+        <p>Waiting for patients to check in.</p>
       </div>`;
     return;
   }
 
-  /* Diri ginahimo ang isa ka card para sa tagsa ka doktor kag ila current kag next patient. */
-  container.innerHTML=groups.map(group=>{
-    const current=group.appointments[0];
-    const next=group.appointments[1];
-    const waiting=Math.max(0,group.appointments.length-1);
-
-    return `
-      <div class="doctor-card">
-        <div class="doctor-name">${escapeHtml(group.name)}</div>
-        <div class="doctor-department">${escapeHtml(group.department)}</div>
-
-        <div class="live-tag">
-          <span class="live-dot"></span>
-          NOW SERVING
-        </div>
-
-        <div class="now-serving-label">QUEUE NUMBER</div>
-
-        <div class="queue-number">
-          ${current?escapeHtml(current.queue_number):`${escapeHtml(group.prefix)}-0`}
-        </div>
-
-        <div class="queue-service">
-          ${current
-            ?`${escapeHtml(current.patient||'Patient')} · ${escapeHtml(current.service||'Consultation')}`
-            :'Waiting for the next patient…'}
-        </div>
-
-        <div class="mini-stats">
-          <div>
-            <b>${next?escapeHtml(next.queue_number):'—'}</b>
-            <span>Next Number</span>
-          </div>
-          <div>
-            <b>${waiting}</b>
-            <span>Patients Waiting</span>
-          </div>
-        </div>
-      </div>`;
-  }).join('');
+  grid.innerHTML=doctors.map((doctor,index)=>doctorCard(doctor,index)).join('');
 }
 
-/* Ini naga-refresh sang doctors kag appointments para pirmi updated ang makita sa TV. */
+/* Ini ang fallback para magpadayon gihapon ang daan mo nga single A-0 queue samtang wala pa na-update ang backend. */
+function renderOldQueue(data){
+  const oldQueue={
+    doctor_name:data.doctor_name||data.doctor||'RHU Queue',
+    department:data.department||'San Enrique RHU',
+    current_number:data.current_number||'A-0',
+    next_number:data.next_number||'A-1',
+    waiting:data.waiting??0,
+    current_service:(data.current_patient&&data.current_service)
+      ?`${data.current_patient} · ${data.current_service}`
+      :(data.current_service||'Waiting for the next patient…')
+  };
+
+  document.getElementById('doctorGrid').innerHTML=doctorCard(oldQueue,0);
+}
+
+/* Ini amo ang original automatic style mo nga isa lang ka /api/public/queue-status request kada refresh. */
 async function refreshQueue(){
   const errorBanner=document.getElementById('errorBanner');
 
   try{
-    const [doctors,appointments]=await Promise.all([
-      getDoctors(),
-      getAppointments()
-    ]);
+    const res=await fetch(`${BACKEND_URL}/api/public/queue-status`,{
+      method:'GET',
+      headers:{'Accept':'application/json'},
+      cache:'no-store'
+    });
 
-    const groups=buildDoctorQueues(doctors,appointments);
-    renderDoctorQueues(groups);
+    if(!res.ok)throw new Error(`Server returned ${res.status}`);
+
+    const data=await res.json();
+
+    /* Kon updated na ang backend, tanan nga doktor ipakita bilang independent queues. */
+    if(Array.isArray(data.doctors)){
+      renderDoctorQueues(data.doctors);
+    }
+    /* Kon daan pa ang backend, automatic gamiton gihapon ang original single queue response. */
+    else{
+      renderOldQueue(data);
+    }
+
     errorBanner.style.display='none';
   }catch(err){
     console.error('Queue display error:',err);
@@ -418,7 +317,7 @@ async function refreshQueue(){
   }
 }
 
-/* Ini nagastart dayon sang queue kag pagkatapos automatic siya naga-refresh kada 5 seconds. */
+/* Ini nagaload dayon sang queue kag automatic liwat kada 5 seconds pareho sang original code mo. */
 refreshQueue();
 setInterval(refreshQueue,5000);
 </script>
