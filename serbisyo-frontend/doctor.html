@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>SERbisyo RHU — Doctor Portal</title>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <style>
+    :root {
+      --navy: #0f3654;
+      --blue: #1c6ca3;
+      --line: #e2e8ef;
+      --bg: #eef2f6;
+      --green: #1f9d55;
+      --red: #d84c46;
+      --orange: #e69b26;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      font-family: Inter, sans-serif;
+      color: #132433;
+    }
+
+    h1, h2, h3 {
+      font-family: Poppins, sans-serif;
+      color: var(--navy);
+    }
+
+    .top {
+      background: #fff;
+      border-bottom: 1px solid var(--line);
+      padding: 18px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 28px auto;
+      padding: 0 20px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: Inter, sans-serif;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .primary {
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .success {
+      background: var(--green);
+      color: #fff;
+    }
+
+    .outline {
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--navy);
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      margin: 6px 0 12px;
+      font: inherit;
+    }
+
+    .login {
+      max-width: 430px;
+      margin: 10vh auto;
+    }
+
+    .queue {
+      font: 800 54px Poppins, sans-serif;
+      color: var(--navy);
+      margin: 5px 0;
+    }
+
+    .muted {
+      color: #667788;
+      font-size: 13px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .doctor-info {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: #edf5fb;
+      color: var(--blue);
+    }
+
+    .status {
+      display: inline-block;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .status-approved {
+      background: #fff3d9;
+      color: #996400;
+    }
+
+    .status-serving {
+      background: #e8f2fb;
+      color: var(--blue);
+    }
+
+    .status-completed {
+      background: #e5f7ec;
+      color: #16733c;
+    }
+
+    .status-other {
+      background: #f1f3f5;
+      color: #667788;
+    }
+
+    .current-card {
+      border-left: 5px solid var(--blue);
+    }
+
+    .current-actions {
+      margin-top: 18px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 12px;
+      border-bottom: 1px solid #eef1f4;
+      font-size: 13px;
+    }
+
+    th {
+      color: var(--navy);
+      font-weight: 700;
+    }
+
+    .empty {
+      padding: 25px !important;
+      text-align: center;
+      color: #667788;
+    }
+
+    .error {
+      color: var(--red);
+      font-size: 13px;
+      margin-top: 12px;
+    }
+
+    @media (max-width: 600px) {
+      .top {
+        padding: 15px 18px;
+      }
+
+      .wrap {
+        margin-top: 18px;
+        padding: 0 12px;
+      }
+
+      .card {
+        padding: 18px;
+      }
+
+      .queue {
+        font-size: 44px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- LOGIN -->
+  <div id="login" class="login card">
+    <h2>Doctor Portal</h2>
+
+    <p class="muted">
+      Sign in with your SERbisyo RHU doctor account.
+    </p>
+
+    <input
+      id="email"
+      type="email"
+      placeholder="Email"
+      autocomplete="email"
+    >
+
+    <input
+      id="pass"
+      type="password"
+      placeholder="Password"
+      autocomplete="current-password"
+    >
+
+    <button
+      id="loginBtn"
+      class="btn primary"
+      type="button"
+    >
+      Sign In
+    </button>
+
+    <p id="msg" class="error"></p>
+  </div>
+
+
+  <!-- DOCTOR APP -->
+  <div id="app" class="hidden">
+
+    <header class="top">
+      <div>
+        <b>SERbisyo — Doctor Portal</b>
+
+        <div class="doctor-info">
+          <span class="muted" id="doctorName"></span>
+          <span class="badge" id="doctorDepartment"></span>
+        </div>
+      </div>
+
+      <button
+        id="logoutBtn"
+        class="btn outline"
+        type="button"
+      >
+        Log Out
+      </button>
+    </header>
+
+
+    <main class="wrap">
+
+      <!-- CURRENT PATIENT -->
+      <section class="card current-card">
+
+        <div class="muted">
+          NOW SERVING
+        </div>
+
+        <div
+          class="queue"
+          id="currentNum"
+        >
+          —
+        </div>
+
+        <h3 id="currentPatient">
+          No patient currently being served
+        </h3>
+
+        <p
+          class="muted"
+          id="currentService"
+        ></p>
+
+        <p
+          class="muted"
+          id="currentSchedule"
+        ></p>
+
+        <div class="current-actions">
+
+          <button
+            class="btn primary"
+            id="callNextBtn"
+            type="button"
+          >
+            Call Next Patient
+          </button>
+
+          <button
+            class="btn success hidden"
+            id="doneBtn"
+            type="button"
+          >
+            ✓ Patient Done
+          </button>
+
+        </div>
+
+        <p
+          id="queueMessage"
+          class="muted"
+        ></p>
+
+      </section>
+
+
+      <!-- WAITING QUEUE -->
+      <section class="card">
+
+        <h3>My Waiting Queue</h3>
+
+        <p class="muted">
+          Only checked-in patients assigned to you are shown here.
+        </p>
+
+        <div class="table-wrap">
+
+          <table>
+
+            <thead>
+              <tr>
+                <th>Queue</th>
+                <th>Patient</th>
+                <th>Service</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+
+            <tbody id="waitingQueue"></tbody>
+
+          </table>
+
+        </div>
+
+      </section>
+
+
+      <!-- BOOKINGS -->
+      <section class="card">
+
+        <h3>My Bookings</h3>
+
+        <p class="muted">
+          Appointments assigned to your doctor account.
+        </p>
+
+        <div class="table-wrap">
+
+          <table>
+
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Patient</th>
+                <th>Service</th>
+                <th>Queue</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+
+            <tbody id="bookings"></tbody>
+
+          </table>
+
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+
+<script>
+/* =========================================================
+   CONFIGURATION
+========================================================= */
+
+const BACKEND_URL = 'https://serbisyorhu.onrender.com';
+
+let token =
+  localStorage.getItem('serbisyo_doctor_token') || '';
+
+let me = null;
+let doctor = null;
+let appointments = [];
+
+let isLoading = false;
+
+
+/* =========================================================
+   DOM ELEMENTS
+========================================================= */
+
+const loginSection =
+  document.getElementById('login');
+
+const appSection =
+  document.getElementById('app');
+
+const emailInput =
+  document.getElementById('email');
+
+const passwordInput =
+  document.getElementById('pass');
+
+const loginBtn =
+  document.getElementById('loginBtn');
+
+const logoutBtn =
+  document.getElementById('logoutBtn');
+
+const msg =
+  document.getElementById('msg');
+
+const doctorName =
+  document.getElementById('doctorName');
+
+const doctorDepartment =
+  document.getElementById('doctorDepartment');
+
+const currentNum =
+  document.getElementById('currentNum');
+
+const currentPatient =
+  document.getElementById('currentPatient');
+
+const currentService =
+  document.getElementById('currentService');
+
+const currentSchedule =
+  document.getElementById('currentSchedule');
+
+const callNextBtn =
+  document.getElementById('callNextBtn');
+
+const doneBtn =
+  document.getElementById('doneBtn');
+
+const queueMessage =
+  document.getElementById('queueMessage');
+
+const waitingQueue =
+  document.getElementById('waitingQueue');
+
+const bookings =
+  document.getElementById('bookings');
+
+
+/* =========================================================
+   API REQUEST
+========================================================= */
+
+async function req(url, options = {}) {
+
+  const headers = {
+    ...(options.headers || {})
+  };
+
+  if (token) {
+    headers.Authorization = 'Bearer ' + token;
+  }
+
+  const response = await fetch(
+    BACKEND_URL + url,
+    {
+      ...options,
+      headers
+    }
+  );
+
+  const data = await response
+    .json()
+    .catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(
+      data.error ||
+      data.message ||
+      'Request failed.'
+    );
+  }
+
+  return data;
+}
+
+
+/* =========================================================
+   LOGIN
+========================================================= */
+
+async function loginDoctor() {
+
+  const email =
+    emailInput.value.trim();
+
+  const password =
+    passwordInput.value;
+
+  if (!email || !password) {
+    msg.textContent =
+      'Please enter your email and password.';
+    return;
+  }
+
+  loginBtn.disabled = true;
+  loginBtn.textContent = 'Signing In...';
+  msg.textContent = '';
+
+  try {
+
+    const data = await req(
+      '/api/auth',
+      {
+        method: 'POST',
+
+        headers: {
+          'Content-Type': 'application/json'
+        },
+
+        body: JSON.stringify({
+          action: 'login',
+          email,
+          password
+        })
+      }
+    );
+
+    if (!data.access_token) {
+      throw new Error(
+        'Login succeeded but no access token was returned.'
+      );
+    }
+
+    token = data.access_token;
+    me = data.user;
+
+    localStorage.setItem(
+      'serbisyo_doctor_token',
+      token
+    );
+
+    await start();
+
+  } catch (error) {
+
+    token = '';
+    me = null;
+
+    localStorage.removeItem(
+      'serbisyo_doctor_token'
+    );
+
+    msg.textContent = error.message;
+
+  } finally {
+
+    loginBtn.disabled = false;
+    loginBtn.textContent = 'Sign In';
+  }
+}
+
+
+/* =========================================================
+   START DOCTOR SESSION
+========================================================= */
+
+async function start() {
+
+  if (!me) {
+
+    const session =
+      await req('/api/auth?action=session');
+
+    if (
+      !session ||
+      !session.authenticated ||
+      !session.user
+    ) {
+      throw new Error(
+        'Your session has expired. Please sign in again.'
+      );
+    }
+
+    me = session.user;
+  }
+
+
+  /*
+   * Find the staff record connected to the
+   * currently logged-in user.
+   */
+
+  const staff =
+    await req(
+      '/api/data?table=staff&eq=' +
+      encodeURIComponent(
+        'user_id.' + me.id
+      )
+    );
+
+
+  doctor =
+    Array.isArray(staff)
+      ? staff[0]
+      : null;
+
+
+  if (!doctor) {
+    throw new Error(
+      'No staff record is connected to this account.'
+    );
+  }
+
+
+  if (
+    !/doctor/i.test(
+      String(doctor.role || '')
+    )
+  ) {
+    throw new Error(
+      'This account is not registered as a doctor.'
+    );
+  }
+
+
+  doctorName.textContent =
+    doctor.name || 'Doctor';
+
+  doctorDepartment.textContent =
+    doctor.department ||
+    doctor.specialty ||
+    'Doctor';
+
+
+  loginSection.classList.add('hidden');
+  appSection.classList.remove('hidden');
+
+  await loadAppointments();
+}
+
+
+/* =========================================================
+   LOAD THIS DOCTOR'S APPOINTMENTS
+========================================================= */
+
+async function loadAppointments() {
+
+  if (!doctor || isLoading) {
+    return;
+  }
+
+  isLoading = true;
+
+  try {
+
+    const rows =
+      await req(
+        '/api/data?table=appointments&order=date.asc'
+      );
+
+
+    const doctorNameNormalized =
+      normalize(doctor.name);
+
+
+    appointments =
+      (Array.isArray(rows) ? rows : [])
+      .filter(appointment => {
+
+        return normalize(
+          appointment.doctor_name
+        ) === doctorNameNormalized;
+
+      });
+
+
+    render();
+
+  } catch (error) {
+
+    console.error(
+      'Failed to load appointments:',
+      error
+    );
+
+    queueMessage.textContent =
+      'Unable to refresh the queue.';
+
+  } finally {
+
+    isLoading = false;
+  }
+}
+
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function normalize(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase();
+}
+
+
+function escapeHTML(value) {
+
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+
+function statusName(status) {
+
+  return normalize(status);
+}
+
+
+function isWaiting(appointment) {
+
+  const status =
+    statusName(appointment.status);
+
+  /*
+   * Approved means:
+   * Admin already confirmed/check-in and
+   * the patient has a queue number.
+   */
+
+  return (
+    status === 'approved' &&
+    appointment.queue_number
+  );
+}
+
+
+function isServing(appointment) {
+
+  return (
+    statusName(appointment.status) ===
+    'serving'
+  );
+}
+
+
+function queueValue(queueNumber) {
+
+  if (!queueNumber) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  const match =
+    String(queueNumber).match(/\d+/);
+
+  return match
+    ? Number(match[0])
+    : Number.MAX_SAFE_INTEGER;
+}
+
+
+function sortQueue(a, b) {
+
+  return (
+    queueValue(a.queue_number) -
+    queueValue(b.queue_number)
+  );
+}
+
+
+function getWaitingPatients() {
+
+  return appointments
+    .filter(isWaiting)
+    .sort(sortQueue);
+}
+
+
+function getCurrentPatient() {
+
+  return (
+    appointments.find(isServing) ||
+    null
+  );
+}
+
+
+function statusBadge(status) {
+
+  const normalized =
+    statusName(status);
+
+  let cssClass =
+    'status-other';
+
+  if (normalized === 'approved') {
+    cssClass =
+      'status-approved';
+  }
+
+  if (normalized === 'serving') {
+    cssClass =
+      'status-serving';
+  }
+
+  if (normalized === 'completed') {
+    cssClass =
+      'status-completed';
+  }
+
+  return `
+    <span class="status ${cssClass}">
+      ${escapeHTML(status || 'Unknown')}
+    </span>
+  `;
+}
+
+
+/* =========================================================
+   RENDER
+========================================================= */
+
+function render() {
+
+  renderCurrentPatient();
+  renderWaitingQueue();
+  renderBookings();
+}
+
+
+/* =========================================================
+   CURRENT PATIENT
+========================================================= */
+
+function renderCurrentPatient() {
+
+  const current =
+    getCurrentPatient();
+
+  const waiting =
+    getWaitingPatients();
+
+
+  if (current) {
+
+    currentNum.textContent =
+      current.queue_number || '—';
+
+    currentPatient.textContent =
+      current.patient ||
+      'Unknown Patient';
+
+    currentService.textContent =
+      current.service || '';
+
+    currentSchedule.textContent =
+      [
+        current.date,
+        current.time
+      ]
+      .filter(Boolean)
+      .join(' • ');
+
+
+    doneBtn.classList.remove(
+      'hidden'
+    );
+
+    callNextBtn.classList.add(
+      'hidden'
+    );
+
+    queueMessage.textContent =
+      'Finish the current patient before calling the next patient.';
+
+    return;
+  }
+
+
+  currentNum.textContent = '—';
+
+  currentPatient.textContent =
+    'No patient currently being served';
+
+  currentService.textContent = '';
+
+  currentSchedule.textContent = '';
+
+  doneBtn.classList.add(
+    'hidden'
+  );
+
+  callNextBtn.classList.remove(
+    'hidden'
+  );
+
+
+  if (waiting.length > 0) {
+
+    callNextBtn.disabled = false;
+
+    queueMessage.textContent =
+      `${waiting.length} patient${
+        waiting.length === 1
+          ? ''
+          : 's'
+      } waiting in your queue.`;
+
+  } else {
+
+    callNextBtn.disabled = true;
+
+    queueMessage.textContent =
+      'No checked-in patients are waiting.';
+  }
+}
+
+
+/* =========================================================
+   WAITING QUEUE
+========================================================= */
+
+function renderWaitingQueue() {
+
+  const waiting =
+    getWaitingPatients();
+
+
+  if (!waiting.length) {
+
+    waitingQueue.innerHTML = `
+      <tr>
+        <td
+          colspan="6"
+          class="empty"
+        >
+          No patients are currently waiting.
+        </td>
+      </tr>
+    `;
+
+    return;
+  }
+
+
+  waitingQueue.innerHTML =
+    waiting
+      .map(appointment => `
+
+        <tr>
+
+          <td>
+            <strong>
+              ${escapeHTML(
+                appointment.queue_number
+              )}
+            </strong>
+          </td>
+
+          <td>
+            ${escapeHTML(
+              appointment.patient || '—'
+            )}
+          </td>
+
+          <td>
+            ${escapeHTML(
+              appointment.service || '—'
+            )}
+          </td>
+
+          <td>
+            ${escapeHTML(
+              appointment.date || '—'
+            )}
+          </td>
+
+          <td>
+            ${escapeHTML(
+              appointment.time || '—'
+            )}
+          </td>
+
+          <td>
+            ${statusBadge(
+              appointment.status
+            )}
+          </td>
+
+        </tr>
+
+      `)
+      .join('');
+}
+
+
+/* =========================================================
+   ALL BOOKINGS
+========================================================= */
+
+function renderBookings() {
+
+  if (!appointments.length) {
+
+    bookings.innerHTML = `
+      <tr>
+        <td
+          colspan="6"
+          class="empty"
+        >
+          No bookings are assigned to you.
+        </td>
+      </tr>
+    `;
+
+    return;
+  }
+
+
+  const sorted =
+    [...appointments]
+      .sort((a, b) => {
+
+        const dateA =
+          `${a.date || ''} ${a.time || ''}`;
+
+        const dateB =
+          `${b.date || ''} ${b.time || ''}`;
+
+        return dateA.localeCompare(
+          dateB
+        );
+      });
+
+
+  bookings.innerHTML =
+    sorted
+      .map(appointment => `
+
+        <tr>
+
+          <td>
+            ${escapeHTML(
+              appointment.date || '—'
+            )}
+          </td>
+
+          <td>
+            ${escapeHTML(
+              appointment.time || '—'
+            )}
+          </td>
+
+          <td>
+            ${escapeHTML(
+              appointment.patient || '—'
+            )}
+          </td>
+
+          <td>
+            ${escapeHTML(
+              appointment.service || '—'
+            )}
+          </td>
+
+          <td>
+            ${escapeHTML(
+              appointment.queue_number || '—'
+            )}
+          </td>
+
+          <td>
+            ${statusBadge(
+              appointment.status
+            )}
+          </td>
+
+        </tr>
+
+      `)
+      .join('');
+}
+
+
+/* =========================================================
+   CALL NEXT PATIENT
+========================================================= */
+
+async function callNextPatient() {
+
+  /*
+   * A doctor cannot call another patient
+   * while currently serving someone.
+   */
+
+  const current =
+    getCurrentPatient();
+
+  if (current) {
+
+    queueMessage.textContent =
+      'Complete the current patient first.';
+
+    return;
+  }
+
+
+  const waiting =
+    getWaitingPatients();
+
+  const next =
+    waiting[0];
+
+
+  if (!next) {
+
+    queueMessage.textContent =
+      'No patients are waiting.';
+
+    return;
+  }
+
+
+  callNextBtn.disabled = true;
+  callNextBtn.textContent =
+    'Calling...';
+
+
+  try {
+
+    /*
+     * Change only THIS doctor's next
+     * appointment to Serving.
+     */
+
+    await req(
+      '/api/data?table=appointments&id=' +
+      encodeURIComponent(next.id),
+      {
+        method: 'PATCH',
+
+        headers: {
+          'Content-Type':
+            'application/json'
+        },
+
+        body: JSON.stringify({
+          status: 'Serving'
+        })
+      }
+    );
+
+
+    await loadAppointments();
+
+  } catch (error) {
+
+    console.error(error);
+
+    queueMessage.textContent =
+      error.message ||
+      'Unable to call the next patient.';
+
+  } finally {
+
+    callNextBtn.textContent =
+      'Call Next Patient';
+
+    callNextBtn.disabled = false;
+  }
+}
+
+
+/* =========================================================
+   COMPLETE CURRENT PATIENT
+========================================================= */
+
+async function completeCurrentPatient() {
+
+  const current =
+    getCurrentPatient();
+
+
+  if (!current) {
+
+    queueMessage.textContent =
+      'There is no current patient.';
+
+    return;
+  }
+
+
+  doneBtn.disabled = true;
+  doneBtn.textContent =
+    'Completing...';
+
+
+  try {
+
+    /*
+     * Completing a consultation should
+     * preserve the appointment record.
+     *
+     * This record can later be displayed
+     * in Patient Records -> Details ->
+     * Patient History.
+     */
+
+    await req(
+      '/api/data?table=appointments&id=' +
+      encodeURIComponent(current.id),
+      {
+        method: 'PATCH',
+
+        headers: {
+          'Content-Type':
+            'application/json'
+        },
+
+        body: JSON.stringify({
+          status: 'Completed'
+        })
+      }
+    );
+
+
+    await loadAppointments();
+
+
+    queueMessage.textContent =
+      'Patient completed. You may now call the next patient.';
+
+  } catch (error) {
+
+    console.error(error);
+
+    queueMessage.textContent =
+      error.message ||
+      'Unable to complete the patient.';
+
+  } finally {
+
+    doneBtn.disabled = false;
+    doneBtn.textContent =
+      '✓ Patient Done';
+  }
+}
+
+
+/* =========================================================
+   LOGOUT
+========================================================= */
+
+function logoutDoctor() {
+
+  localStorage.removeItem(
+    'serbisyo_doctor_token'
+  );
+
+  token = '';
+  me = null;
+  doctor = null;
+  appointments = [];
+
+  location.reload();
+}
+
+
+/* =========================================================
+   EVENTS
+========================================================= */
+
+loginBtn.addEventListener(
+  'click',
+  loginDoctor
+);
+
+logoutBtn.addEventListener(
+  'click',
+  logoutDoctor
+);
+
+callNextBtn.addEventListener(
+  'click',
+  callNextPatient
+);
+
+doneBtn.addEventListener(
+  'click',
+  completeCurrentPatient
+);
+
+
+/*
+ * Allow Enter to submit login.
+ */
+
+passwordInput.addEventListener(
+  'keydown',
+  event => {
+
+    if (event.key === 'Enter') {
+      loginDoctor();
+    }
+
+  }
+);
+
+
+/* =========================================================
+   RESTORE SESSION
+========================================================= */
+
+(async function restoreSession() {
+
+  if (!token) {
+    return;
+  }
+
+  try {
+
+    await start();
+
+  } catch (error) {
+
+    console.error(error);
+
+    localStorage.removeItem(
+      'serbisyo_doctor_token'
+    );
+
+    token = '';
+    me = null;
+    doctor = null;
+
+    loginSection.classList.remove(
+      'hidden'
+    );
+
+    appSection.classList.add(
+      'hidden'
+    );
+
+    msg.textContent =
+      error.message;
+  }
+
+})();
+
+
+/* =========================================================
+   AUTO REFRESH
+========================================================= */
+
+/*
+ * Refresh every 5 seconds so changes made by
+ * Admin are reflected in the Doctor Portal.
+ *
+ * The TV display should use the same
+ * appointment statuses:
+ *
+ * Approved  = Waiting
+ * Serving   = Now Serving
+ * Completed = Finished
+ */
+
+setInterval(() => {
+
+  if (doctor) {
+
+    loadAppointments()
+      .catch(error => {
+        console.error(
+          'Auto refresh failed:',
+          error
+        );
+      });
+
+  }
+
+}, 5000);
+
+</script>
+
+</body>
+</html>
