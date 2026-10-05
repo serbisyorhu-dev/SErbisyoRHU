@@ -1,426 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <title>SERbisyo RHU — Doctor Portal</title>
-
-  <link
-    href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap"
-    rel="stylesheet"
-  >
-
-  <style>
-    :root {
-      --navy: #0f3654;
-      --blue: #1c6ca3;
-      --line: #e2e8ef;
-      --bg: #eef2f6;
-      --green: #1f9d55;
-      --red: #d84c46;
-      --orange: #e69b26;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      background: var(--bg);
-      font-family: Inter, sans-serif;
-      color: #132433;
-    }
-
-    h1, h2, h3 {
-      font-family: Poppins, sans-serif;
-      color: var(--navy);
-    }
-
-    .top {
-      background: #fff;
-      border-bottom: 1px solid var(--line);
-      padding: 18px 28px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 20px;
-    }
-
-    .wrap {
-      max-width: 1100px;
-      margin: 28px auto;
-      padding: 0 20px;
-    }
-
-    .card {
-      background: #fff;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 22px;
-      margin-bottom: 18px;
-    }
-
-    .btn {
-      border: 0;
-      border-radius: 999px;
-      padding: 10px 18px;
-      font-weight: 700;
-      cursor: pointer;
-      font-family: Inter, sans-serif;
-    }
-
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .primary {
-      background: var(--blue);
-      color: #fff;
-    }
-
-    .success {
-      background: var(--green);
-      color: #fff;
-    }
-
-    .outline {
-      background: #fff;
-      border: 1px solid var(--line);
-      color: var(--navy);
-    }
-
-    input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      margin: 6px 0 12px;
-      font: inherit;
-    }
-
-    .login {
-      max-width: 430px;
-      margin: 10vh auto;
-    }
-
-    .queue {
-      font: 800 54px Poppins, sans-serif;
-      color: var(--navy);
-      margin: 5px 0;
-    }
-
-    .muted {
-      color: #667788;
-      font-size: 13px;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    .doctor-info {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 5px 10px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 700;
-      background: #edf5fb;
-      color: var(--blue);
-    }
-
-    .status {
-      display: inline-block;
-      padding: 5px 9px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    .status-approved {
-      background: #fff3d9;
-      color: #996400;
-    }
-
-    .status-serving {
-      background: #e8f2fb;
-      color: var(--blue);
-    }
-
-    .status-completed {
-      background: #e5f7ec;
-      color: #16733c;
-    }
-
-    .status-other {
-      background: #f1f3f5;
-      color: #667788;
-    }
-
-    .current-card {
-      border-left: 5px solid var(--blue);
-    }
-
-    .current-actions {
-      margin-top: 18px;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .table-wrap {
-      width: 100%;
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 700px;
-    }
-
-    th,
-    td {
-      text-align: left;
-      padding: 12px;
-      border-bottom: 1px solid #eef1f4;
-      font-size: 13px;
-    }
-
-    th {
-      color: var(--navy);
-      font-weight: 700;
-    }
-
-    .empty {
-      padding: 25px !important;
-      text-align: center;
-      color: #667788;
-    }
-
-    .error {
-      color: var(--red);
-      font-size: 13px;
-      margin-top: 12px;
-    }
-
-    @media (max-width: 600px) {
-      .top {
-        padding: 15px 18px;
-      }
-
-      .wrap {
-        margin-top: 18px;
-        padding: 0 12px;
-      }
-
-      .card {
-        padding: 18px;
-      }
-
-      .queue {
-        font-size: 44px;
-      }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SERbisyo RHU — Doctor Portal</title>
+<link rel="icon" type="image/png" href="assets/logo-full.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0f3654;--blue-deep:#124a76;--blue:#1c6ca3;--blue-mid:#2680c2;--blue-light:#eaf3fa;--teal:#12a594;--amber:#e0a030;--red:#d84c46;--green:#1f9d55;--green-light:#e7f7ed;--ink:#132433;--ink-soft:#5b6b7a;--line:#e2e8ef;--bg:#eef2f6;--card:#fff;--shadow:0 1px 2px rgba(15,54,84,.04),0 8px 24px -12px rgba(15,54,84,.12);--font-head:'Poppins',sans-serif;--font-body:'Inter',sans-serif;}
+*{box-sizing:border-box}html,body{margin:0;padding:0}body{font-family:var(--font-body);background:radial-gradient(1200px 500px at 15% -10%,#dcecf9 0%,transparent 60%),radial-gradient(900px 500px at 100% 0%,#e6f6f2 0%,transparent 55%),var(--bg);color:var(--ink);min-height:100vh}h1,h2,h3{font-family:var(--font-head);margin:0;color:var(--navy)}button,input{font-family:inherit}.hidden{display:none!important}.muted{color:var(--ink-soft);font-size:13px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}.btn{border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer}.btn:disabled{opacity:.5;cursor:not-allowed}.primary{background:linear-gradient(180deg,var(--blue-mid),var(--blue-deep));color:#fff}.success{background:var(--green);color:#fff}.outline{background:#fff;border:1px solid var(--line);color:var(--navy)}
+/* Pareho ini sang admin login card para isa lang ang visual identity sang system. */
+.login-shell{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}.login{width:100%;max-width:430px;padding:30px}.login-brand{display:flex;align-items:center;gap:12px;margin-bottom:24px}.brand-icon{width:42px;height:42px;border-radius:12px;background:linear-gradient(160deg,#0f3654,#12866f);display:flex;align-items:center;justify-content:center}.brand-icon img{width:25px;height:25px;object-fit:contain}.login h2{font-size:23px}.login p{margin:5px 0 20px}.login input{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:10px;margin:0 0 12px;background:#f7f9fb;outline:none;color:var(--ink)}.login input:focus{border-color:var(--blue-mid);box-shadow:0 0 0 3px var(--blue-light)}.login .btn{width:100%;margin-top:3px}.error{color:var(--red);font-size:13px;margin:12px 0 0}
+/* Ini ang same white sidebar style nga ginagamit sang admin index.html. */
+#app{display:flex;min-height:100vh}.sidebar{width:250px;min-width:250px;background:#fff;border-right:1px solid var(--line);padding:20px 16px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}.brand{display:flex;align-items:center;gap:10px;padding:6px 6px 18px}.brand-text b{display:block;font-size:14.5px;color:var(--navy);line-height:1.2}.brand-text span{font-size:11.5px;color:var(--ink-soft)}.nav{display:flex;flex-direction:column;gap:8px;margin-top:6px}.nav-item{display:flex;align-items:center;gap:11px;padding:11px 14px;border-radius:12px;border:none;color:var(--ink-soft);font-size:14px;font-weight:600;text-decoration:none;background:none;text-align:left;width:100%}.nav-item:hover{background:#f4f7fa}.nav-item.active{background:linear-gradient(180deg,var(--blue-mid),var(--blue-deep));color:#fff;box-shadow:0 8px 16px -8px rgba(18,74,118,.5)}.sidebar-bottom{margin-top:auto;border-top:1px solid var(--line);padding-top:12px}.logout-side{display:flex;align-items:center;gap:10px;width:100%;padding:10px;border:none;background:none;border-radius:10px;color:var(--red);font-weight:600}.logout-side:hover{background:#fbe9e8}
+/* Ini ang same sticky topbar kag content spacing sang admin dashboard. */
+.main{flex:1;min-width:0;display:flex;flex-direction:column}.top{display:flex;align-items:center;gap:16px;padding:16px 28px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}.top h2{font-size:17px;color:var(--blue-deep)}.path{font-size:12px;color:var(--ink-soft);margin-top:1px}.doctor-info{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto}.badge{display:inline-block;padding:5px 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--blue-light);color:var(--blue)}.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(160deg,#1c6ca3,#12866f);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}.wrap{width:100%;max-width:1280px;padding:26px 28px 60px}.page-head{margin-bottom:20px}.page-head h1{font-size:25px}.page-head p{margin:5px 0 0;color:var(--ink-soft);font-size:14px}
+/* Ini ang queue hero card nga kapareho sang Queue Management card sa admin. */
+.current-card{padding:24px;border-left:5px solid var(--blue);margin-bottom:18px}.queue-label{display:inline-flex;padding:6px 12px;border-radius:999px;background:var(--blue-light);color:var(--blue);font-size:11px;font-weight:800;letter-spacing:.6px}.queue{font:800 58px var(--font-head);color:var(--navy);margin:8px 0 2px}.current-card h3{font-size:18px}.current-actions{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}#queueMessage{margin-top:12px}
+.section-card{padding:22px;margin-bottom:18px}.section-card h3{font-size:17px}.section-card>p{margin:4px 0 18px}.table-wrap{width:100%;overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:700px}th{text-align:left;font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:#8a99a6;padding:0 12px 10px;border-bottom:1px solid var(--line)}td{text-align:left;padding:13px 12px;border-bottom:1px solid #f0f3f6;font-size:13.5px}tbody tr:hover{background:#fafcfe}.empty{padding:25px!important;text-align:center;color:var(--ink-soft)}.status{display:inline-block;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:700}.status-approved{background:#fff3d9;color:#996400}.status-serving{background:#e8f2fb;color:var(--blue)}.status-completed{background:var(--green-light);color:#16733c}.status-other{background:#f1f3f5;color:#667788}
+@media(max-width:800px){.sidebar{display:none}.top{padding:14px 16px}.wrap{padding:20px 14px 50px}.doctor-info{margin-left:auto}.top .outline{display:none}.queue{font-size:46px}.section-card,.current-card{padding:18px}}
+</style>
 </head>
-
 <body>
-
-  <!-- LOGIN -->
+<!-- Doctor login: same card language as the admin login without changing authentication logic. -->
+<div id="loginShell" class="login-shell">
   <div id="login" class="login card">
-    <h2>Doctor Portal</h2>
-
-    <p class="muted">
-      Sign in with your SERbisyo RHU doctor account.
-    </p>
-
-    <input
-      id="email"
-      type="email"
-      placeholder="Email"
-      autocomplete="email"
-    >
-
-    <input
-      id="pass"
-      type="password"
-      placeholder="Password"
-      autocomplete="current-password"
-    >
-
-    <button
-      id="loginBtn"
-      class="btn primary"
-      type="button"
-    >
-      Sign In
-    </button>
-
+    <div class="login-brand"><div class="brand-icon"><img src="assets/logo-full.png" alt="San Enrique RHU"></div><div><h2>Doctor Portal</h2><span class="muted">San Enrique RHU · Clinical Sanctuary</span></div></div>
+    <p class="muted">Sign in with your SERbisyo RHU doctor account.</p>
+    <input id="email" type="email" placeholder="Email" autocomplete="email">
+    <input id="pass" type="password" placeholder="Password" autocomplete="current-password">
+    <button id="loginBtn" class="btn primary" type="button">Sign In</button>
     <p id="msg" class="error"></p>
   </div>
-
-
-  <!-- DOCTOR APP -->
-  <div id="app" class="hidden">
-
-    <header class="top">
-      <div>
-        <b>SERbisyo — Doctor Portal</b>
-
-        <div class="doctor-info">
-          <span class="muted" id="doctorName"></span>
-          <span class="badge" id="doctorDepartment"></span>
-        </div>
-      </div>
-
-      <button
-        id="logoutBtn"
-        class="btn outline"
-        type="button"
-      >
-        Log Out
-      </button>
-    </header>
-
-
+</div>
+<!-- Doctor app: sidebar/topbar/card structure now matches index.html while all original IDs remain. -->
+<div id="app" class="hidden">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-icon"><img src="assets/logo-full.png" alt="San Enrique RHU"></div><div class="brand-text"><b>San Enrique RHU</b><span>Doctor Portal</span></div></div>
+    <nav class="nav">
+      <a class="nav-item active" href="#current"><span>▣</span> My Queue</a>
+      <a class="nav-item" href="#waiting"><span>☷</span> Waiting Patients</a>
+      <a class="nav-item" href="#bookings-card"><span>▤</span> My Bookings</a>
+    </nav>
+    <div class="sidebar-bottom"><button id="logoutSideBtn" class="logout-side" type="button">↪ Log Out</button></div>
+  </aside>
+  <div class="main">
+    <header class="top"><div><h2>SERbisyo — Doctor Portal</h2><div class="path">Doctor / My Queue</div></div><div class="doctor-info"><span class="muted" id="doctorName"></span><span class="badge" id="doctorDepartment"></span><div class="avatar">DR</div><button id="logoutBtn" class="btn outline" type="button">Log Out</button></div></header>
     <main class="wrap">
-
-      <!-- CURRENT PATIENT -->
-      <section class="card current-card">
-
-        <div class="muted">
-          NOW SERVING
-        </div>
-
-        <div
-          class="queue"
-          id="currentNum"
-        >
-          —
-        </div>
-
-        <h3 id="currentPatient">
-          No patient currently being served
-        </h3>
-
-        <p
-          class="muted"
-          id="currentService"
-        ></p>
-
-        <p
-          class="muted"
-          id="currentSchedule"
-        ></p>
-
-        <div class="current-actions">
-
-          <button
-            class="btn primary"
-            id="callNextBtn"
-            type="button"
-          >
-            Call Next Patient
-          </button>
-
-          <button
-            class="btn success hidden"
-            id="doneBtn"
-            type="button"
-          >
-            ✓ Patient Done
-          </button>
-
-        </div>
-
-        <p
-          id="queueMessage"
-          class="muted"
-        ></p>
-
-      </section>
-
-
-      <!-- WAITING QUEUE -->
-      <section class="card">
-
-        <h3>My Waiting Queue</h3>
-
-        <p class="muted">
-          Only checked-in patients assigned to you are shown here.
-        </p>
-
-        <div class="table-wrap">
-
-          <table>
-
-            <thead>
-              <tr>
-                <th>Queue</th>
-                <th>Patient</th>
-                <th>Service</th>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-
-            <tbody id="waitingQueue"></tbody>
-
-          </table>
-
-        </div>
-
-      </section>
-
-
-      <!-- BOOKINGS -->
-      <section class="card">
-
-        <h3>My Bookings</h3>
-
-        <p class="muted">
-          Appointments assigned to your doctor account.
-        </p>
-
-        <div class="table-wrap">
-
-          <table>
-
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Patient</th>
-                <th>Service</th>
-                <th>Queue</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-
-            <tbody id="bookings"></tbody>
-
-          </table>
-
-        </div>
-
-      </section>
-
+      <div class="page-head"><h1>Doctor Queue</h1><p>Manage only the patients assigned to your account.</p></div>
+      <section id="current" class="card current-card"><div class="queue-label">● NOW SERVING</div><div class="queue" id="currentNum">—</div><h3 id="currentPatient">No patient currently being served</h3><p class="muted" id="currentService"></p><p class="muted" id="currentSchedule"></p><div class="current-actions"><button class="btn primary" id="callNextBtn" type="button">Call Next Patient</button><button class="btn success hidden" id="doneBtn" type="button">✓ Patient Done</button></div><p id="queueMessage" class="muted"></p></section>
+      <section id="waiting" class="card section-card"><h3>My Waiting Queue</h3><p class="muted">Only checked-in patients assigned to you are shown here.</p><div class="table-wrap"><table><thead><tr><th>Queue</th><th>Patient</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th></tr></thead><tbody id="waitingQueue"></tbody></table></div></section>
+      <section id="bookings-card" class="card section-card"><h3>My Bookings</h3><p class="muted">Appointments assigned to your doctor account.</p><div class="table-wrap"><table><thead><tr><th>Date</th><th>Time</th><th>Patient</th><th>Service</th><th>Queue</th><th>Status</th></tr></thead><tbody id="bookings"></tbody></table></div></section>
     </main>
-
   </div>
-
-
+</div>
 <script>
 /* =========================================================
    CONFIGURATION
@@ -444,6 +79,9 @@ let isLoading = false;
 
 const loginSection =
   document.getElementById('login');
+
+const loginShell =
+  document.getElementById('loginShell');
 
 const appSection =
   document.getElementById('app');
@@ -684,6 +322,7 @@ async function start() {
 
 
   loginSection.classList.add('hidden');
+  loginShell.classList.add('hidden');
   appSection.classList.remove('hidden');
 
   await loadAppointments();
@@ -1335,6 +974,9 @@ logoutBtn.addEventListener(
   logoutDoctor
 );
 
+const logoutSideBtn = document.getElementById('logoutSideBtn');
+if (logoutSideBtn) logoutSideBtn.addEventListener('click', logoutDoctor);
+
 callNextBtn.addEventListener(
   'click',
   callNextPatient
@@ -1391,6 +1033,7 @@ passwordInput.addEventListener(
     loginSection.classList.remove(
       'hidden'
     );
+    loginShell.classList.remove('hidden');
 
     appSection.classList.add(
       'hidden'
