@@ -28,8 +28,8 @@
     --line-dash:#b9d4e8;
     --bg:#eef2f6;
     --card:#ffffff;
-    --radius:12px;
-    --radius-sm:8px;
+    --radius:16px;
+    --radius-sm:10px;
     --shadow:0 1px 2px rgba(15,54,84,.04), 0 8px 24px -12px rgba(15,54,84,.12);
     --font-head:'Poppins',sans-serif;
     --font-body:'Inter',sans-serif;
@@ -56,7 +56,7 @@
   .hidden{display:none !important;}
   .row{display:flex; align-items:center;}
   .between{justify-content:space-between;}
-  .gap8{gap:8px;} .gap12{gap:12px;} .gap16{gap:12px;}
+  .gap8{gap:8px;} .gap12{gap:12px;} .gap16{gap:16px;}
   .muted{color:var(--ink-soft);}
   .small{font-size:12.5px;}
   .pill{
@@ -71,7 +71,7 @@
   .pill-gray{background:#eef1f4; color:#5b6b7a;}
 
   .btn{
-    border:none; border-radius:999px; padding:9px 16px; font-weight:600; font-size:14px;
+    border:none; border-radius:999px; padding:11px 22px; font-weight:600; font-size:14px;
     display:inline-flex; align-items:center; gap:8px; transition:transform .12s ease, box-shadow .12s ease, opacity .12s;
   }
   .btn:active{transform:scale(.97);}
@@ -80,7 +80,7 @@
   .btn-primary:hover{opacity:.94;}
   .btn-outline{background:#fff; color:var(--blue-deep); border:1.5px solid var(--line);}
   .btn-outline:hover{border-color:var(--blue-mid);}
-  .btn-ghost{background:transparent; color:var(--ink-soft); padding:6px 10px;}
+  .btn-ghost{background:transparent; color:var(--ink-soft); padding:8px 12px;}
   .btn-danger{background:var(--red); color:#fff;}
   .btn-sm{padding:7px 14px; font-size:12.5px; border-radius:999px;}
   .icon-btn{
@@ -104,7 +104,7 @@
   .login-card{margin-top:28px; padding:34px 32px 28px; text-align:left;}
   .login-card h3{font-size:19px;}
   .login-card .desc{color:var(--ink-soft); font-size:13.5px; margin-top:6px; line-height:1.5;}
-  .field{margin-top:12px;}
+  .field{margin-top:18px;}
   .field label{display:flex; justify-content:space-between; font-size:11px; font-weight:700; letter-spacing:.6px; color:#7c8a97; text-transform:uppercase; margin-bottom:7px;}
   .field label a{font-size:12px; text-transform:none; font-weight:600; letter-spacing:0;}
   .input-wrap{position:relative;}
@@ -117,7 +117,7 @@
   .eye-toggle{position:absolute; right:28px; top:50%; transform:translateY(-50%); background:none; border:none; color:#9aa9b6; padding:4px;}
   .check-row{display:flex; align-items:center; gap:9px; margin-top:16px; font-size:13.5px; color:var(--ink-soft);}
   .check-row input{width:16px; height:16px; accent-color:var(--blue-mid);}
-  .login-btn{width:100%; justify-content:center; margin-top:14px; padding:13px; font-size:15px;}
+  .login-btn{width:100%; justify-content:center; margin-top:22px; padding:13px; font-size:15px;}
   .login-foot{text-align:center; margin-top:16px; font-size:13.5px; color:var(--ink-soft);}
   .login-foot a{font-weight:600; text-decoration:none;}
   .legal{margin-top:26px; text-align:center; font-size:12px; color:#93a2af;}
@@ -139,18 +139,18 @@
   #app-screen{display:flex; min-height:100vh;}
   .sidebar{
     width:250px; min-width:250px; background:#fff; border-right:1px solid var(--line);
-    padding:14px 12px; display:flex; flex-direction:column; position:sticky; top:0; height:100vh;
+    padding:20px 16px; display:flex; flex-direction:column; position:sticky; top:0; height:100vh;
   }
-  .brand{display:flex; align-items:center; gap:10px; padding:4px 5px 10px;}
+  .brand{display:flex; align-items:center; gap:10px; padding:6px 6px 18px;}
   .brand-icon{
     width:38px; height:38px; border-radius:11px; background:linear-gradient(160deg,#0f3654,#12866f);
     display:flex; align-items:center; justify-content:center; color:#fff;
   }
   .brand-text b{display:block; font-size:14.5px; color:var(--navy); font-weight:700; line-height:1.2;}
   .brand-text span{font-size:11.5px; color:var(--ink-soft);}
-  .nav{display:flex; flex-direction:column; gap:4px; margin-top:4px;}
+  .nav{display:flex; flex-direction:column; gap:8px; margin-top:6px;}
   .nav-item{
-    display:flex; align-items:center; gap:11px; padding:8px 11px; border-radius:12px; border:1.5px dashed transparent;
+    display:flex; align-items:center; gap:11px; padding:11px 14px; border-radius:12px; border:1.5px dashed transparent;
     color:var(--ink-soft); font-size:14px; font-weight:600; text-decoration:none; background:none; text-align:left; width:100%;
   }
   .nav-item svg{opacity:.85; flex-shrink:0;}
@@ -163,7 +163,7 @@
   .new-entry-btn{width:100%; justify-content:center; padding:12px;}
   .sidebar-links{display:flex; flex-direction:column; gap:2px; margin-top:6px; border-top:1px solid var(--line); padding-top:12px;}
   .sidebar-links button{
-    display:flex; align-items:center; gap:10px; padding:7px 9px; border-radius:10px; border:none; background:none;
+    display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:10px; border:none; background:none;
     color:var(--ink-soft); font-size:13.5px; font-weight:600; text-align:left; width:100%;
   }
   .sidebar-links button:hover{background:#f4f7fa;}
@@ -171,10 +171,10 @@
 
   .main{flex:1; min-width:0; display:flex; flex-direction:column;}
   .topbar{
-    display:flex; align-items:center; gap:12px; padding:11px 18px; background:#fff; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:16px; padding:16px 28px; background:#fff; border-bottom:1px solid var(--line);
     position:sticky; top:0; z-index:5;
   }
-  .topbar h2{font-size:16px; color:var(--blue-deep);}
+  .topbar h2{font-size:17px; color:var(--blue-deep);}
   .topbar .path{font-size:12px; color:var(--ink-soft); font-weight:500; margin-top:1px;}
   .search-box{
     flex:1; max-width:420px; display:flex; align-items:center; gap:8px; background:#f4f7fa; border-radius:11px;
@@ -187,20 +187,20 @@
     width:36px; height:36px; border-radius:50%; background:linear-gradient(160deg,#1c6ca3,#12866f); color:#fff;
     display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;
   }
-  .content{padding:16px 18px 36px; flex:1;}
+  .content{padding:26px 28px 60px; flex:1;}
   .page{max-width:1280px;}
-  .page-head{margin-bottom:8px;}
-  .page-head h1{font-size:22px;}
-  .page-head p{color:var(--ink-soft); margin-top:3px; font-size:14px;}
+  .page-head{margin-bottom:20px;}
+  .page-head h1{font-size:25px;}
+  .page-head p{color:var(--ink-soft); margin-top:5px; font-size:14px;}
 
-  .grid{display:grid; gap:12px;}
+  .grid{display:grid; gap:18px;}
   .grid-2{grid-template-columns:1fr 1fr;}
   .grid-4{grid-template-columns:repeat(4,1fr);}
   .grid-main{grid-template-columns:2fr 1fr;}
   @media(max-width:1000px){.grid-2,.grid-4,.grid-main{grid-template-columns:1fr;}}
 
-  .stat-card{padding:13px 15px;}
-  .stat-icon{width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:8px;}
+  .stat-card{padding:18px 20px;}
+  .stat-icon{width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:12px;}
   .stat-value{font-size:24px; font-weight:800; color:var(--navy); font-family:var(--font-head);}
   .stat-label{font-size:12.5px; color:var(--ink-soft); margin-top:2px;}
   .trend-up{color:var(--green); font-weight:700; font-size:12px;}
@@ -209,11 +209,11 @@
   .table{width:100%; border-collapse:collapse; font-size:13.5px;}
   .table thead th{
     text-align:left; font-size:10.5px; letter-spacing:.5px; text-transform:uppercase; color:#8a99a6;
-    padding:0 9px 7px; font-weight:700; border-bottom:1px solid var(--line);
+    padding:0 12px 10px; font-weight:700; border-bottom:1px solid var(--line);
   }
-  .table tbody td{padding:9px 9px; border-bottom:1px solid #f0f3f6; vertical-align:middle;}
+  .table tbody td{padding:13px 12px; border-bottom:1px solid #f0f3f6; vertical-align:middle;}
   .table tbody tr:hover{background:#fafcfe;}
-  .name-cell{display:flex; align-items:center; gap:7px;}
+  .name-cell{display:flex; align-items:center; gap:10px;}
   .avatar-sm{
     width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center;
     font-weight:700; font-size:12px; color:#fff; flex-shrink:0;
@@ -226,7 +226,7 @@
     position:fixed; inset:0; background:rgba(15,35,54,.5); backdrop-filter:blur(2px);
     display:flex; align-items:center; justify-content:center; z-index:50; padding:20px;
   }
-  .modal{background:#fff; border-radius:18px; width:100%; max-width:520px; max-height:88vh; overflow-y:auto; padding:18px 18px 16px; box-shadow:0 30px 60px -20px rgba(15,35,54,.4);}
+  .modal{background:#fff; border-radius:18px; width:100%; max-width:520px; max-height:88vh; overflow-y:auto; padding:26px 26px 22px; box-shadow:0 30px 60px -20px rgba(15,35,54,.4);}
   .modal-head{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;}
   .modal-head h3{font-size:18px;}
   .modal-close{background:#f4f7fa; border:none; width:30px; height:30px; border-radius:9px; color:var(--ink-soft); font-size:16px;}
@@ -235,13 +235,13 @@
     width:100%; padding:11px 13px; border-radius:10px; border:1.5px solid var(--line); background:#f7f9fb; font-size:13.5px; outline:none;
   }
   .modal .field input:focus, .modal .field select:focus, .modal .field textarea:focus{border-color:var(--blue-mid); background:#fff;}
-  .modal-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:14px;}
-  .field-row{display:grid; grid-template-columns:1fr 1fr; gap:9px;}
+  .modal-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:22px;}
+  .field-row{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
 
   /* mini availability calendar */
   .cal-wrap{position:relative;}
   .cal-input{cursor:pointer; background:#f7f9fb url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="%235b6b7a" stroke-width="2"><rect x="1" y="2" width="14" height="12" rx="2"/><path d="M1 6h14M4 1v3M12 1v3"/></svg>') no-repeat right 12px center;}
-  .mini-cal{margin-top:6px; border:1px solid var(--line); border-radius:12px; padding:12px 12px 10px; background:#fff;}
+  .mini-cal{margin-top:10px; border:1px solid var(--line); border-radius:12px; padding:12px 12px 10px; background:#fff;}
   .cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
   .cal-head b{font-size:13px; color:var(--navy);}
   .cal-head button{width:26px; height:26px; border-radius:8px; border:1px solid var(--line); background:#fff; color:var(--ink-soft); font-size:14px;}
@@ -254,7 +254,7 @@
   .cal-cell.full{background:var(--red-light); color:var(--red);}
   .cal-cell.past{background:#f7f9fb; color:#cbd4db; cursor:not-allowed;}
   .cal-cell.selected{box-shadow:0 0 0 2px var(--blue-mid) inset;}
-  .cal-legend{display:flex; gap:14px; margin-top:6px; font-size:11px; color:var(--ink-soft); align-items:center;}
+  .cal-legend{display:flex; gap:14px; margin-top:10px; font-size:11px; color:var(--ink-soft); align-items:center;}
   .cal-legend .dot{width:8px; height:8px; border-radius:3px; display:inline-block; margin-right:5px;}
   .cal-legend .dot.open{background:var(--green);}
   .cal-legend .dot.full{background:var(--red);}
@@ -273,17 +273,17 @@
   .spinner{width:34px; height:34px; border-radius:50%; border:3px solid #d7e3ec; border-top-color:var(--blue-mid); animation:spin .8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
 
-  .queue-hero{padding:18px 16px; text-align:center;}
+  .queue-hero{padding:30px 26px; text-align:center;}
   .queue-live-tag{display:inline-flex; align-items:center; gap:6px; background:var(--green-light); color:var(--green); padding:5px 14px; border-radius:999px; font-size:11.5px; font-weight:700;}
-  .queue-num{font-family:var(--font-head); font-size:52px; font-weight:800; color:var(--navy); line-height:1.1; margin-top:6px;}
+  .queue-num{font-family:var(--font-head); font-size:64px; font-weight:800; color:var(--navy); line-height:1.1; margin-top:10px;}
   .queue-sub{color:var(--ink-soft); font-size:13.5px; margin-top:4px;}
-  .queue-mini{display:flex; justify-content:space-around; margin-top:14px; padding-top:20px; border-top:1px solid var(--line);}
+  .queue-mini{display:flex; justify-content:space-around; margin-top:22px; padding-top:20px; border-top:1px solid var(--line);}
   .queue-mini div b{display:block; font-size:20px; color:var(--navy); font-family:var(--font-head);}
   .queue-mini div span{font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.4px;}
-  .queue-actions-card{padding:14px;}
+  .queue-actions-card{padding:20px;}
   .queue-actions-card .btn{width:100%; justify-content:center; margin-bottom:10px;}
-  .station-row{display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid #f0f3f6; font-size:13.5px;}
-  .activity-row{display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid #f0f3f6;}
+  .station-row{display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f0f3f6; font-size:13.5px;}
+  .activity-row{display:flex; gap:10px; align-items:flex-start; padding:11px 0; border-bottom:1px solid #f0f3f6;}
   .activity-dot{width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
 
   .bar-chart{display:flex; align-items:flex-end; gap:14px; height:180px; padding-top:10px;}
@@ -297,10 +297,10 @@
   .legend-row{display:flex; align-items:center; gap:8px; font-size:12.5px; padding:5px 0; color:var(--ink-soft);}
   .legend-dot{width:9px; height:9px; border-radius:3px; flex-shrink:0;}
 
-  .empty-state{text-align:center; padding:28px 14px; color:var(--ink-soft);}
+  .empty-state{text-align:center; padding:50px 20px; color:var(--ink-soft);}
 
   .tab-row{display:flex; gap:6px; background:#f4f7fa; padding:4px; border-radius:11px; width:fit-content;}
-  .tab-row button{border:none; background:none; padding:6px 12px; border-radius:9px; font-size:12.5px; font-weight:600; color:var(--ink-soft);}
+  .tab-row button{border:none; background:none; padding:7px 16px; border-radius:9px; font-size:12.5px; font-weight:600; color:var(--ink-soft);}
   .tab-row button.active{background:#fff; color:var(--blue-deep); box-shadow:0 1px 3px rgba(0,0,0,.08);}
 
   @media(max-width:880px){
@@ -310,23 +310,6 @@
     .topbar{padding:14px 16px;}
     .search-box{display:none;}
   }
-
-  /* Compact admin layout */
-  .page{max-width:1400px;}
-  .card{border-radius:12px;}
-  .table{font-size:13px;}
-  .table thead th{padding-left:9px;padding-right:9px;}
-  .table tbody td{padding:8px 9px;}
-  .btn{min-height:34px;}
-  .btn-sm{padding:5px 10px;font-size:12px;min-height:29px;}
-  .field{margin-top:12px;}
-  .modal{max-height:92vh;}
-  .page-head{margin-bottom:12px;}
-  .page-head p{font-size:13px;}
-  .sidebar{width:230px;min-width:230px;}
-  .nav-item{font-size:13px;}
-  .content{padding:16px 18px 32px;}
-  @media(max-width:880px){.content{padding:12px}.topbar{padding:10px 12px}}
 </style>
 <body>
 
@@ -510,6 +493,10 @@
         <h2 id="topbar-title">SERbisyo — San Enrique RHU</h2>
         <div class="path" id="topbar-path">Dashboard</div>
       </div>
+      <div class="search-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+        <input id="global-search" placeholder="Search patients, files, or tasks...">
+      </div>
       <div class="topbar-right">
         <button class="icon-btn" id="refresh-btn" title="Refresh data"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v6h-6"/></svg></button>
         <div class="avatar" id="user-avatar">A</div>
@@ -653,20 +640,16 @@ function closeModal(){ document.getElementById('modal-root').innerHTML=''; }
    DATA LOADING
    ========================================================= */
 async function loadAllData(){
-  async function loadTable(table, options={}){
-    try{ return await api(table, 'GET', options); }
-    catch(err){ console.warn(`Could not load ${table}:`, err.message); return []; }
-  }
   const [patients, appointments, staff, queueStateArr, stations, activity, schedules, announcements, services] = await Promise.all([
-    loadTable('patients', { order:'created_at.desc' }),
-    loadTable('appointments', { order:'created_at.desc' }),
-    loadTable('staff', { order:'created_at.desc' }),
-    loadTable('queue_state', { eq:'id.1' }),
-    loadTable('queue_stations', { order:'sort_order.asc' }),
-    loadTable('queue_activity', { order:'created_at.desc', limit:8 }),
-    loadTable('schedules', { order:'date.asc' }),
-    loadTable('announcements', { order:'created_at.desc' }),
-    loadTable('services', { order:'name.asc' })
+    api('patients', 'GET', { order:'created_at.desc' }),
+    api('appointments', 'GET', { order:'created_at.desc' }),
+    api('staff', 'GET', { order:'created_at.desc' }),
+    api('queue_state', 'GET', { eq:'id.1' }),
+    api('queue_stations', 'GET', { order:'sort_order.asc' }),
+    api('queue_activity', 'GET', { order:'created_at.desc', limit:8 }),
+    api('schedules', 'GET', { order:'date.asc' }),
+    api('announcements', 'GET', { order:'created_at.desc' }),
+    api('services', 'GET', { order:'name.asc' })
   ]);
 
   DB.patients = (patients||[]).map(r=>({
@@ -843,57 +826,45 @@ document.getElementById('login-form').addEventListener('submit', async (e)=>{
 
 async function enterApp(){
   showLoading(true);
-  let authenticated = false;
   try{
+    // Always re-confirm who's actually logged in via this token,
+    // rather than trusting whatever object is already in currentUser.
+    // This MUST be a GET — the backend's session-check route only exists as GET.
     const token = getToken();
-    if(!token){ showMsg('Please sign in to continue.', 'err'); return; }
-
-    let sessionCheck = { authenticated:false };
-    try{
-      const sessionRes = await safeFetch(`${BACKEND_URL}/api/auth?action=session`, {
-        headers:{ 'Authorization': `Bearer ${token}` }
-      });
-      sessionCheck = await sessionRes.json().catch(()=>({authenticated:false}));
-    }catch(err){ console.warn('Session check failed:', err.message); }
+    const sessionRes = await safeFetch(`${BACKEND_URL}/api/auth?action=session`, {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+    const sessionCheck = await sessionRes.json().catch(()=>({authenticated:false}));
 
     if(sessionCheck.authenticated){
       currentUser = sessionCheck.user;
-      authenticated = true;
-    }else if(await attemptTokenRefresh()){
-      authenticated = true;
-    }
-
-    if(!authenticated){
-      clearToken(); currentUser=null;
-      document.getElementById('login-screen').classList.remove('hidden');
-      document.getElementById('app-screen').classList.add('hidden');
-      showMsg('Your login session is no longer valid. Please sign in again.', 'err');
-      return;
+    } else {
+      // Access token's genuinely no good anymore — try a silent refresh
+      // before giving up and showing the login screen.
+      const refreshed = await attemptTokenRefresh();
+      if(!refreshed) throw new Error('Session expired.');
     }
 
     await loadAllData();
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('app-screen').classList.remove('hidden');
-    loginMsg.className='login-msg';
-    const name=currentUser?.user_metadata?.name || currentUser?.email || 'Admin';
-    document.getElementById('user-avatar').textContent=initials(name);
-    if(currentUser?.user_metadata?.role==='staff' && currentUser?.id){
-      ensureStaffRecord(name,currentUser.email,currentUser.id,null,null);
+    const name = currentUser?.user_metadata?.name || currentUser?.email || 'Admin';
+    document.getElementById('user-avatar').textContent = initials(name);
+
+    if(currentUser?.user_metadata?.role === 'staff' && currentUser?.id){
+      ensureStaffRecord(name, currentUser.email, currentUser.id, null, null);
     }
+
     navigate('dashboard');
-  }catch(err){
-    console.error('Admin startup error:',err);
-    if(authenticated){
-      document.getElementById('login-screen').classList.add('hidden');
-      document.getElementById('app-screen').classList.remove('hidden');
-      try{ navigate('dashboard'); }catch(e){}
-      toast('Some data could not be loaded. Click Refresh Data to retry.',true);
-    }else{
-      document.getElementById('login-screen').classList.remove('hidden');
-      document.getElementById('app-screen').classList.add('hidden');
-      showMsg('Could not verify your login. Please try again.','err');
-    }
-  }finally{ showLoading(false); }
+  } catch(err){
+    clearToken();
+    currentUser = null;
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('app-screen').classList.add('hidden');
+    showMsg('Your session expired — please log in again.', 'err');
+  } finally {
+    showLoading(false);
+  }
 }
 
 document.getElementById('logout-btn').addEventListener('click', async ()=>{
@@ -936,7 +907,7 @@ document.querySelectorAll('.nav-item').forEach(btn=>{
   btn.addEventListener('click', ()=> navigate(btn.dataset.page));
 });
 document.getElementById('new-entry-btn').addEventListener('click', ()=>{
-  if(currentPage==='patients') toast('Patient records are created automatically from patient accounts.');
+  if(currentPage==='patients') openPatientModal();
   else if(currentPage==='staff') openStaffModal();
   else if(currentPage==='queue') openStationModal();
   else if(currentPage==='schedules') openScheduleModal();
@@ -962,6 +933,10 @@ function navigate(page){
   document.getElementById('sidebar').classList.remove('open');
 }
 
+document.getElementById('global-search').addEventListener('input', (e)=>{
+  const q = e.target.value.trim().toLowerCase();
+  if(currentPage==='patients'){ patientSearch = q; renderPatientsInPlace(); }
+});
 
 /* =========================================================
    DASHBOARD
@@ -977,19 +952,19 @@ function renderDashboard(){
     <div class="grid grid-2">
       <div class="card card-dash" style="padding:24px; cursor:pointer;" onclick="navigate('appointments')">
         <div class="row between"><div class="stat-icon" style="background:var(--blue-light); color:var(--blue-deep);">📅</div><span class="muted">→</span></div>
-        <h3 style="margin-top:6px; font-size:17px;">📅 Appointments</h3>
+        <h3 style="margin-top:10px; font-size:17px;">📅 Appointments</h3>
         <p class="muted small" style="margin-top:6px; line-height:1.5;">Manage scheduled consultations and specialist visits for today.</p>
         <div style="margin-top:14px; font-size:12.5px;" class="muted">${DB.appointments.length} scheduled · <b style="color:var(--blue-deep)">View all →</b></div>
       </div>
       <div class="card card-dash" style="padding:24px; cursor:pointer;" onclick="navigate('queue')">
         <div class="row between"><div class="stat-icon" style="background:var(--teal-light); color:var(--teal);">🎟️</div><span class="muted">→</span></div>
-        <h3 style="margin-top:6px; font-size:17px;">🎟️ Queue Management</h3>
+        <h3 style="margin-top:10px; font-size:17px;">🎟️ Queue Management</h3>
         <p class="muted small" style="margin-top:6px; line-height:1.5;">Real-time status of waiting patients and triage flow.</p>
         <span class="pill pill-green" style="margin-top:14px;">● Active Now: ${String(waiting).padStart(2,'0')}</span>
       </div>
       <div class="card card-dash" style="padding:24px; cursor:pointer;" onclick="navigate('patients')">
         <div class="row between"><div class="stat-icon" style="background:var(--blue-light); color:var(--blue-deep);">👥</div><span class="muted">→</span></div>
-        <h3 style="margin-top:6px; font-size:17px;">👥 Patients</h3>
+        <h3 style="margin-top:10px; font-size:17px;">👥 Patients</h3>
         <p class="muted small" style="margin-top:6px; line-height:1.5;">Access comprehensive digital health records and history.</p>
         <div style="margin-top:14px; font-size:12.5px;" class="muted">Total Registered <b style="color:var(--blue-deep); font-size:15px;">${DB.patients.length}</b></div>
       </div>
@@ -998,9 +973,9 @@ function renderDashboard(){
           <div class="stat-icon" style="background:var(--amber-light); color:#96721e;">📊</div>
           <div style="text-align:right;"><div class="small muted">PERFORMANCE</div><div class="small muted">${DB.appointments.length ? 'Live data' : 'No data yet'}</div></div>
         </div>
-        <h3 style="margin-top:6px; font-size:17px;">📊 Reports</h3>
+        <h3 style="margin-top:10px; font-size:17px;">📊 Reports</h3>
         <p class="muted small" style="margin-top:6px; line-height:1.5;">Analyze health outcomes, resource utilization, and clinic performance.</p>
-        <div class="bar-chart" style="height:44px; gap:6px; margin-top:6px;">
+        <div class="bar-chart" style="height:44px; gap:6px; margin-top:10px;">
           ${computeReportData().intake.slice(-5).map(x=>`<div class="bar-col"><div class="bar" style="height:${x.v ? Math.min(100, x.v*14) : 2}%; max-width:16px;"></div></div>`).join('')}
         </div>
       </div>
@@ -1039,12 +1014,12 @@ function renderAppointments(){
         <div class="tab-row" id="appt-tabs">
           ${['all','Pending','Approved','Completed','Cancelled'].map(s=>`<button data-f="${s}" class="${apptFilters.status===s?'active':''}">${s==='all'?'All':s}</button>`).join('')}
         </div>
-        <input type="text" id="appt-search" placeholder="Search patient…" value="${apptFilters.search}" style="padding:6px 10px; border-radius:9px; border:1px solid var(--line); font-size:12.5px; min-width:160px;">
-        <input type="date" id="appt-date-filter" value="${apptFilters.date}" style="padding:6px 10px; border-radius:9px; border:1px solid var(--line); font-size:12.5px;">
-        <select id="appt-doctor-filter" style="padding:6px 10px; border-radius:9px; border:1px solid var(--line); font-size:12.5px;">
+        <input type="text" id="appt-search" placeholder="Search patient…" value="${apptFilters.search}" style="padding:8px 12px; border-radius:9px; border:1px solid var(--line); font-size:12.5px; min-width:160px;">
+        <input type="date" id="appt-date-filter" value="${apptFilters.date}" style="padding:8px 12px; border-radius:9px; border:1px solid var(--line); font-size:12.5px;">
+        <select id="appt-doctor-filter" style="padding:8px 12px; border-radius:9px; border:1px solid var(--line); font-size:12.5px;">
           <option value="">All Doctors</option>${doctorNames.map(d=>`<option ${apptFilters.doctor===d?'selected':''}>${d}</option>`).join('')}
         </select>
-        <select id="appt-service-filter" style="padding:6px 10px; border-radius:9px; border:1px solid var(--line); font-size:12.5px;">
+        <select id="appt-service-filter" style="padding:8px 12px; border-radius:9px; border:1px solid var(--line); font-size:12.5px;">
           <option value="">All Services</option>${serviceNames.map(s=>`<option ${apptFilters.service===s?'selected':''}>${s}</option>`).join('')}
         </select>
         <div class="muted small" style="margin-left:auto;">Showing ${rows.length} of ${DB.appointments.length}</div>
@@ -1107,45 +1082,24 @@ async function setApptStatus(dbId, status){
  * This is what makes "your number" mean something specific to a patient,
  * instead of just watching a shared counter with no connection to them.
  */
-async 
-function doctorKey(name){ return String(name||'Unassigned').trim().toLowerCase(); }
-function stableDoctorPrefix(name){
-  const staffDoctor=DB.staff.find(s=>/doctor/i.test(s.role||'') && doctorKey(s.name)===doctorKey(name));
-  if(staffDoctor && staffDoctor.id) return 'D'+String(staffDoctor.id).replace(/\D/g,'').slice(-3).padStart(3,'0');
-  let h=0; for(const c of String(name||'Doctor')) h=(h*31+c.charCodeAt(0))>>>0;
-  return 'D'+String(h%1000).padStart(3,'0');
-}
-function nextDoctorQueueNumber(doctor){
-  const prefix=stableDoctorPrefix(doctor);
-  const nums=DB.appointments
-    .filter(a=>doctorKey(a.doctor)===doctorKey(doctor) && String(a.queueNumber||'').startsWith(prefix+'-'))
-    .map(a=>Number(String(a.queueNumber).split('-').pop())||0);
-  return `${prefix}-${String(Math.max(0,...nums)+1).padStart(3,'0')}`;
-}
-function doctorQueueGroups(){
-  const groups={};
-  DB.appointments.filter(a=>a.status==='Approved' && a.queueNumber).forEach(a=>{
-    const key=a.doctor||'Unassigned';
-    (groups[key] ||= []).push(a);
-  });
-  Object.values(groups).forEach(list=>list.sort((a,b)=>String(a.queueNumber).localeCompare(String(b.queueNumber))));
-  return groups;
-}
-
 async function confirmArrivalAndAssignQueue(dbId){
-  const a=DB.appointments.find(x=>String(x.dbId)===String(dbId));
-  if(!a) return toast('Appointment not found.', true);
-  if(!a.doctor) return toast('This booking has no assigned doctor.', true);
-  if(a.status!=='Pending') return toast('Only pending appointments can be checked in.', true);
-  const assignedNumber=nextDoctorQueueNumber(a.doctor);
+  const a = DB.appointments.find(x=>x.dbId===dbId); if(!a) return;
   try{
-    await api('appointments','PATCH',{id:a.dbId,body:{status:'Approved',queue_number:assignedNumber}});
-    a.status='Approved'; a.queueNumber=assignedNumber;
-    DB.queue.waiting=(DB.queue.waiting||0)+1;
-    try{ await api('queue_state','PATCH',{id:1,body:{waiting:DB.queue.waiting}}); }catch(e){}
-    toast(`${a.patient} checked in to ${a.doctor} — ${assignedNumber}`);
-    navigate('appointments');
-  }catch(err){ toast('Could not confirm arrival: '+err.message,true); }
+    const assignedNumber = DB.queue.nextNumber;
+    const newNext = incQueueNum(DB.queue.nextNumber);
+    const newWaiting = (DB.queue.waiting||0) + 1;
+
+    await api('appointments','PATCH',{ id:dbId, body:{ status:'Approved', queue_number:assignedNumber } });
+    await updateQueueState({ next_number:newNext, waiting:newWaiting });
+
+    a.status = 'Approved';
+    a.queueNumber = assignedNumber;
+    DB.queue.nextNumber = newNext;
+    DB.queue.waiting = newWaiting;
+
+    toast(`Checked in — assigned ${assignedNumber}.`);
+    navigate(currentPage);
+  } catch(err){ toast('Error: '+err.message, true); }
 }
 
 async function deleteAppt(dbId){
@@ -1332,14 +1286,14 @@ function renderSchedules(){
     </div>
     <div class="card" style="padding:20px;">
       <div class="row gap8" style="margin-bottom:16px; flex-wrap:wrap;">
-        <input type="date" id="sched-date-filter" value="${scheduleFilters.date}" style="padding:6px 10px; border-radius:9px; border:1px solid var(--line); font-size:12.5px;">
-        <select id="sched-service-filter" style="padding:6px 10px; border-radius:9px; border:1px solid var(--line); font-size:12.5px;">
+        <input type="date" id="sched-date-filter" value="${scheduleFilters.date}" style="padding:8px 12px; border-radius:9px; border:1px solid var(--line); font-size:12.5px;">
+        <select id="sched-service-filter" style="padding:8px 12px; border-radius:9px; border:1px solid var(--line); font-size:12.5px;">
           <option value="">All Services</option>${serviceNames.map(s=>`<option ${scheduleFilters.service===s?'selected':''}>${s}</option>`).join('')}
         </select>
-        <select id="sched-doctor-filter" style="padding:6px 10px; border-radius:9px; border:1px solid var(--line); font-size:12.5px;">
+        <select id="sched-doctor-filter" style="padding:8px 12px; border-radius:9px; border:1px solid var(--line); font-size:12.5px;">
           <option value="">All Doctors</option>${doctorNames.map(d=>`<option ${scheduleFilters.doctor===d?'selected':''}>${d}</option>`).join('')}
         </select>
-        <select id="sched-status-filter" style="padding:6px 10px; border-radius:9px; border:1px solid var(--line); font-size:12.5px;">
+        <select id="sched-status-filter" style="padding:8px 12px; border-radius:9px; border:1px solid var(--line); font-size:12.5px;">
           <option value="">All Statuses</option>
           ${['Available','Full','Cancelled','Completed'].map(s=>`<option ${scheduleFilters.status===s?'selected':''}>${s}</option>`).join('')}
         </select>
@@ -1862,50 +1816,145 @@ async function deleteAnnouncement(dbId){
    ========================================================= */
 let patientSearch = '';
 function renderPatients(){
-  const rows = DB.patients.map(p=>`
-    <tr>
-      <td><div class="name-cell"><div class="avatar-sm" style="background:${colorFor(p.name)}">${initials(p.name)}</div>
-        <div class="meta"><b>${p.name||'—'}</b><span>${p.id||'No patient number'}</span></div></div></td>
-      <td>${p.age ?? '—'}</td>
-      <td>${p.contact||'—'}</td>
-      <td>${p.email||'—'}</td>
-      <td>${p.barangay||p.address||'—'}</td>
-      <td><span class="pill ${String(p.status||'ACTIVE').toUpperCase()==='ACTIVE'?'pill-green':'pill-gray'}">${p.status||'ACTIVE'}</span></td>
-      <td><button class="btn btn-outline btn-sm" onclick="viewPatient(${JSON.stringify(p.dbId)})">Details</button></td>
-    </tr>`).join('');
-  pageEl().innerHTML=`
-    <div class="page-head"><h1>Patient Records</h1><p>Patients are created from registered patient accounts. Administrators can review details and booking history.</p></div>
-    <div class="card" style="padding:20px;overflow:auto">
-      <table class="table"><thead><tr><th>Patient</th><th>Age</th><th>Contact</th><th>Email</th><th>Address / Barangay</th><th>Status</th><th>Action</th></tr></thead>
-      <tbody>${rows || `<tr><td colspan="7"><div class="empty-state">No patient accounts found.</div></td></tr>`}</tbody></table>
-    </div>`;
+  const rows = DB.patients.filter(p=>{
+    if(!patientSearch) return true;
+    const q = patientSearch;
+    return p.name.toLowerCase().includes(q) || p.id.toLowerCase().includes(q) || p.contact.includes(q);
+  });
+  return `
+    <div class="page-head"><h1>Patient Records</h1><p>Manage and review comprehensive clinical histories for San Enrique residents.</p></div>
+    <div class="card" style="padding:20px;">
+      <div class="row between" style="flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+        <div class="search-box" style="background:#f4f7fa; flex:1; min-width:240px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
+          <input id="patient-search" placeholder="Search by name, patient ID, or contact number..." value="${patientSearch}">
+        </div>
+        <button class="btn btn-primary" onclick="openPatientModal()">+ Register New Patient</button>
+      </div>
+      <div class="row between" style="margin-bottom:10px;"><h4 style="font-size:14px;">Recent Admissions</h4><span class="muted small">Showing ${rows.length} of ${DB.patients.length}</span></div>
+      <table class="table">
+        <thead><tr><th>Full Name</th><th>Age</th><th>Contact</th><th>Email</th><th>Action</th></tr></thead>
+        <tbody>
+          ${rows.length ? rows.map(p=>`
+            <tr>
+              <td><div class="name-cell"><div class="avatar-sm" style="background:${colorFor(p.name)}">${initials(p.name)}</div>
+                <div class="meta"><b>${p.name}</b><span>ID: ${p.id}</span></div></div></td>
+              <td>${p.age} yrs</td>
+              <td>${p.contact}</td>
+              <td>${p.email}</td>
+              <td>
+                <div class="row gap8">
+                  <button class="icon-btn" title="View" onclick="viewPatient(${p.dbId})">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                  <button class="icon-btn" title="Delete" onclick="deletePatient(${p.dbId})">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>`).join('') : `<tr><td colspan="5"><div class="empty-state">${DB.patients.length ? 'No patients match your search.' : 'No patients registered yet. Click "Register New Patient" to add the first one.'}</div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 function renderPatientsInPlace(){
   document.getElementById('page-content').innerHTML = renderPatients();
   afterRender('patients');
 }
-function viewPatient(id){
-  const p=DB.patients.find(x=>String(x.dbId)===String(id));
-  if(!p) return toast('Patient not found.', true);
-  const appts=DB.appointments
-    .filter(a=>String(a.patient||'').trim().toLowerCase()===String(p.name||'').trim().toLowerCase())
-    .sort((a,b)=>`${b.date||''} ${b.time||''}`.localeCompare(`${a.date||''} ${a.time||''}`));
+function viewPatient(dbId){
+  const p = DB.patients.find(x=>x.dbId===dbId); if(!p) return;
   openModal(`
-    <div class="modal-head"><div><h3>${p.name||'Patient Details'}</h3><div class="small muted">${p.id||''}</div></div><button class="modal-close" onclick="closeModal()">×</button></div>
-    <div class="grid grid-2" style="margin-top:16px">
-      <div><div class="small muted">Age</div><b>${p.age??'—'}</b></div>
-      <div><div class="small muted">Contact</div><b>${p.contact||'—'}</b></div>
-      <div><div class="small muted">Email</div><b>${p.email||'—'}</b></div>
-      <div><div class="small muted">Barangay</div><b>${p.barangay||'—'}</b></div>
+    <div class="modal-head"><h3>Patient Record</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="row gap12" style="margin:14px 0 18px;">
+      <div class="avatar-sm" style="width:52px;height:52px;border-radius:14px;font-size:18px;background:${colorFor(p.name)}">${initials(p.name)}</div>
+      <div><h3 style="font-size:17px;">${p.name}</h3><span class="muted small">Patient ID: ${p.id}</span></div>
     </div>
-    <div style="margin-top:18px"><div class="small muted">Address</div><b>${p.address||'—'}</b></div>
-    <h4 style="margin-top:24px;margin-bottom:10px">Booking History</h4>
-    <div style="overflow:auto"><table class="table"><thead><tr><th>Date</th><th>Service</th><th>Doctor</th><th>Queue</th><th>Status</th></tr></thead>
-      <tbody>${appts.map(a=>`<tr><td>${a.date||'—'} ${a.time||''}</td><td>${a.service||'—'}</td><td>${a.doctor||'—'}</td><td><b>${a.queueNumber||'—'}</b></td><td>${a.status||'—'}</td></tr>`).join('') || `<tr><td colspan="5">No booking history.</td></tr>`}</tbody>
-    </table></div>`);
+    <div class="grid grid-2" style="gap:12px;">
+      <div class="small"><span class="muted">Age</span><br><b>${p.age} years</b></div>
+      <div class="small"><span class="muted">Contact</span><br><b>${p.contact}</b></div>
+      <div class="small"><span class="muted">Email</span><br><b>${p.email}</b></div>
+      <div class="small"><span class="muted">Barangay</span><br><b>${p.barangay||'—'}</b></div>
+      <div class="small" style="grid-column:1/-1;"><span class="muted">Address</span><br><b>${p.address||'—'}</b></div>
+    </div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">Close</button></div>
+  `);
 }
-async function deletePatient(){ toast('Patient deletion is disabled. Patient records belong to registered accounts.', true); }
-function openPatientModal(){ toast('Patients register through the mobile application.', true); }
+async function deletePatient(dbId){
+  try{
+    await api('patients','DELETE',{ id:dbId });
+    DB.patients = DB.patients.filter(p=>p.dbId!==dbId);
+    toast('Patient record removed.'); navigate('patients');
+  } catch(err){ toast('Error: '+err.message, true); }
+}
+function openPatientModal(){
+  openModal(`
+    <div class="modal-head"><h3>Register New Patient</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <form id="patient-form">
+      <div class="field"><label>Full Name</label><input name="name" required placeholder="Juan Dela Cruz"></div>
+      <div class="field-row">
+        <div class="field"><label>Age</label><input name="age" type="number" min="0" max="120" required></div>
+        <div class="field"><label>Barangay</label>
+          <select name="barangay" required>
+  <option value="" disabled selected>Select Barangay</option>
+  <option value="Abaca">Abaca</option>
+  <option value="Asisig">Asisig</option>
+  <option value="Bantayan">Bantayan</option>
+  <option value="Braulan">Braulan</option>
+  <option value="Cabugao Nuevo">Cabugao Nuevo</option>
+  <option value="Cabugao Viejo">Cabugao Viejo</option>
+  <option value="Camiri">Camiri</option>
+  <option value="Compo">Compo</option>
+  <option value="Catan-Agan">Catan-Agan</option>
+  <option value="Cubay">Cubay</option>
+  <option value="Dacal">Dacal</option>
+  <option value="Dumiles">Dumiles</option>
+  <option value="Garita">Garita</option>
+  <option value="Gines Nuevo">Gines Nuevo</option>
+  <option value="Imbang Pequeño">Imbang Pequeño</option>
+  <option value="Imbesad-an">Imbesad-an</option>
+  <option value="Iprog">Iprog</option>
+  <option value="Lip-ac">Lip-ac</option>
+  <option value="Madarag">Madarag</option>
+  <option value="Mapili">Mapili</option>
+  <option value="Paga">Paga</option>
+  <option value="Palje">Palje</option>
+  <option value="Poblacion Ilawod">Poblacion Ilawod</option>
+  <option value="Poblacion Ilaya">Poblacion Ilaya</option>
+  <option value="Quinolpan">Quinolpan</option>
+  <option value="Rumagayray">Rumagayray</option>
+  <option value="San Antonio">San Antonio</option>
+  <option value="Tambunac">Tambunac</option>
+</select>
+        </div>
+      </div>
+      <div class="field"><label>Contact Number</label><input name="contact" required placeholder="+63 9XX XXX XXXX"></div>
+      <div class="field"><label>Email</label><input name="email" type="email" placeholder="name@example.com"></div>
+      <div class="field"><label>Address</label><input name="address" placeholder="Street, purok, etc."></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Register Patient</button>
+      </div>
+    </form>
+  `);
+  document.getElementById('patient-form').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const year = new Date().getFullYear();
+    const seq = String(Date.now()).slice(-4);
+    const patient_no = `${year}-${seq}`;
+    const payload = {
+      patient_no, name:f.get('name'), age:Number(f.get('age')), contact:f.get('contact'),
+      email:f.get('email')||null, barangay:f.get('barangay'), address:f.get('address')||null
+    };
+    try{
+      const data = await api('patients','POST',{ body: payload });
+      const row = Array.isArray(data) ? data[0] : data;
+      DB.patients.unshift({ dbId:row.id, id:row.patient_no, name:row.name, age:row.age, contact:row.contact, email:row.email||'—', status:row.status, barangay:row.barangay, address:row.address||'' });
+      closeModal(); toast('New patient registered.'); navigate('patients');
+    } catch(err){ toast('Error: '+err.message, true); }
+  });
+}
 
 /* =========================================================
    QUEUE CONTROLS
@@ -1917,34 +1966,55 @@ function incQueueNum(code){
   return `${m[1]}-${n}`;
 }
 function renderQueue(){
-  const groups=doctorQueueGroups();
-  const doctors=[...new Set([
-    ...DB.staff.filter(s=>/doctor/i.test(s.role||'')).map(s=>s.name).filter(Boolean),
-    ...Object.keys(groups)
-  ])].sort((a,b)=>a.localeCompare(b));
-
-  pageEl().innerHTML=`
-    <div class="page-head"><h1>Queue Management</h1><p>Each doctor has an independent queue. Completing a patient here affects only that doctor's line.</p></div>
-    <div class="grid grid-2">
-      ${doctors.map(doc=>{
-        const list=groups[doc]||[];
-        const current=list[0], next=list[1];
-        const staff=DB.staff.find(s=>doctorKey(s.name)===doctorKey(doc));
-        return `<div class="card queue-hero">
-          <div class="queue-live-tag">● ${list.length?'ACTIVE':'NO PATIENTS WAITING'}</div>
-          <h2 style="margin-top:12px">${doc}</h2>
-          <div class="small muted">${staff?.dept||'Medical Doctor'}</div>
-          <div class="queue-num">${current?.queueNumber||'—'}</div>
-          <div class="queue-sub">${current ? `${current.patient} · ${current.service||'Consultation'}` : 'Waiting for a checked-in patient…'}</div>
+  const q = DB.queue;
+  return `
+    <div class="page-head"><h1>Queue Management</h1><p>Live Patient Flow Control</p></div>
+    <div class="grid grid-main">
+      <div>
+        <div class="card queue-hero">
+          <span class="queue-live-tag">● CURRENTLY SERVING</span>
+          <div class="queue-num">${q.currentNumber}</div>
+          <div class="queue-sub">👤 ${q.currentPatient} · ${q.currentService}</div>
           <div class="queue-mini">
-            <div><b>${next?.queueNumber||'—'}</b><span>Next</span></div>
-            <div><b>${list.length}</b><span>Waiting</span></div>
+            <div><b>${q.nextNumber}</b><span>Next Queue</span></div>
+            <div><b>${q.waiting}</b><span>Waiting Patients</span></div>
           </div>
-          <button class="btn btn-primary" style="margin-top:20px;width:100%;justify-content:center" ${current?'':'disabled'}
-            onclick="adminDoctorNext(decodeURIComponent('${encodeURIComponent(doc)}'))">✓ Complete &amp; Call Next</button>
-        </div>`;
-      }).join('') || `<div class="card empty-state">No doctors found. Add doctors in Staff Directory.</div>`}
-    </div>`;
+        </div>
+        <div class="card" style="margin-top:18px; padding:20px;">
+          <div class="row between" style="margin-bottom:10px;"><h4 style="font-size:14.5px;">Recent Activity</h4></div>
+          ${q.activity.length ? q.activity.map(a=>`
+            <div class="activity-row">
+              <div class="activity-dot" style="background:${a.type==='ok'?'var(--green-light)':'var(--amber-light)'}; color:${a.type==='ok'?'var(--green)':'#96721e'};">${a.type==='ok'?'✓':'!'}</div>
+              <div><b style="font-size:13.5px;">${a.label}</b><div class="small muted">${a.meta}</div></div>
+            </div>`).join('') : `<div class="empty-state small">No activity yet.</div>`}
+        </div>
+      </div>
+      <div>
+        <div class="card queue-actions-card">
+          <h4 style="font-size:14.5px; margin-bottom:14px;">Queue Actions</h4>
+          <button class="btn btn-primary" onclick="queueNext()">▶ Next Patient</button>
+          <button class="btn btn-outline" onclick="queueRecall()">↻ Recall Current</button>
+          <div class="grid grid-2" style="gap:8px;">
+            <button class="btn btn-outline" style="justify-content:center;" onclick="queueNoShow()">🚫 No Show</button>
+            <button class="btn btn-outline" style="justify-content:center;" onclick="queuePause()">${q.paused?'▶ Resume':'⏸ Pause Queue'}</button>
+          </div>
+          <button class="btn btn-outline" style="margin-top:8px;" onclick="queueReset()">↺ Reset Queue</button>
+        </div>
+        <div class="card" style="margin-top:18px; padding:18px;">
+          <div class="row between" style="margin-bottom:6px;"><h4 style="font-size:14.5px;">Station Assignment</h4><button class="icon-btn" style="width:28px;height:28px;" title="Add station" onclick="openStationModal()">+</button></div>
+          ${q.stations.length ? q.stations.map(s=>`
+            <div class="station-row"><span>🏥 ${s.name}</span>
+              <button class="pill ${s.status==='ACTIVE'?'pill-green':'pill-gray'}" style="border:none;" onclick="toggleStation(${s.dbId})">${s.status}</button>
+            </div>`).join('') : `<div class="empty-state small">No stations yet.</div>`}
+        </div>
+        ${q.waiting > 0 ? `
+        <div class="card" style="margin-top:18px; padding:16px 18px; background:var(--amber-light); border:1px solid #f1d9a4;">
+          <b style="font-size:12.5px; color:#96721e;">⚠ Queue Alert</b>
+          <p class="small" style="margin-top:6px; line-height:1.5; color:#8a6a1e;">${q.waiting} patient(s) currently waiting.</p>
+        </div>` : ''}
+      </div>
+    </div>
+  `;
 }
 async function addActivity(label, type){
   const meta = 'Just now · ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
@@ -1956,21 +2026,6 @@ async function updateQueueState(fields){
   try{ await api('queue_state','PATCH',{ eq:'id.1', body: fields }); return true; }
   catch(err){ toast('Error: '+err.message, true); return false; }
 }
-async function adminDoctorNext(doctor){
-  const list=(doctorQueueGroups()[doctor]||[]);
-  const current=list[0];
-  if(!current) return toast('No checked-in patient for this doctor.', true);
-  try{
-    await api('appointments','PATCH',{id:current.dbId,body:{status:'Completed'}});
-    current.status='Completed';
-    DB.queue.waiting=Math.max(0,(DB.queue.waiting||0)-1);
-    try{ await api('queue_state','PATCH',{id:1,body:{waiting:DB.queue.waiting}}); }catch(e){}
-    try{ await api('queue_activity','POST',{body:{label:`${current.queueNumber} completed`,meta:`${doctor} · ${current.patient}`,type:'success'}}); }catch(e){}
-    toast(`${current.queueNumber} completed. ${doctor}'s next patient is ready.`);
-    renderQueue();
-  }catch(err){ toast('Queue update failed: '+err.message,true); }
-}
-
 async function queueNext(){
   const q = DB.queue;
   const newCurrent = q.nextNumber;
@@ -2090,7 +2145,7 @@ function renderStaff(){
               </tr>`).join('') : `<tr><td colspan="5"><div class="empty-state">${DB.staff.length ? 'No staff match this filter.' : 'No staff registered yet. Click "Register New Staff" to add the first one.'}</div></td></tr>`}
           </tbody>
         </table>
-        <div class="muted small" style="margin-top:6px;">Showing ${rows.length} of ${DB.staff.length} Personnel</div>
+        <div class="muted small" style="margin-top:10px;">Showing ${rows.length} of ${DB.staff.length} Personnel</div>
       </div>
       <div>
         <div class="card" style="padding:20px;">
@@ -2100,7 +2155,7 @@ function renderStaff(){
             <div><div class="stat-value">${onLeave}</div><div class="stat-label">On Leave</div></div>
           </div>
         </div>
-        <div class="card" style="margin-top:12px; padding:18px; background:var(--teal-light); border:1px solid #b7e6de;">
+        <div class="card" style="margin-top:18px; padding:18px; background:var(--teal-light); border:1px solid #b7e6de;">
           <b class="small" style="color:var(--teal);">🛡 Credential Renewals</b>
           <p class="small" style="margin-top:6px; color:#0d7a6c;">${onLeave} staff member(s) currently on leave.</p>
         </div>
@@ -2490,14 +2545,14 @@ function renderReports(){
       <div>
         <div class="card" style="padding:22px;">
           <h4 style="font-size:15px; margin-bottom:2px;">Patient Volume Trends</h4>
-          <p class="small muted" style="margin-bottom:8px;">Appointments by day of week — ${r.periodLabel}</p>
+          <p class="small muted" style="margin-bottom:12px;">Appointments by day of week — ${r.periodLabel}</p>
           ${r.totalAppts ? `<div class="bar-chart">
             ${r.volumeByDay.map(x=>`<div class="bar-col"><div class="bar" style="height:${(x.v/maxVol*100)}%;"></div><span class="bar-label">${x.d}</span></div>`).join('')}
           </div>` : `<div class="empty-state small">No appointments in this period yet.</div>`}
         </div>
-        <div class="card" style="padding:22px; margin-top:12px;">
+        <div class="card" style="padding:22px; margin-top:18px;">
           <h4 style="font-size:15px; margin-bottom:2px;">Patient Intake Trends</h4>
-          <p class="small muted" style="margin-bottom:8px;">Appointments booked per month (last 6 months, all-time overview)</p>
+          <p class="small muted" style="margin-bottom:12px;">Appointments booked per month (last 6 months, all-time overview)</p>
           ${r.intake.some(x=>x.v) ? `<div class="bar-chart">
             ${r.intake.map(x=>`<div class="bar-col"><div class="bar" style="height:${(x.v/maxIntake*100)}%;"></div><span class="bar-label">${x.m}</span></div>`).join('')}
           </div>` : `<div class="empty-state small">No appointments yet — this chart will fill in as you schedule them.</div>`}
@@ -2523,26 +2578,26 @@ function renderReports(){
             </div>
           ` : `<p class="small muted" style="margin-top:14px;">No ratings collected yet for this ${r.period}. Patients can rate a visit from My Appointments once it's marked Completed.</p>`}
         </div>
-        <div class="card" style="padding:20px; margin-top:12px; text-align:center;">
+        <div class="card" style="padding:20px; margin-top:18px; text-align:center;">
           <h4 style="font-size:14.5px; margin-bottom:10px;">Service Distribution</h4>
           ${r.totalAppts ? `
             <div class="donut" style="background:${donutGradient(r.serviceDist)};"><div class="donut-center"><b>${r.totalAppts}</b><span>Total</span></div></div>
             <div style="text-align:left; margin-top:14px;">
               ${r.serviceDist.map(d=>`<div class="legend-row"><span class="legend-dot" style="background:${d.color};"></span>${d.label} <b style="margin-left:auto;">${d.pct}%</b></div>`).join('')}
             </div>
-          ` : `<p class="small muted" style="margin-top:6px;">No appointments in this period.</p>`}
+          ` : `<p class="small muted" style="margin-top:10px;">No appointments in this period.</p>`}
         </div>
-        <div class="card" style="padding:20px; margin-top:12px;">
-          <h4 style="font-size:14.5px; margin-bottom:8px;">Patient Volume by Barangay (all-time)</h4>
+        <div class="card" style="padding:20px; margin-top:18px;">
+          <h4 style="font-size:14.5px; margin-bottom:12px;">Patient Volume by Barangay (all-time)</h4>
           ${r.byBarangay.length ? r.byBarangay.map(b=>`
             <div style="margin-bottom:10px;">
               <div class="row between small" style="margin-bottom:4px;"><span>${b.label}</span><b>${b.pct}%</b></div>
               <div style="height:6px; background:#eef1f4; border-radius:4px; overflow:hidden;"><div style="height:100%; width:${Math.min(100,b.pct*2.6)}%; background:var(--blue-mid); border-radius:4px;"></div></div>
             </div>`).join('') : `<p class="small muted">No patients registered yet.</p>`}
         </div>
-        <div class="card" style="padding:20px; margin-top:12px;">
+        <div class="card" style="padding:20px; margin-top:18px;">
           <h4 style="font-size:14.5px; margin-bottom:2px;">Age Groups — ${r.periodLabel}</h4>
-          <p class="small muted" style="margin-bottom:8px;">Which age ranges are actually booking appointments (not included in the PDF export)</p>
+          <p class="small muted" style="margin-bottom:12px;">Which age ranges are actually booking appointments (not included in the PDF export)</p>
           ${r.ageMatchedCount ? r.ageDistribution.map(a=>`
             <div style="margin-bottom:10px;">
               <div class="row between small" style="margin-bottom:4px;"><span>${a.label}</span><b>${a.pct}% <span class="muted">(${a.count})</span></b></div>
