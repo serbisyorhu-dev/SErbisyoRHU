@@ -25,73 +25,72 @@ def get_bearer_token():
 
 @data_bp.route('/api/public/queue-status', methods=['GET'])
 def public_queue_status():
-    """
-    No login required — this is what the RHU's waiting-room TV display
-    calls. Reads only queue_state (never patient-identifying data), using
-    just the anon key rather than a user's Bearer token.
-    """
-    status, res = supabase_request(
-        'GET',
-        '/rest/v1/queue_state?id=eq.1&select=current_number,next_number,waiting,current_patient,current_service'
-    )
-    if status >= 400 or not res:
-        return json_response({'error': 'Could not load queue status.'}, 500)
-    row = res[0] if isinstance(res, list) and res else {}
-    return json_response(row)
+    """Public TV queue status, separated per doctor while keeping the old fallback."""
 
-
-@data_bp.route('/api/data', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
-def data_proxy():
-    token = get_bearer_token()
-    if not token:
-        return json_response({'error': 'Not authenticated. Please log in.'}, 401)
-
-    table = request.args.get('table', '')
-    if table not in ALLOWED_TABLES:
-        return json_response({'error': f'Unknown or disallowed table: {table}'}, 400)
-
-    query = []
-    row_id = request.args.get('id')
-    if row_id is not None:
-        query.append('id=eq.' + quote(row_id, safe=''))
-
-    eq = request.args.get('eq')
-    if eq and '.' in eq:
-        col, val = eq.split('.', 1)
-        query.append(f'{quote(col, safe="")}=eq.{quote(val, safe="")}')
-
-    order = request.args.get('order')
-    if order:
-        query.append('order=' + quote(order, safe='.,'))
-
-    limit = request.args.get('limit')
-    if limit:
+    # Ini nagahimo sang A, B, C ... AA prefix halin sa permanent staff ID.
+    def queue_prefix(staff_id):
         try:
-            query.append('limit=' + str(int(limit)))
-        except ValueError:
-            pass
+            number = int(staff_id)
+        except (TypeError, ValueError):
+            return None
+        if number < 1:
+            return None
+        prefix = ''
+        while number > 0:
+            number -= 1
+            prefix = chr(65 + (number % 26)) + prefix
+            number //= 26
+        return prefix
 
-    path = f'/rest/v1/{table}'
-    if query:
-        path += '?' + '&'.join(query)
+    # Ini nagakuha sang numeric part sang A-0, B-2 kag iban pa para insakto ang sorting.
+    def queue_value(queue_number):
+        try:
+            return int(str(queue_number).split('-')[-1])
+        except (TypeError, ValueError):
+            return 999999999
 
-    method = request.method
-    body = None
-    extra_headers = {}
+    # Kuhaon ang existing doctors kag appointments; wala kita nagadugang sang bag-o nga endpoint.
+    staff_status, staff_rows = supabase_request(
+        'GET',
+        '/rest/v1/staff?select=id,name,role,dept'
+    )
+    appointment_status, appointment_rows = supabase_request(
+        'GET',
+        '/rest/v1/appointments?select=id,doctor_name,service,status,queue_number'
+    )
 
-    if method == 'GET':
-        pass
-    elif method == 'POST':
-        body = request.get_json(silent=True) or {}
-        extra_headers['Prefer'] = 'return=representation'
-    elif method in ('PUT', 'PATCH'):
-        body = request.get_json(silent=True) or {}
-        extra_headers['Prefer'] = 'return=representation'
-        method = 'PATCH'
-    elif method == 'DELETE':
-        extra_headers['Prefer'] = 'return=representation'
-    else:
-        return json_response({'error': 'Method not allowed'}, 405)
+    # Kon indi mabasa ang doctor data, gamiton gihapon ang daan nga single queue response.
+    if staff_status >= 400 or appointment_status >= 400:
+        status, res = supabase_request(
+            'GET',
+            '/rest/v1/queue_state?id=eq.1&select=current_number,next_number,waiting,current_patient,current_service'
+        )
+        if status >= 400 or not res:
+            return json_response({'error': 'Could not load queue status.'}, 500)
+        row = res[0] if isinstance(res, list) and res else {}
+        return json_response(row)
 
-    status, res = supabase_request(method, path, body, token, extra_headers)
-    return json_response(res, status or 200)
+    staff_rows = staff_rows if isinstance(staff_rows, list) else []
+    appointment_rows = appointment_rows if isinstance(appointment_rows, list) else []
+    doctors = []
+
+    # Tagsa ka doctor may kaugalingon nga current, next kag waiting count.
+    for doctor in staff_rows:
+        if 'doctor' not in str(doctor.get('role') or '').lower():
+            continue
+        doctor_id = doctor.get('id')
+        doctor_name = str(doctor.get('name') or '').strip()
+        if not doctor_id or not doctor_name:
+            continue
+        prefix = queue_prefix(doctor_id)
+        if not prefix:
+            continue
+
+        doctor_appointments = []
+        for appointment in appointment_rows:
+            if str(appointment.get('doctor_name') or '').strip().lower() != doctor_name.lower():
+                continue
+            if not appointment.get('queue_number'):
+                continue
+            status_name = str(appointment.get('status') or '').strip().lower()
+            if status_name not in ('approved', 'serving'):
