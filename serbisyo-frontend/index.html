@@ -364,6 +364,7 @@
               <label>Role</label>
               <select id="signup-role" style="width:100%; padding:13px 14px; border-radius:12px; border:1.5px solid var(--line); background:#f7f9fb; font-size:14.5px; color:var(--ink);">
                 <option>Medical Doctor</option>
+                <option>Doctor</option>
                 <option>Staff</option>
                 <option>Nursing</option>
                 <option>Admin</option>
@@ -2133,9 +2134,9 @@ function renderStaff(){
                 <td class="muted small">${s.lastLogin}</td>
                 <td>
                   <div class="row gap8">
-                    <button class="icon-btn" title="Cycle status" onclick="cycleStaffStatus(${s.dbId})">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v6h-6"/></svg>
-                    </button>
+                    <select class="staff-status-select" title="Change staff status" onchange="setStaffStatus(${s.dbId}, this.value)" style="min-width:112px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--navy);font:inherit;font-size:12px;font-weight:700;cursor:pointer;">
+                      ${['ACTIVE','ON LEAVE','INACTIVE'].map(status=>`<option value="${status}" ${s.status===status?'selected':''}>${status}</option>`).join('')}
+                    </select>
                     <button class="icon-btn" title="Remove" onclick="deleteStaff(${s.dbId})">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
                     </button>
@@ -2168,6 +2169,22 @@ async function cycleStaffStatus(dbId){
   const newStatus = order[(order.indexOf(s.status)+1) % order.length];
   try{ await api('staff','PATCH',{ id:dbId, body:{ status:newStatus } }); s.status = newStatus; navigate('staff'); }
   catch(err){ toast('Error: '+err.message, true); }
+}
+async function setStaffStatus(dbId,newStatus){
+  const allowed=['ACTIVE','ON LEAVE','INACTIVE'];
+  const s=DB.staff.find(x=>x.dbId===dbId);
+  if(!s||!allowed.includes(newStatus))return;
+  const oldStatus=s.status;
+  try{
+    await api('staff','PATCH',{id:dbId,body:{status:newStatus}});
+    s.status=newStatus;
+    toast(`${s.name} status changed to ${newStatus}.`);
+    navigate('staff');
+  }catch(err){
+    s.status=oldStatus;
+    toast('Error: '+err.message,true);
+    navigate('staff');
+  }
 }
 async function deleteStaff(dbId){
   try{
