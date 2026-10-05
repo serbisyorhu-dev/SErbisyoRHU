@@ -493,10 +493,6 @@
         <h2 id="topbar-title">SERbisyo — San Enrique RHU</h2>
         <div class="path" id="topbar-path">Dashboard</div>
       </div>
-      <div class="search-box">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
-        <input id="global-search" placeholder="Search patients, files, or tasks...">
-      </div>
       <div class="topbar-right">
         <button class="icon-btn" id="refresh-btn" title="Refresh data"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7M21 4v6h-6"/></svg></button>
         <div class="avatar" id="user-avatar">A</div>
@@ -654,12 +650,12 @@ async function loadAllData(){
 
   DB.patients = (patients||[]).map(r=>({
     dbId:r.id, id:r.patient_no, name:r.name, age:r.age, contact:r.contact,
-    email:r.email||'—', address:r.address||'', barangay:r.barangay||'', status:r.status
+    email:r.email||'—', address:r.address||'', barangay:r.barangay||'', status:r.status, userId:r.user_id||''
   }));
   DB.appointments = (appointments||[]).map(r=>({
     dbId:r.id, patient:r.patient, date:r.date, time:r.time, service:r.service, status:r.status,
     scheduleId:r.schedule_id, doctor:r.doctor_name||'', bookedAt:r.created_at, confirmationCode:r.confirmation_code||'',
-    queueNumber:r.queue_number||'',
+    queueNumber:r.queue_number||'', userId:r.user_id||'',
     rating:r.rating||null, ratingComment:r.rating_comment||''
   }));
   DB.staff = (staff||[]).map(r=>({
@@ -907,7 +903,7 @@ document.querySelectorAll('.nav-item').forEach(btn=>{
   btn.addEventListener('click', ()=> navigate(btn.dataset.page));
 });
 document.getElementById('new-entry-btn').addEventListener('click', ()=>{
-  if(currentPage==='patients') openPatientModal();
+  if(currentPage==='patients') toast('Patients are added automatically when they create a mobile account.');
   else if(currentPage==='staff') openStaffModal();
   else if(currentPage==='queue') openStationModal();
   else if(currentPage==='schedules') openScheduleModal();
@@ -933,10 +929,6 @@ function navigate(page){
   document.getElementById('sidebar').classList.remove('open');
 }
 
-document.getElementById('global-search').addEventListener('input', (e)=>{
-  const q = e.target.value.trim().toLowerCase();
-  if(currentPage==='patients'){ patientSearch = q; renderPatientsInPlace(); }
-});
 
 /* =========================================================
    DASHBOARD
@@ -1082,24 +1074,39 @@ async function setApptStatus(dbId, status){
  * This is what makes "your number" mean something specific to a patient,
  * instead of just watching a shared counter with no connection to them.
  */
+
+function doctorKey(name){ return String(name||'').trim().toLowerCase(); }
+function doctorCode(name){
+  const st=DB.staff.find(x=>doctorKey(x.name)===doctorKey(name));
+  if(st && st.dbId!=null){ const d=String(st.dbId).replace(/\D/g,''); if(d) return 'D'+d.padStart(3,'0').slice(-3); }
+  let h=0; for(const c of String(name||'Doctor')) h=(h*31+c.charCodeAt(0))>>>0;
+  return 'D'+String(h%1000).padStart(3,'0');
+}
+function doctorQueueList(doctor){
+  return DB.appointments.filter(a=>doctorKey(a.doctor)===doctorKey(doctor) && a.status==='Approved' && a.queueNumber)
+    .sort((a,b)=>String(a.queueNumber).localeCompare(String(b.queueNumber)));
+}
+function nextDoctorQueueNumber(doctor){
+  const prefix=doctorCode(doctor);
+  const nums=DB.appointments.filter(a=>doctorKey(a.doctor)===doctorKey(doctor) && String(a.queueNumber||'').startsWith(prefix+'-'))
+    .map(a=>Number(String(a.queueNumber).split('-').pop())||0);
+  return `${prefix}-${String(Math.max(0,...nums)+1).padStart(3,'0')}`;
+}
+function queueDoctors(){
+  return [...new Set([...DB.staff.filter(x=>/doctor/i.test(String(x.role||''))).map(x=>x.name),...DB.schedules.map(x=>x.doctor),...DB.appointments.map(x=>x.doctor)].filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+}
+
 async function confirmArrivalAndAssignQueue(dbId){
-  const a = DB.appointments.find(x=>x.dbId===dbId); if(!a) return;
+  const a=DB.appointments.find(x=>x.dbId===dbId); if(!a) return;
+  if(!a.doctor) return toast('Assign a doctor before confirming arrival.',true);
   try{
-    const assignedNumber = DB.queue.nextNumber;
-    const newNext = incQueueNum(DB.queue.nextNumber);
-    const newWaiting = (DB.queue.waiting||0) + 1;
-
-    await api('appointments','PATCH',{ id:dbId, body:{ status:'Approved', queue_number:assignedNumber } });
-    await updateQueueState({ next_number:newNext, waiting:newWaiting });
-
-    a.status = 'Approved';
-    a.queueNumber = assignedNumber;
-    DB.queue.nextNumber = newNext;
-    DB.queue.waiting = newWaiting;
-
-    toast(`Checked in — assigned ${assignedNumber}.`);
-    navigate(currentPage);
-  } catch(err){ toast('Error: '+err.message, true); }
+    const assignedNumber=nextDoctorQueueNumber(a.doctor);
+    await api('appointments','PATCH',{id:dbId,body:{status:'Approved',queue_number:assignedNumber}});
+    a.status='Approved'; a.queueNumber=assignedNumber;
+    DB.queue.waiting=(DB.queue.waiting||0)+1;
+    try{ await updateQueueState({waiting:DB.queue.waiting}); }catch(e){}
+    toast(`Checked in — ${assignedNumber} · ${a.doctor}.`); navigate(currentPage);
+  }catch(err){toast('Error: '+err.message,true);}
 }
 
 async function deleteAppt(dbId){
@@ -1829,7 +1836,7 @@ function renderPatients(){
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4-4"/></svg>
           <input id="patient-search" placeholder="Search by name, patient ID, or contact number..." value="${patientSearch}">
         </div>
-        <button class="btn btn-primary" onclick="openPatientModal()">+ Register New Patient</button>
+
       </div>
       <div class="row between" style="margin-bottom:10px;"><h4 style="font-size:14px;">Recent Admissions</h4><span class="muted small">Showing ${rows.length} of ${DB.patients.length}</span></div>
       <table class="table">
@@ -1843,16 +1850,9 @@ function renderPatients(){
               <td>${p.contact}</td>
               <td>${p.email}</td>
               <td>
-                <div class="row gap8">
-                  <button class="icon-btn" title="View" onclick="viewPatient(${p.dbId})">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                  </button>
-                  <button class="icon-btn" title="Delete" onclick="deletePatient(${p.dbId})">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
-                  </button>
-                </div>
+                <button class="btn btn-sm btn-outline" onclick="viewPatient(${p.dbId})">Details</button>
               </td>
-            </tr>`).join('') : `<tr><td colspan="5"><div class="empty-state">${DB.patients.length ? 'No patients match your search.' : 'No patients registered yet. Click "Register New Patient" to add the first one.'}</div></td></tr>`}
+            </tr>`).join('') : `<tr><td colspan="5"><div class="empty-state">${DB.patients.length ? 'No patients match your search.' : 'No patient accounts yet.'}</div></td></tr>`}
         </tbody>
       </table>
     </div>
@@ -1864,6 +1864,10 @@ function renderPatientsInPlace(){
 }
 function viewPatient(dbId){
   const p = DB.patients.find(x=>x.dbId===dbId); if(!p) return;
+  const bookings = DB.appointments.filter(a =>
+    (p.userId && a.userId && String(p.userId)===String(a.userId)) ||
+    String(a.patient||'').trim().toLowerCase()===String(p.name||'').trim().toLowerCase()
+  ).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')) || String(b.time||'').localeCompare(String(a.time||'')));
   openModal(`
     <div class="modal-head"><h3>Patient Record</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
     <div class="row gap12" style="margin:14px 0 18px;">
@@ -1877,84 +1881,18 @@ function viewPatient(dbId){
       <div class="small"><span class="muted">Barangay</span><br><b>${p.barangay||'—'}</b></div>
       <div class="small" style="grid-column:1/-1;"><span class="muted">Address</span><br><b>${p.address||'—'}</b></div>
     </div>
+    <h4 style="font-size:14px;margin:20px 0 10px;">Booking History</h4>
+    <div style="overflow:auto;max-height:320px;">
+      <table class="table">
+        <thead><tr><th>Date</th><th>Service</th><th>Doctor</th><th>Queue</th><th>Status</th></tr></thead>
+        <tbody>${bookings.length ? bookings.map(a=>`<tr><td>${fmtDate(a.date)}<div class="small muted">${a.time||''}</div></td><td>${a.service||'—'}</td><td>${a.doctor||'—'}</td><td>${a.queueNumber||'—'}</td><td>${a.status||'—'}</td></tr>`).join('') : `<tr><td colspan="5"><div class="empty-state small">No booking history yet.</div></td></tr>`}</tbody>
+      </table>
+    </div>
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">Close</button></div>
   `);
 }
-async function deletePatient(dbId){
-  try{
-    await api('patients','DELETE',{ id:dbId });
-    DB.patients = DB.patients.filter(p=>p.dbId!==dbId);
-    toast('Patient record removed.'); navigate('patients');
-  } catch(err){ toast('Error: '+err.message, true); }
-}
-function openPatientModal(){
-  openModal(`
-    <div class="modal-head"><h3>Register New Patient</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
-    <form id="patient-form">
-      <div class="field"><label>Full Name</label><input name="name" required placeholder="Juan Dela Cruz"></div>
-      <div class="field-row">
-        <div class="field"><label>Age</label><input name="age" type="number" min="0" max="120" required></div>
-        <div class="field"><label>Barangay</label>
-          <select name="barangay" required>
-  <option value="" disabled selected>Select Barangay</option>
-  <option value="Abaca">Abaca</option>
-  <option value="Asisig">Asisig</option>
-  <option value="Bantayan">Bantayan</option>
-  <option value="Braulan">Braulan</option>
-  <option value="Cabugao Nuevo">Cabugao Nuevo</option>
-  <option value="Cabugao Viejo">Cabugao Viejo</option>
-  <option value="Camiri">Camiri</option>
-  <option value="Compo">Compo</option>
-  <option value="Catan-Agan">Catan-Agan</option>
-  <option value="Cubay">Cubay</option>
-  <option value="Dacal">Dacal</option>
-  <option value="Dumiles">Dumiles</option>
-  <option value="Garita">Garita</option>
-  <option value="Gines Nuevo">Gines Nuevo</option>
-  <option value="Imbang Pequeño">Imbang Pequeño</option>
-  <option value="Imbesad-an">Imbesad-an</option>
-  <option value="Iprog">Iprog</option>
-  <option value="Lip-ac">Lip-ac</option>
-  <option value="Madarag">Madarag</option>
-  <option value="Mapili">Mapili</option>
-  <option value="Paga">Paga</option>
-  <option value="Palje">Palje</option>
-  <option value="Poblacion Ilawod">Poblacion Ilawod</option>
-  <option value="Poblacion Ilaya">Poblacion Ilaya</option>
-  <option value="Quinolpan">Quinolpan</option>
-  <option value="Rumagayray">Rumagayray</option>
-  <option value="San Antonio">San Antonio</option>
-  <option value="Tambunac">Tambunac</option>
-</select>
-        </div>
-      </div>
-      <div class="field"><label>Contact Number</label><input name="contact" required placeholder="+63 9XX XXX XXXX"></div>
-      <div class="field"><label>Email</label><input name="email" type="email" placeholder="name@example.com"></div>
-      <div class="field"><label>Address</label><input name="address" placeholder="Street, purok, etc."></div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary">Register Patient</button>
-      </div>
-    </form>
-  `);
-  document.getElementById('patient-form').addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const f = new FormData(e.target);
-    const year = new Date().getFullYear();
-    const seq = String(Date.now()).slice(-4);
-    const patient_no = `${year}-${seq}`;
-    const payload = {
-      patient_no, name:f.get('name'), age:Number(f.get('age')), contact:f.get('contact'),
-      email:f.get('email')||null, barangay:f.get('barangay'), address:f.get('address')||null
-    };
-    try{
-      const data = await api('patients','POST',{ body: payload });
-      const row = Array.isArray(data) ? data[0] : data;
-      DB.patients.unshift({ dbId:row.id, id:row.patient_no, name:row.name, age:row.age, contact:row.contact, email:row.email||'—', status:row.status, barangay:row.barangay, address:row.address||'' });
-      closeModal(); toast('New patient registered.'); navigate('patients');
-    } catch(err){ toast('Error: '+err.message, true); }
-  });
-}
+function deletePatient(){ toast('Patient deletion is disabled.'); }
+function openPatientModal(){ toast('Patients are added automatically when they create a mobile account.'); }
 
 /* =========================================================
    QUEUE CONTROLS
@@ -1966,55 +1904,28 @@ function incQueueNum(code){
   return `${m[1]}-${n}`;
 }
 function renderQueue(){
-  const q = DB.queue;
+  const q=DB.queue, doctors=queueDoctors();
   return `
     <div class="page-head"><h1>Queue Management</h1><p>Live Patient Flow Control</p></div>
     <div class="grid grid-main">
       <div>
-        <div class="card queue-hero">
-          <span class="queue-live-tag">● CURRENTLY SERVING</span>
-          <div class="queue-num">${q.currentNumber}</div>
-          <div class="queue-sub">👤 ${q.currentPatient} · ${q.currentService}</div>
-          <div class="queue-mini">
-            <div><b>${q.nextNumber}</b><span>Next Queue</span></div>
-            <div><b>${q.waiting}</b><span>Waiting Patients</span></div>
-          </div>
-        </div>
+        ${doctors.length ? doctors.map(doctor=>{ const list=doctorQueueList(doctor),cur=list[0],next=list[1]; return `
+          <div class="card queue-hero" style="margin-bottom:18px;">
+            <span class="queue-live-tag">● ${doctor}</span>
+            <div class="queue-num">${cur?.queueNumber||'—'}</div>
+            <div class="queue-sub">👤 ${cur?`${cur.patient} · ${cur.service}`:'No checked-in patient'}</div>
+            <div class="queue-mini"><div><b>${next?.queueNumber||'—'}</b><span>Next Queue</span></div><div><b>${list.length}</b><span>Waiting Patients</span></div></div>
+          </div>`; }).join('') : `<div class="card queue-hero"><span class="queue-live-tag">● QUEUE</span><div class="queue-num">—</div><div class="queue-sub">No doctors found.</div></div>`}
         <div class="card" style="margin-top:18px; padding:20px;">
           <div class="row between" style="margin-bottom:10px;"><h4 style="font-size:14.5px;">Recent Activity</h4></div>
-          ${q.activity.length ? q.activity.map(a=>`
-            <div class="activity-row">
-              <div class="activity-dot" style="background:${a.type==='ok'?'var(--green-light)':'var(--amber-light)'}; color:${a.type==='ok'?'var(--green)':'#96721e'};">${a.type==='ok'?'✓':'!'}</div>
-              <div><b style="font-size:13.5px;">${a.label}</b><div class="small muted">${a.meta}</div></div>
-            </div>`).join('') : `<div class="empty-state small">No activity yet.</div>`}
+          ${q.activity.length ? q.activity.map(a=>`<div class="activity-row"><div class="activity-dot" style="background:${a.type==='ok'?'var(--green-light)':'var(--amber-light)'};color:${a.type==='ok'?'var(--green)':'#96721e'};">${a.type==='ok'?'✓':'!'}</div><div><b style="font-size:13.5px;">${a.label}</b><div class="small muted">${a.meta}</div></div></div>`).join('') : `<div class="empty-state small">No activity yet.</div>`}
         </div>
       </div>
       <div>
-        <div class="card queue-actions-card">
-          <h4 style="font-size:14.5px; margin-bottom:14px;">Queue Actions</h4>
-          <button class="btn btn-primary" onclick="queueNext()">▶ Next Patient</button>
-          <button class="btn btn-outline" onclick="queueRecall()">↻ Recall Current</button>
-          <div class="grid grid-2" style="gap:8px;">
-            <button class="btn btn-outline" style="justify-content:center;" onclick="queueNoShow()">🚫 No Show</button>
-            <button class="btn btn-outline" style="justify-content:center;" onclick="queuePause()">${q.paused?'▶ Resume':'⏸ Pause Queue'}</button>
-          </div>
-          <button class="btn btn-outline" style="margin-top:8px;" onclick="queueReset()">↺ Reset Queue</button>
-        </div>
-        <div class="card" style="margin-top:18px; padding:18px;">
-          <div class="row between" style="margin-bottom:6px;"><h4 style="font-size:14.5px;">Station Assignment</h4><button class="icon-btn" style="width:28px;height:28px;" title="Add station" onclick="openStationModal()">+</button></div>
-          ${q.stations.length ? q.stations.map(s=>`
-            <div class="station-row"><span>🏥 ${s.name}</span>
-              <button class="pill ${s.status==='ACTIVE'?'pill-green':'pill-gray'}" style="border:none;" onclick="toggleStation(${s.dbId})">${s.status}</button>
-            </div>`).join('') : `<div class="empty-state small">No stations yet.</div>`}
-        </div>
-        ${q.waiting > 0 ? `
-        <div class="card" style="margin-top:18px; padding:16px 18px; background:var(--amber-light); border:1px solid #f1d9a4;">
-          <b style="font-size:12.5px; color:#96721e;">⚠ Queue Alert</b>
-          <p class="small" style="margin-top:6px; line-height:1.5; color:#8a6a1e;">${q.waiting} patient(s) currently waiting.</p>
-        </div>` : ''}
+        <div class="card queue-actions-card"><h4 style="font-size:14.5px;margin-bottom:14px;">Queue Actions</h4><p class="small muted">Doctors control their own patient queue from the Doctor Portal.</p></div>
+        <div class="card" style="margin-top:18px;padding:18px;"><div class="row between" style="margin-bottom:6px;"><h4 style="font-size:14.5px;">Station Assignment</h4><button class="icon-btn" style="width:28px;height:28px;" title="Add station" onclick="openStationModal()">+</button></div>${q.stations.length?q.stations.map(st=>`<div class="station-row"><span>🏥 ${st.name}</span><button class="pill ${st.status==='ACTIVE'?'pill-green':'pill-gray'}" style="border:none;" onclick="toggleStation(${st.dbId})">${st.status}</button></div>`).join(''):`<div class="empty-state small">No stations yet.</div>`}</div>
       </div>
-    </div>
-  `;
+    </div>`;
 }
 async function addActivity(label, type){
   const meta = 'Just now · ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
