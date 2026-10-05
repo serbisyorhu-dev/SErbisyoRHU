@@ -19,16 +19,44 @@ def get_bearer_token():
     return None
 
 
+# Ini naga-normalize sang actual staff role nga ginpili sa Create Account form.
+def normalize_staff_role(value):
+    role = str(value or '').strip()
+
+    allowed_roles = {
+        'doctor': 'Doctor',
+        'medical doctor': 'Medical Doctor',
+        'staff': 'Staff',
+        'admin': 'Admin',
+        'administrator': 'Administrator',
+        'nursing': 'Nursing',
+        'nurse': 'Nursing',
+    }
+
+    return allowed_roles.get(role.lower(), role or 'Staff')
+
+
 @auth_bp.route('/api/auth', methods=['GET'])
 def auth_session_check():
     if request.args.get('action') == 'session':
         token = get_bearer_token()
         if not token:
             return json_response({'authenticated': False})
-        status, res = supabase_request('GET', '/auth/v1/user', token=token)
+
+        status, res = supabase_request(
+            'GET',
+            '/auth/v1/user',
+            token=token
+        )
+
         if status >= 400 or not res:
             return json_response({'authenticated': False})
-        return json_response({'authenticated': True, 'user': res})
+
+        return json_response({
+            'authenticated': True,
+            'user': res
+        })
+
     return json_response({'error': 'Unknown action.'}, 400)
 
 
@@ -40,13 +68,29 @@ def auth_actions():
     if action == 'login':
         email = (body.get('email') or '').strip()
         password = body.get('password') or ''
-        if not email or not password:
-            return json_response({'error': 'Email and password are required.'}, 400)
 
-        status, res = supabase_request('POST', '/auth/v1/token?grant_type=password',
-                                        {'email': email, 'password': password})
+        if not email or not password:
+            return json_response({
+                'error': 'Email and password are required.'
+            }, 400)
+
+        status, res = supabase_request(
+            'POST',
+            '/auth/v1/token?grant_type=password',
+            {
+                'email': email,
+                'password': password
+            }
+        )
+
         if status >= 400 or not res or not res.get('access_token'):
-            msg = (res or {}).get('error_description') or (res or {}).get('msg') or (res or {}).get('error') or 'Invalid credentials.'
+            msg = (
+                (res or {}).get('error_description')
+                or (res or {}).get('msg')
+                or (res or {}).get('error')
+                or 'Invalid credentials.'
+            )
+
             return json_response({'error': msg}, 401)
 
         return json_response({
@@ -56,33 +100,94 @@ def auth_actions():
             'refresh_token': res.get('refresh_token'),
         })
 
+
     if action == 'signup':
         email = (body.get('email') or '').strip()
         password = body.get('password') or ''
         name = (body.get('name') or '').strip()
 
+        # Ini ang existing authorization role; staff gihapon para protected ang admin signup.
         wants_staff = body.get('role') == 'staff'
-        invite_code = str(body.get('invite_code') or '')
+
+        invite_code = str(
+            body.get('invite_code') or ''
+        )
+
         code_matches = (
             bool(ADMIN_INVITE_CODE)
             and ADMIN_INVITE_CODE != 'CHANGE-THIS-SECRET-CODE'
-            and hmac.compare_digest(ADMIN_INVITE_CODE, invite_code)
+            and hmac.compare_digest(
+                ADMIN_INVITE_CODE,
+                invite_code
+            )
         )
-        role = 'staff' if (wants_staff and code_matches) else 'patient'
+
+        role = (
+            'staff'
+            if wants_staff and code_matches
+            else 'patient'
+        )
 
         if wants_staff and not code_matches:
-            return json_response({'error': 'Invalid or missing staff invite code.'}, 403)
-        if not email or not password or not name:
-            return json_response({'error': 'All fields are required.'}, 400)
-        if len(password) < 6:
-            return json_response({'error': 'Password must be at least 6 characters.'}, 400)
+            return json_response({
+                'error': 'Invalid or missing staff invite code.'
+            }, 403)
 
-        status, res = supabase_request('POST', '/auth/v1/signup', {
-            'email': email, 'password': password, 'data': {'name': name, 'role': role}
-        })
+        if not email or not password or not name:
+            return json_response({
+                'error': 'All fields are required.'
+            }, 400)
+
+        if len(password) < 6:
+            return json_response({
+                'error': 'Password must be at least 6 characters.'
+            }, 400)
+
+        # Ini ang bag-o: ginakuha naton ang actual role kag position halin sa Create Account form.
+        staff_role = normalize_staff_role(
+            body.get('staff_role')
+            or body.get('job_role')
+            or body.get('staff_job_role')
+        )
+
+        position = str(
+            body.get('position')
+            or body.get('staff_position')
+            or ''
+        ).strip()
+
+        # Ini naga-save sang selected Doctor/Admin/Staff role sa Supabase Auth metadata.
+        signup_metadata = {
+            'name': name,
+            'role': role
+        }
+
+        if wants_staff:
+            signup_metadata['staff_role'] = staff_role
+            signup_metadata['job_role'] = staff_role
+            signup_metadata['position'] = position
+
+        status, res = supabase_request(
+            'POST',
+            '/auth/v1/signup',
+            {
+                'email': email,
+                'password': password,
+                'data': signup_metadata
+            }
+        )
+
         if status >= 400:
-            msg = (res or {}).get('error_description') or (res or {}).get('msg') or (res or {}).get('error') or 'Could not create account.'
-            return json_response({'error': msg}, 400)
+            msg = (
+                (res or {}).get('error_description')
+                or (res or {}).get('msg')
+                or (res or {}).get('error')
+                or 'Could not create account.'
+            )
+
+            return json_response({
+                'error': msg
+            }, 400)
 
         if res and res.get('access_token'):
             return json_response({
@@ -92,17 +197,38 @@ def auth_actions():
                 'refresh_token': res.get('refresh_token'),
             })
 
-        return json_response({'authenticated': False, 'message': 'Account created. Check your email to confirm it, then log in.'})
+        return json_response({
+            'authenticated': False,
+            'message': (
+                'Account created. Check your email to confirm it, '
+                'then log in.'
+            )
+        })
+
 
     if action == 'refresh':
         refresh_token = body.get('refresh_token')
-        if not refresh_token:
-            return json_response({'error': 'Missing refresh token.'}, 400)
 
-        status, res = supabase_request('POST', '/auth/v1/token?grant_type=refresh_token',
-                                        {'refresh_token': refresh_token})
+        if not refresh_token:
+            return json_response({
+                'error': 'Missing refresh token.'
+            }, 400)
+
+        status, res = supabase_request(
+            'POST',
+            '/auth/v1/token?grant_type=refresh_token',
+            {
+                'refresh_token': refresh_token
+            }
+        )
+
         if status >= 400 or not res or not res.get('access_token'):
-            return json_response({'error': 'Session could not be refreshed. Please log in again.'}, 401)
+            return json_response({
+                'error': (
+                    'Session could not be refreshed. '
+                    'Please log in again.'
+                )
+            }, 401)
 
         return json_response({
             'authenticated': True,
@@ -111,41 +237,98 @@ def auth_actions():
             'refresh_token': res.get('refresh_token'),
         })
 
+
     if action == 'logout':
         return json_response({'ok': True})
 
+
     if action == 'forgot_password':
         email = (body.get('email') or '').strip()
-        redirect_to = (body.get('redirect_to') or '').strip()
+        redirect_to = (
+            body.get('redirect_to') or ''
+        ).strip()
+
         if not email:
-            return json_response({'error': 'Email is required.'}, 400)
+            return json_response({
+                'error': 'Email is required.'
+            }, 400)
+
         if not redirect_to:
-            return json_response({'error': 'Missing redirect URL.'}, 400)
+            return json_response({
+                'error': 'Missing redirect URL.'
+            }, 400)
 
         status, res = supabase_request(
-            'POST', f'/auth/v1/recover?redirect_to={quote(redirect_to, safe="")}',
-            {'email': email}
+            'POST',
+            f'/auth/v1/recover?redirect_to={quote(redirect_to, safe="")}',
+            {
+                'email': email
+            }
         )
-        if status >= 400:
-            msg = (res or {}).get('error_description') or (res or {}).get('msg') or (res or {}).get('error') or 'Could not send reset email.'
-            return json_response({'error': msg}, 400)
 
-        return json_response({'ok': True, 'message': 'If that email is registered, a reset link has been sent.'})
+        if status >= 400:
+            msg = (
+                (res or {}).get('error_description')
+                or (res or {}).get('msg')
+                or (res or {}).get('error')
+                or 'Could not send reset email.'
+            )
+
+            return json_response({
+                'error': msg
+            }, 400)
+
+        return json_response({
+            'ok': True,
+            'message': (
+                'If that email is registered, '
+                'a reset link has been sent.'
+            )
+        })
+
 
     if action == 'update_password':
-        access_token = (body.get('access_token') or '').strip()
-        new_password = body.get('password') or ''
-        if not access_token:
-            return json_response({'error': 'Missing or expired reset link.'}, 400)
-        if len(new_password) < 6:
-            return json_response({'error': 'Password must be at least 6 characters.'}, 400)
+        access_token = (
+            body.get('access_token') or ''
+        ).strip()
 
-        status, res = supabase_request('PUT', '/auth/v1/user', {'password': new_password}, token=access_token)
+        new_password = body.get('password') or ''
+
+        if not access_token:
+            return json_response({
+                'error': 'Missing or expired reset link.'
+            }, 400)
+
+        if len(new_password) < 6:
+            return json_response({
+                'error': (
+                    'Password must be at least 6 characters.'
+                )
+            }, 400)
+
+        status, res = supabase_request(
+            'PUT',
+            '/auth/v1/user',
+            {
+                'password': new_password
+            },
+            token=access_token
+        )
+
         if status >= 400:
-            msg = (res or {}).get('error_description') or (res or {}).get('msg') or (res or {}).get('error') or 'Could not update password.'
-            return json_response({'error': msg}, 400)
+            msg = (
+                (res or {}).get('error_description')
+                or (res or {}).get('msg')
+                or (res or {}).get('error')
+                or 'Could not update password.'
+            )
+
+            return json_response({
+                'error': msg
+            }, 400)
 
         return json_response({'ok': True})
+
 
     if action == 'verify_reset_code':
         email = (body.get('email') or '').strip()
@@ -153,24 +336,71 @@ def auth_actions():
         new_password = body.get('password') or ''
 
         if not email or not code:
-            return json_response({'error': 'Email and code are required.'}, 400)
+            return json_response({
+                'error': 'Email and code are required.'
+            }, 400)
+
         if len(new_password) < 6:
-            return json_response({'error': 'Password must be at least 6 characters.'}, 400)
+            return json_response({
+                'error': (
+                    'Password must be at least 6 characters.'
+                )
+            }, 400)
 
         # Step 1: verify the 6-digit code — this returns a short-lived session.
-        status, res = supabase_request('POST', '/auth/v1/verify', {
-            'type': 'recovery', 'email': email, 'token': code
-        })
+        status, res = supabase_request(
+            'POST',
+            '/auth/v1/verify',
+            {
+                'type': 'recovery',
+                'email': email,
+                'token': code
+            }
+        )
+
         if status >= 400 or not res or not res.get('access_token'):
-            msg = (res or {}).get('error_description') or (res or {}).get('msg') or (res or {}).get('error') or 'Invalid or expired code.'
-            return json_response({'error': msg}, 400)
+            msg = (
+                (res or {}).get('error_description')
+                or (res or {}).get('msg')
+                or (res or {}).get('error')
+                or 'Invalid or expired code.'
+            )
+
+            return json_response({
+                'error': msg
+            }, 400)
 
         # Step 2: use that session to actually set the new password.
-        status2, res2 = supabase_request('PUT', '/auth/v1/user', {'password': new_password}, token=res['access_token'])
+        status2, res2 = supabase_request(
+            'PUT',
+            '/auth/v1/user',
+            {
+                'password': new_password
+            },
+            token=res['access_token']
+        )
+
         if status2 >= 400:
-            msg = (res2 or {}).get('error_description') or (res2 or {}).get('msg') or (res2 or {}).get('error') or 'Could not update password.'
-            return json_response({'error': msg}, 400)
+            msg = (
+                (res2 or {}).get('error_description')
+                or (res2 or {}).get('msg')
+                or (res2 or {}).get('error')
+                or 'Could not update password.'
+            )
 
-        return json_response({'ok': True, 'message': 'Password updated. You can now log in with your new password.'})
+            return json_response({
+                'error': msg
+            }, 400)
 
-    return json_response({'error': 'Unknown action.'}, 400)
+        return json_response({
+            'ok': True,
+            'message': (
+                'Password updated. You can now log in '
+                'with your new password.'
+            )
+        })
+
+
+    return json_response({
+        'error': 'Unknown action.'
+    }, 400)
