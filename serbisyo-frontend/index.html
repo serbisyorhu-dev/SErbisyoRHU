@@ -653,16 +653,20 @@ function closeModal(){ document.getElementById('modal-root').innerHTML=''; }
    DATA LOADING
    ========================================================= */
 async function loadAllData(){
+  async function loadTable(table, options={}){
+    try{ return await api(table, 'GET', options); }
+    catch(err){ console.warn(`Could not load ${table}:`, err.message); return []; }
+  }
   const [patients, appointments, staff, queueStateArr, stations, activity, schedules, announcements, services] = await Promise.all([
-    api('patients', 'GET', { order:'created_at.desc' }),
-    api('appointments', 'GET', { order:'created_at.desc' }),
-    api('staff', 'GET', { order:'created_at.desc' }),
-    api('queue_state', 'GET', { eq:'id.1' }),
-    api('queue_stations', 'GET', { order:'sort_order.asc' }),
-    api('queue_activity', 'GET', { order:'created_at.desc', limit:8 }),
-    api('schedules', 'GET', { order:'date.asc' }),
-    api('announcements', 'GET', { order:'created_at.desc' }),
-    api('services', 'GET', { order:'name.asc' })
+    loadTable('patients', { order:'created_at.desc' }),
+    loadTable('appointments', { order:'created_at.desc' }),
+    loadTable('staff', { order:'created_at.desc' }),
+    loadTable('queue_state', { eq:'id.1' }),
+    loadTable('queue_stations', { order:'sort_order.asc' }),
+    loadTable('queue_activity', { order:'created_at.desc', limit:8 }),
+    loadTable('schedules', { order:'date.asc' }),
+    loadTable('announcements', { order:'created_at.desc' }),
+    loadTable('services', { order:'name.asc' })
   ]);
 
   DB.patients = (patients||[]).map(r=>({
@@ -839,45 +843,57 @@ document.getElementById('login-form').addEventListener('submit', async (e)=>{
 
 async function enterApp(){
   showLoading(true);
+  let authenticated = false;
   try{
-    // Always re-confirm who's actually logged in via this token,
-    // rather than trusting whatever object is already in currentUser.
-    // This MUST be a GET — the backend's session-check route only exists as GET.
     const token = getToken();
-    const sessionRes = await safeFetch(`${BACKEND_URL}/api/auth?action=session`, {
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-    });
-    const sessionCheck = await sessionRes.json().catch(()=>({authenticated:false}));
+    if(!token){ showMsg('Please sign in to continue.', 'err'); return; }
+
+    let sessionCheck = { authenticated:false };
+    try{
+      const sessionRes = await safeFetch(`${BACKEND_URL}/api/auth?action=session`, {
+        headers:{ 'Authorization': `Bearer ${token}` }
+      });
+      sessionCheck = await sessionRes.json().catch(()=>({authenticated:false}));
+    }catch(err){ console.warn('Session check failed:', err.message); }
 
     if(sessionCheck.authenticated){
       currentUser = sessionCheck.user;
-    } else {
-      // Access token's genuinely no good anymore — try a silent refresh
-      // before giving up and showing the login screen.
-      const refreshed = await attemptTokenRefresh();
-      if(!refreshed) throw new Error('Session expired.');
+      authenticated = true;
+    }else if(await attemptTokenRefresh()){
+      authenticated = true;
+    }
+
+    if(!authenticated){
+      clearToken(); currentUser=null;
+      document.getElementById('login-screen').classList.remove('hidden');
+      document.getElementById('app-screen').classList.add('hidden');
+      showMsg('Your login session is no longer valid. Please sign in again.', 'err');
+      return;
     }
 
     await loadAllData();
     document.getElementById('login-screen').classList.add('hidden');
     document.getElementById('app-screen').classList.remove('hidden');
-    const name = currentUser?.user_metadata?.name || currentUser?.email || 'Admin';
-    document.getElementById('user-avatar').textContent = initials(name);
-
-    if(currentUser?.user_metadata?.role === 'staff' && currentUser?.id){
-      ensureStaffRecord(name, currentUser.email, currentUser.id, null, null);
+    loginMsg.className='login-msg';
+    const name=currentUser?.user_metadata?.name || currentUser?.email || 'Admin';
+    document.getElementById('user-avatar').textContent=initials(name);
+    if(currentUser?.user_metadata?.role==='staff' && currentUser?.id){
+      ensureStaffRecord(name,currentUser.email,currentUser.id,null,null);
     }
-
     navigate('dashboard');
-  } catch(err){
-    clearToken();
-    currentUser = null;
-    document.getElementById('login-screen').classList.remove('hidden');
-    document.getElementById('app-screen').classList.add('hidden');
-    showMsg('Your session expired — please log in again.', 'err');
-  } finally {
-    showLoading(false);
-  }
+  }catch(err){
+    console.error('Admin startup error:',err);
+    if(authenticated){
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('app-screen').classList.remove('hidden');
+      try{ navigate('dashboard'); }catch(e){}
+      toast('Some data could not be loaded. Click Refresh Data to retry.',true);
+    }else{
+      document.getElementById('login-screen').classList.remove('hidden');
+      document.getElementById('app-screen').classList.add('hidden');
+      showMsg('Could not verify your login. Please try again.','err');
+    }
+  }finally{ showLoading(false); }
 }
 
 document.getElementById('logout-btn').addEventListener('click', async ()=>{
