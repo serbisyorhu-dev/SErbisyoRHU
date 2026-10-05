@@ -222,15 +222,18 @@ function doctorCard(doctor,index){
   const prefix=String.fromCharCode(65+(index%26));
   const name=doctor.doctor_name||doctor.name||doctor.doctor||`Doctor ${index+1}`;
   const department=doctor.department||doctor.service||doctor.specialization||'Medical Doctor';
-  const current=doctor.current_number||doctor.current_queue||doctor.queue_number||`${prefix}-0`;
+  const current=doctor.current_number||doctor.current_queue||doctor.queue_number||'—';
   const next=doctor.next_number||doctor.next_queue||'—';
   const waiting=doctor.waiting??doctor.waiting_count??0;
   const service=doctor.current_service||doctor.service||'Waiting for the next patient…';
+  const stationName=doctor.station_name||doctor.station||'';
+  const station=stationName?`${stationName}${doctor.station_status?` · ${doctor.station_status}`:''}`:'Station not assigned';
 
   return `
     <div class="doctor-card">
       <div class="doctor-name">${escapeHtml(name)}</div>
       <div class="doctor-department">${escapeHtml(department)}</div>
+      <div class="doctor-department" style="margin-top:5px;font-weight:700;">🏥 ${escapeHtml(station)}</div>
 
       <div class="live-tag">
         <span class="live-dot"></span>
@@ -275,7 +278,7 @@ function renderOldQueue(data){
   const oldQueue={
     doctor_name:data.doctor_name||data.doctor||'RHU Queue',
     department:data.department||'San Enrique RHU',
-    current_number:data.current_number||'A-0',
+    current_number:data.current_number||'—',
     next_number:data.next_number||'A-1',
     waiting:data.waiting??0,
     current_service:(data.current_patient&&data.current_service)
