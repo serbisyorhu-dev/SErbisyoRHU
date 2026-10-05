@@ -53,10 +53,10 @@
     <div class="sidebar-bottom"><button id="logoutSideBtn" class="logout-side" type="button">↪ Log Out</button></div>
   </aside>
   <div class="main">
-    <header class="top"><div><h2>SERbisyo — Doctor Portal</h2><div class="path">Doctor / My Queue</div></div><div class="doctor-info"><span class="muted" id="doctorName"></span><span class="badge" id="doctorDepartment"></span><span class="badge" id="doctorStation">No station assigned</span><div class="avatar">DR</div><button id="logoutBtn" class="btn outline" type="button">Log Out</button></div></header>
+    <header class="top"><div><h2>My Queue</h2><div class="path">Doctor Portal</div></div><div class="doctor-info"><span class="muted" id="doctorName"></span><span class="badge" id="doctorDepartment"></span><span class="badge" id="doctorStation">No station assigned</span><div class="avatar">DR</div></div></header>
     <main class="wrap">
       <div class="page-head"><h1>Doctor Queue</h1><p>Manage only the patients assigned to your account.</p></div>
-      <section id="current" class="card current-card"><div class="queue-label">● NOW SERVING</div><div class="queue" id="currentNum">—</div><h3 id="currentPatient">No patient currently being served</h3><p class="muted" id="currentService"></p><p class="muted" id="currentSchedule"></p><p class="muted" id="currentStation">🏥 No station assigned</p><div class="current-actions"><button class="btn primary" id="callNextBtn" type="button">Call Next Patient</button><button class="btn success hidden" id="doneBtn" type="button">✓ Patient Done</button></div><p id="queueMessage" class="muted"></p></section>
+      <section id="current" class="card current-card"><div class="queue-label">● NOW SERVING</div><div class="queue" id="currentNum">—</div><h3 id="currentPatient">No patient currently being served</h3><p class="muted" id="currentService"></p><p class="muted" id="currentSchedule"></p><div class="current-actions"><button class="btn primary" id="callNextBtn" type="button">Call Next Patient</button><button class="btn success hidden" id="doneBtn" type="button">✓ Patient Done</button></div><p id="queueMessage" class="muted"></p></section>
       <section id="waiting" class="card section-card"><h3>My Waiting Queue</h3><p class="muted">Only checked-in patients assigned to you are shown here.</p><div class="table-wrap"><table><thead><tr><th>Queue</th><th>Patient</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th></tr></thead><tbody id="waitingQueue"></tbody></table></div></section>
       <section id="bookings-card" class="card section-card"><h3>My Bookings</h3><p class="muted">Appointments assigned to your doctor account.</p><div class="table-wrap"><table><thead><tr><th>Date</th><th>Time</th><th>Patient</th><th>Service</th><th>Queue</th><th>Status</th></tr></thead><tbody id="bookings"></tbody></table></div></section>
     </main>
@@ -102,9 +102,6 @@ const passwordInput =
 const loginBtn =
   document.getElementById('loginBtn');
 
-const logoutBtn =
-  document.getElementById('logoutBtn');
-
 const msg =
   document.getElementById('msg');
 
@@ -116,9 +113,6 @@ const doctorDepartment =
 
 const doctorStation =
   document.getElementById('doctorStation');
-
-const currentStation =
-  document.getElementById('currentStation');
 
 const currentNum =
   document.getElementById('currentNum');
@@ -357,12 +351,10 @@ async function loadDoctorStation(){
     )||null;
     const label=assignedStation?`${assignedStation.name} · ${assignedStation.status}`:'No station assigned';
     doctorStation.textContent=label;
-    currentStation.textContent=`🏥 ${label}`;
   }catch(error){
     console.error('Failed to load station assignment:',error);
     assignedStation=null;
     doctorStation.textContent='No station assigned';
-    currentStation.textContent='🏥 No station assigned';
   }
 }
 
@@ -1004,11 +996,6 @@ function logoutDoctor() {
 loginBtn.addEventListener(
   'click',
   loginDoctor
-);
-
-logoutBtn.addEventListener(
-  'click',
-  logoutDoctor
 );
 
 const logoutSideBtn = document.getElementById('logoutSideBtn');
