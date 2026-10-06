@@ -1,122 +1,95 @@
-                    waiting_list[0].get('service')
-                    or waiting_list[0].get('service_name')
-                )
+from urllib.parse import quote
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from flask import Blueprint, request, jsonify
 
-            doctors.append({
-                'doctor_id': doctor_id,
-                'doctor_name': doctor_name,
-                'role': doctor.get('role'),
-                'position': (
-                    doctor.get('position')
-                    or doctor.get('dept')
-                ),
-                'department': (
-                    doctor.get('department')
-                    or doctor.get('dept')
-                    or doctor.get('specialty')
-                    or doctor.get('specialization')
-                    or doctor.get('position')
-                    or 'Medical Doctor'
-                ),
-                'prefix': prefix,
-                'current_number': current_number,
-                'current_service': current_service,
-                'next_number': next_number,
-                'next_service': next_service,
-                'waiting': len(waiting_list),
-                'booked_count': len(waiting_list),
-                'station': station_name,
-                'station_status': station_status_value
-            })
+from supabase_helper import supabase_request
 
-        # Ini pirmi naga-return sang doctors array; bisan zero appointments, doctor cards dapat ara gihapon.
-        return json_response({
-            'date': clinic_today,
-            'doctors': doctors
-        })
+data_bp = Blueprint('data', __name__)
 
-    except Exception as error:
-        print('PUBLIC QUEUE STATUS ERROR:', error)
-
-        # Kon may unexpected error sa bag-o nga logic, gamiton gihapon ang original queue_state.
-        try:
-            status, res = supabase_request(
-                'GET',
-                '/rest/v1/queue_state?id=eq.1&select=current_number,next_number,waiting,current_patient,current_service'
-            )
-
-            if status < 400 and res:
-                row = (
-                    res[0]
-                    if isinstance(res, list) and res
-                    else {}
-                )
-                return json_response(row)
-
-        except Exception as fallback_error:
-            print(
-                'QUEUE STATUS FALLBACK ERROR:',
-                fallback_error
-            )
-
-        return json_response(
-            {'error': 'Could not load queue status.'},
-            500
-        )
+ALLOWED_TABLES = [
+    'patients', 'appointments', 'staff',
+    'queue_state', 'queue_stations', 'queue_activity',
+    'schedules', 'announcements', 'services',
+]
 
 
-@data_bp.route('/api/data', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
-def data_proxy():
-    token = get_bearer_token()
-    if not token:
-        return json_response({'error': 'Not authenticated. Please log in.'}, 401)
+def json_response(data, status=200):
+    return jsonify(data), status
 
-    table = request.args.get('table', '')
-    if table not in ALLOWED_TABLES:
-        return json_response({'error': f'Unknown or disallowed table: {table}'}, 400)
 
-    query = []
-    row_id = request.args.get('id')
-    if row_id is not None:
-        query.append('id=eq.' + quote(row_id, safe=''))
+def get_bearer_token():
+    header = request.headers.get('Authorization', '')
+    if header.startswith('Bearer '):
+        return header[7:]
+    return None
 
-    eq = request.args.get('eq')
-    if eq and '.' in eq:
-        col, val = eq.split('.', 1)
-        query.append(f'{quote(col, safe="")}=eq.{quote(val, safe="")}')
 
-    order = request.args.get('order')
-    if order:
-        query.append('order=' + quote(order, safe='.,'))
+# Ini nagacheck kon Doctor ukon Medical Doctor gid ang role.
+def is_doctor_role(role):
+    role = str(role or '').strip().lower()
+    return role in ('doctor', 'medical doctor')
 
-    limit = request.args.get('limit')
-    if limit:
-        try:
-            query.append('limit=' + str(int(limit)))
-        except ValueError:
-            pass
 
-    path = f'/rest/v1/{table}'
-    if query:
-        path += '?' + '&'.join(query)
+# Ini nagapangita sang doctor account bisan ang role label yara sa role, staff_role, job_role, position, ukon department.
+def is_doctor_staff(person):
+    if not isinstance(person, dict):
+        return False
 
-    method = request.method
-    body = None
-    extra_headers = {}
+    possible_roles = [
+        person.get('role'),
+        person.get('staff_role'),
+        person.get('job_role'),
+        person.get('position'),
+        person.get('department'),
+        person.get('dept'),
+        person.get('specialty'),
+        person.get('specialization'),
+    ]
 
-    if method == 'GET':
-        pass
-    elif method == 'POST':
-        body = request.get_json(silent=True) or {}
-        extra_headers['Prefer'] = 'return=representation'
-    elif method in ('PUT', 'PATCH'):
-        body = request.get_json(silent=True) or {}
-        extra_headers['Prefer'] = 'return=representation'
-        method = 'PATCH'
-    elif method == 'DELETE':
-        extra_headers['Prefer'] = 'return=representation'
-    else:
-        return json_response({'error': 'Method not allowed'}, 405)
+    for value in possible_roles:
+        normalized = str(value or '').strip().lower()
+        if normalized in ('doctor', 'medical doctor'):
+            return True
 
-    status, res = supabase_request(method, path, body, token, extra_headers)
-    return json_response(res, status or 200)
+    return False
+
+
+# Ini nagakuha sang current clinic date sa Pilipinas para indi maapil ang future ukon daan nga bookings sa live TV queue.
+def clinic_today_iso():
+    try:
+        return datetime.now(ZoneInfo('Asia/Manila')).date().isoformat()
+    except Exception:
+        return datetime.now().date().isoformat()
+
+
+# Ini nagahimo sang A, B, C ... Z, AA, AB depende sa doctor order.
+def doctor_prefix(index):
+    number = index + 1
+    result = ''
+
+    while number > 0:
+        number -= 1
+        result = chr(65 + (number % 26)) + result
+        number //= 26
+
+    return result
+
+
+# Ini nagakuha sang number sa A-1, A-2, B-1 para insakto ang queue sorting.
+def queue_sequence(queue_number):
+    try:
+        return int(str(queue_number).split('-')[-1])
+    except (TypeError, ValueError):
+        return 999999999
+
+
+# Ini nagakuha sang station name bisan lain-lain gamay ang column name sa table.
+def get_station_name(station):
+    return (
+        station.get('name')
+        or station.get('station_name')
+        or station.get('room_name')
+        or station.get('room')
+        or station.get('label')
+    )
