@@ -407,7 +407,7 @@
 
     <div class="legal">
       Protected by ISUFST-SEC , BSIT © 2026
-      <div class="links"><a href="#">Contact Support</a> · <a href="#">Privacy Policy</a></div>
+      <div class="links"><a href="#" id="contact-support-link">Contact Support</a> · <a href="#" id="privacy-policy-link">Privacy Policy</a></div>
     </div>
   </div>
 
@@ -479,7 +479,7 @@
 
     <div class="sidebar-bottom">
       <div class="sidebar-links">
-        <button><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 1.9-2.4 3.6M12 17h.01"/></svg> Support</button>
+        <button id="support-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 1.9-2.4 3.6M12 17h.01"/></svg> Support</button>
         <button class="logout" id="logout-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Log Out</button>
       </div>
     </div>
@@ -2711,6 +2711,27 @@ function afterRender(page){
     if(sel) sel.addEventListener('change', (e)=>{ staffStatusFilter = e.target.value; navigate('staff'); });
   }
 }
+
+
+/* Ini nagahatag function sa Support kag Privacy links para wala visible control nga wala action. */
+function openSupportInfo(){
+  openModal(`
+    <div class="modal-head"><h3>Support</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <p style="color:var(--ink-soft);line-height:1.65;margin-top:10px;">For account access, queue, appointment, or system concerns, please contact your San Enrique RHU system administrator or designated IT support personnel.</p>
+    <div class="modal-actions"><button class="btn btn-primary" onclick="closeModal()">OK</button></div>`);
+}
+function openPrivacyInfo(){
+  openModal(`
+    <div class="modal-head"><h3>Privacy</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <p style="color:var(--ink-soft);line-height:1.65;margin-top:10px;">Use patient and staff information only for authorized RHU operations. Keep account credentials private and log out after using a shared device.</p>
+    <div class="modal-actions"><button class="btn btn-primary" onclick="closeModal()">OK</button></div>`);
+}
+const supportBtn=document.getElementById('support-btn');
+if(supportBtn) supportBtn.addEventListener('click',openSupportInfo);
+const contactSupportLink=document.getElementById('contact-support-link');
+if(contactSupportLink) contactSupportLink.addEventListener('click',(e)=>{e.preventDefault();openSupportInfo();});
+const privacyPolicyLink=document.getElementById('privacy-policy-link');
+if(privacyPolicyLink) privacyPolicyLink.addEventListener('click',(e)=>{e.preventDefault();openPrivacyInfo();});
 
 /* mobile sidebar toggle */
 function setupMobileToggle(){
