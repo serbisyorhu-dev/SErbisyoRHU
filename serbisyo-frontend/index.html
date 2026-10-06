@@ -2162,7 +2162,6 @@ function renderStaff(){
   return `
     <div class="page-head row between">
       <div><h1>Staff Directory</h1><p>Manage and monitor the clinical sanctuary's personnel.</p></div>
-      <button class="btn btn-primary" onclick="openStaffModal()">+ Register New Staff</button>
     </div>
     <div class="grid grid-main">
       <div class="card" style="padding:20px;">
@@ -2194,7 +2193,7 @@ function renderStaff(){
                     </button>
                   </div>
                 </td>
-              </tr>`).join('') : `<tr><td colspan="5"><div class="empty-state">${DB.staff.length ? 'No staff match this filter.' : 'No staff registered yet. Click "Register New Staff" to add the first one.'}</div></td></tr>`}
+              </tr>`).join('') : `<tr><td colspan="5"><div class="empty-state">${DB.staff.length ? 'No staff match this filter.' : 'No staff accounts have been created yet.'}</div></td></tr>`}
           </tbody>
         </table>
         <div class="muted small" style="margin-top:10px;">Showing ${rows.length} of ${DB.staff.length} Personnel</div>
@@ -2245,36 +2244,7 @@ async function deleteStaff(dbId){
     toast('Staff record removed.'); navigate('staff');
   } catch(err){ toast('Error: '+err.message, true); }
 }
-function openStaffModal(){
-  openModal(`
-    <div class="modal-head"><h3>Register New Staff</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
-    <form id="staff-form">
-      <div class="field"><label>Full Name</label><input name="name" required placeholder="Dr. Jane Reyes"></div>
-      <div class="field-row">
-        <div class="field"><label>Role</label>
-          <select name="role"><option>Medical Doctor</option><option>Nursing</option><option>Admin</option></select>
-        </div>
-        <div class="field"><label>Position</label><input name="position" required placeholder="e.g. Resident Physician"></div>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary">Register Staff</button>
-      </div>
-    </form>
-  `);
-  document.getElementById('staff-form').addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const f = new FormData(e.target);
-    const staff_no = `${new Date().getFullYear()}-${String(Date.now()).slice(-3)}`;
-    const payload = { staff_no, name:f.get('name'), role:f.get('role'), dept:f.get('position'), status:'ACTIVE', last_login:new Date().toISOString() };
-    try{
-      const data = await api('staff','POST',{ body: payload });
-      const row = Array.isArray(data) ? data[0] : data;
-      DB.staff.unshift({ dbId:row.id, id:row.staff_no, name:row.name, role:row.role, dept:row.dept, status:row.status, lastLogin:row.last_login });
-      closeModal(); toast('New staff registered.'); navigate('staff');
-    } catch(err){ toast('Error: '+err.message, true); }
-  });
-}
+
 
 /* =========================================================
    REPORTS & ANALYTICS — everything computed live from real
