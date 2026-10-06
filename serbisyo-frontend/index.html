@@ -519,9 +519,7 @@
    ========================================================= */
 
 const COLORS = ['#1c6ca3','#12a594','#e0a030','#d84c46','#6a5acd','#12866f'];
-// Ini nagapili sang consistent nga color base sa text ukon pangalan.
 function colorFor(str){ let h=0; for(const c of (str||'')) h = (h*31 + c.charCodeAt(0))>>>0; return COLORS[h % COLORS.length]; }
-// Ini nagakuha sang initials halin sa pangalan para gamiton sa avatar.
 function initials(name){ return (name||'?').split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join(''); }
 
 /* In-memory cache of everything loaded from the backend. Nothing is seeded —
@@ -541,15 +539,10 @@ let currentUser = null;
    token-in-header auth isn't affected by that at all. */
 const BACKEND_URL = 'https://serbisyorhu.onrender.com';
 
-// Ini nagakuha sang saved access token halin sa browser storage.
 function getToken(){ return localStorage.getItem('serbisyo_token'); }
-// Ini nagasave sang access token sa browser storage.
 function setToken(token){ localStorage.setItem('serbisyo_token', token); }
-// Ini nagakuha sang saved refresh token para sa session renewal.
 function getRefreshToken(){ return localStorage.getItem('serbisyo_refresh_token'); }
-// Ini nagasave sang refresh token kon may ara.
 function setRefreshToken(token){ if(token) localStorage.setItem('serbisyo_refresh_token', token); }
-// Ini nagapang-delete sang saved login tokens kag user data sa browser.
 function clearToken(){
   localStorage.removeItem('serbisyo_token');
   localStorage.removeItem('serbisyo_refresh_token');
@@ -558,7 +551,6 @@ function clearToken(){
 
 /** Silently trades the stored refresh token for a fresh access token —
  * no password needed. Returns true if it worked. */
-// Ini nagatilaw magkuha bag-o nga access token gamit ang refresh token.
 async function attemptTokenRefresh(){
   const refreshToken = getRefreshToken();
   if(!refreshToken) return false;
@@ -574,7 +566,6 @@ async function attemptTokenRefresh(){
   return false;
 }
 
-// Ini naga-fetch sa backend kag nagahatag mas klaro nga error kon indi ma-reach ang server.
 async function safeFetch(url, options){
   try{
     return await fetch(url, options);
@@ -583,7 +574,6 @@ async function safeFetch(url, options){
   }
 }
 
-// Ini ang generic API helper para magbasa, magdugang, mag-update, ukon mag-delete sang database records.
 async function api(table, method='GET', { id, body, order, eq, limit } = {}){
   const params = new URLSearchParams({ table });
   if(id !== undefined && id !== null) params.set('id', id);
@@ -609,7 +599,6 @@ async function api(table, method='GET', { id, body, order, eq, limit } = {}){
   }
   return data;
 }
-// Ini ang API helper para sa login, signup, logout, kag iban pa nga authentication actions.
 async function authApi(payload){
   const token = getToken();
   const headers = {'Content-Type':'application/json'};
@@ -625,7 +614,6 @@ async function authApi(payload){
 
 /* ---------- toast ---------- */
 let toastTimer;
-// Ini nagapakita sang temporary nga success ukon error message sa screen.
 function toast(msg, isErr){
   const el = document.getElementById('toast');
   el.textContent = msg;
@@ -633,17 +621,14 @@ function toast(msg, isErr){
   clearTimeout(toastTimer);
   toastTimer = setTimeout(()=> el.classList.remove('show'), 2800);
 }
-// Ini nagapakita ukon nagatago sang loading screen.
 function showLoading(v){ document.getElementById('loading-screen').classList.toggle('hidden', !v); }
 
 /* ---------- modal helper ---------- */
-// Ini naga-open sang reusable modal kag ginabutang ang ginpasa nga content sa sulod.
 function openModal(html){
   const root = document.getElementById('modal-root');
   root.innerHTML = `<div class="overlay" id="overlay"><div class="modal">${html}</div></div>`;
   document.getElementById('overlay').addEventListener('click', (e)=>{ if(e.target.id==='overlay') closeModal(); });
 }
-// Ini nagasira kag nagaclear sang current modal.
 function closeModal(){ document.getElementById('modal-root').innerHTML=''; }
 
 
@@ -651,7 +636,6 @@ function closeModal(){ document.getElementById('modal-root').innerHTML=''; }
 /* =========================================================
    DATA LOADING
    ========================================================= */
-// Ini nagakuha sang tanan kinahanglanon nga clinic data halin sa backend kag ginabutang sa local DB cache.
 async function loadAllData(){
   const [patients, appointments, staff, queueStateArr, stations, activity, schedules, announcements, services] = await Promise.all([
     api('patients', 'GET', { order:'created_at.desc' }),
@@ -715,7 +699,6 @@ const submitLabel = document.getElementById('auth-submit-label');
 const loginMsg = document.getElementById('login-msg');
 const authSubmitBtn = document.getElementById('auth-submit');
 
-// Ini nagabind sang click action para magsaylo sa login kag signup mode.
 function bindToggleMode(){
   document.getElementById('toggle-mode').addEventListener('click', (e)=>{
     e.preventDefault();
@@ -728,7 +711,6 @@ document.getElementById('forgot-link').addEventListener('click', (e)=>{
   showMsg('Password resets aren\'t wired up yet in this build — ask an administrator to reset it from the Supabase dashboard (Authentication → Users).', 'err');
 });
 
-// Ini naga-update sang login form depende kon login ukon signup ang napili.
 function renderAuthMode(){
   loginMsg.className = 'login-msg';
   if(authMode==='signup'){
@@ -752,7 +734,6 @@ document.getElementById('eye-toggle').addEventListener('click', ()=>{
   pass.type = pass.type==='password' ? 'text' : 'password';
 });
 
-// Ini nagapakita sang authentication message pareho success ukon error.
 function showMsg(text, kind){
   loginMsg.textContent = text;
   loginMsg.className = 'login-msg show ' + kind;
@@ -763,7 +744,6 @@ function showMsg(text, kind){
  * automatically create a row in the "staff" table this page reads from.
  * This bridges the two, same pattern as the patient app's PatientSync.
  */
-// Ini nagasiguro nga ang authenticated staff account may katumbas nga staff record sa database.
 async function ensureStaffRecord(name, email, userId, jobRole, position){
   if(!userId) return;
   try{
@@ -841,7 +821,6 @@ document.getElementById('login-form').addEventListener('submit', async (e)=>{
   }
 });
 
-// Ini naga-verify sang session, nagaload sang data, kag nagapasulod sa admin dashboard.
 async function enterApp(){
   showLoading(true);
   try{
@@ -923,7 +902,6 @@ let currentPage = 'dashboard';
 document.querySelectorAll('.nav-item').forEach(btn=>{
   btn.addEventListener('click', ()=> navigate(btn.dataset.page));
 });
-// Ini nagasaylo sa napili nga admin page kag nagarender sang iya content.
 function navigate(page){
   currentPage = page;
   document.querySelectorAll('.nav-item').forEach(b=> b.classList.toggle('active', b.dataset.page===page));
@@ -943,91 +921,151 @@ function navigate(page){
 /* =========================================================
    DASHBOARD
    ========================================================= */
-// Ini nagahimo sang Dashboard UI kag nagapakita sang clinic summary kag analytics.
+let dashboardPeriod = 'day'; // 'day' | 'week' | 'month'
+
 function renderDashboard(){
   const name=currentUser?.user_metadata?.name||currentUser?.email?.split('@')[0]||'Admin';
   const waiting=DB.queue.waiting||0;
-  const today=new Date().toISOString().slice(0,10);
-  const todayAppts=DB.appointments.filter(a=>a.date===today);
-  const todayCompleted=todayAppts.filter(a=>a.status==='Completed').length;
-  const todayPending=todayAppts.filter(a=>a.status==='Pending').length;
-  const monthData=computeReportData('month',new Date());
-  const topServices=monthData.serviceDist.slice(0,4);
-  const completionRate=todayAppts.length?Math.round(todayCompleted/todayAppts.length*100):0;
+
+  // Ini ang isa lang ka period selector nga naga-control sang dashboard metrics, service trends, snapshot, kag summary.
+  const periodData=computeReportData(dashboardPeriod,new Date());
+  const periodAppts=DB.appointments.filter(a=>dateInRange(a.date,periodData.range.start,periodData.range.end));
+  const periodPending=periodAppts.filter(a=>a.status==='Pending').length;
+  const periodApproved=periodAppts.filter(a=>a.status==='Approved').length;
+  const topServices=periodData.serviceDist.slice(0,4);
+  const completionRate=periodData.totalAppts?Math.round(periodData.completed/periodData.totalAppts*100):0;
   const topService=topServices.length?topServices[0].label:'No service data yet';
+
+  const periodLabel =
+    dashboardPeriod==='day' ? 'Today' :
+    dashboardPeriod==='week' ? 'This Week' :
+    'This Month';
+
+  const snapshotTitle =
+    dashboardPeriod==='day' ? 'Day Snapshot' :
+    dashboardPeriod==='week' ? 'Week Snapshot' :
+    'Monthly Snapshot';
+
   return `
     <div class="page-head">
       <h1>Good Morning, ${name}</h1>
       <p>${waiting>0?`${waiting} patients are currently in queue.`:'The queue is empty right now.'}</p>
     </div>
 
-    <!-- Ini ang bag-o nga dashboard analytics overview para makita dayon ang important clinic numbers. -->
+    <!-- Ini ang dashboard overview nga ang Day / Week / Month selector naga-update sang tanan period-based analytics. -->
     <div class="grid grid-main" style="margin-bottom:18px; align-items:stretch;">
       <div class="card" style="padding:24px;">
-        <div class="row between" style="margin-bottom:18px;">
+        <div class="row between" style="margin-bottom:18px; gap:14px; flex-wrap:wrap;">
           <div>
             <h3 style="font-size:18px;">Clinic Analytics Overview</h3>
-            <p class="small muted" style="margin-top:4px;">Live summary from patient and appointment records.</p>
+            <p class="small muted" style="margin-top:4px;">${periodData.periodLabel} · Live summary from patient and appointment records.</p>
           </div>
-          <button class="btn btn-sm btn-outline" onclick="navigate('reports')">Full Analytics →</button>
+          <div class="row gap8" style="flex-wrap:wrap;">
+            <div class="tab-row" id="dashboard-period-tabs">
+              ${['day','week','month'].map(p=>`
+                <button data-p="${p}" class="${dashboardPeriod===p?'active':''}">
+                  ${p==='day'?'Day':p==='week'?'Week':'Month'}
+                </button>`).join('')}
+            </div>
+            <button class="btn btn-sm btn-outline" onclick="navigate('reports')">Full Analytics →</button>
+          </div>
         </div>
+
         <div class="grid grid-4" style="gap:12px; margin-bottom:22px;">
           <div style="padding:16px; border:1px solid var(--line); border-radius:14px; background:#fbfdff;">
             <div class="small muted">TOTAL PATIENTS</div>
             <div class="stat-value" style="margin-top:5px;">${DB.patients.length}</div>
             <div class="small muted">Registered patients</div>
           </div>
+
           <div style="padding:16px; border:1px solid var(--line); border-radius:14px; background:#fbfdff;">
-            <div class="small muted">TODAY'S VISITS</div>
-            <div class="stat-value" style="margin-top:5px;">${todayAppts.length}</div>
-            <div class="small muted">Scheduled appointments</div>
+            <div class="small muted">APPOINTMENTS</div>
+            <div class="stat-value" style="margin-top:5px;">${periodData.totalAppts}</div>
+            <div class="small muted">${periodLabel}</div>
           </div>
+
           <div style="padding:16px; border:1px solid var(--line); border-radius:14px; background:#fbfdff;">
             <div class="small muted">COMPLETED</div>
-            <div class="stat-value" style="margin-top:5px; color:var(--green);">${todayCompleted}</div>
-            <div class="small muted">${completionRate}% of today's visits</div>
+            <div class="stat-value" style="margin-top:5px; color:var(--green);">${periodData.completed}</div>
+            <div class="small muted">${completionRate}% of ${periodLabel.toLowerCase()} appointments</div>
           </div>
+
           <div style="padding:16px; border:1px solid var(--line); border-radius:14px; background:#fbfdff;">
             <div class="small muted">WAITING NOW</div>
             <div class="stat-value" style="margin-top:5px; color:var(--teal);">${waiting}</div>
-            <div class="small muted">Patients in queue</div>
+            <div class="small muted">Current queue</div>
           </div>
         </div>
 
-        <div class="grid grid-2" style="gap:20px;">
-          <div>
-            <h4 style="font-size:14px; margin-bottom:4px;">Service Trends</h4>
-            <p class="small muted" style="margin-bottom:14px;">Most requested services this month.</p>
+        <div class="grid grid-2" style="gap:20px; align-items:start;">
+          <!-- Service Trends follows the same Day / Week / Month selector. -->
+          <div style="padding:18px; border:1px solid var(--line); border-radius:14px; background:#fff;">
+            <div class="row between" style="margin-bottom:4px;">
+              <h4 style="font-size:14px;">Service Trends</h4>
+              <span class="pill pill-blue">${periodLabel}</span>
+            </div>
+            <p class="small muted" style="margin-bottom:14px;">Most requested services for ${periodData.periodLabel}.</p>
             ${topServices.length?topServices.map(s=>`
-              <div style="margin-bottom:11px;">
-                <div class="row between small" style="margin-bottom:5px;"><span>${s.label}</span><b>${s.pct}%</b></div>
-                <div style="height:7px; background:#edf2f6; border-radius:999px; overflow:hidden;"><div style="height:100%; width:${s.pct}%; background:var(--blue-mid); border-radius:999px;"></div></div>
-              </div>`).join(''):`<div class="empty-state small">No service trend data yet.</div>`}
+              <div style="margin-bottom:12px;">
+                <div class="row between small" style="margin-bottom:5px;">
+                  <span>${s.label}</span><b>${s.pct}%</b>
+                </div>
+                <div style="height:7px; background:#edf2f6; border-radius:999px; overflow:hidden;">
+                  <div style="height:100%; width:${s.pct}%; background:var(--blue-mid); border-radius:999px;"></div>
+                </div>
+              </div>`).join(''):`<div class="empty-state small" style="padding:26px 12px;">No service trend data for this ${dashboardPeriod}.</div>`}
           </div>
-          <div>
-            <h4 style="font-size:14px; margin-bottom:4px;">Analytics Summary</h4>
-            <p class="small muted" style="margin-bottom:12px;">Quick operational snapshot for today.</p>
-            <div style="background:#f7fafc; border:1px solid var(--line); border-radius:14px; padding:16px; line-height:1.75; font-size:13px; color:var(--ink);">
-              <div>👥 <b>${DB.patients.length}</b> registered patients in the system.</div>
-              <div>📅 <b>${todayAppts.length}</b> appointments scheduled today.</div>
-              <div>✅ <b>${todayCompleted}</b> completed and <b>${todayPending}</b> still pending today.</div>
-              <div>🎟️ <b>${waiting}</b> patient${waiting===1?'':'s'} currently waiting in queue.</div>
-              <div>🩺 Top service this month: <b>${topService}</b>.</div>
+
+          <!-- Ang daan nga Monthly Snapshot ginbutang diri kag naga-change man sa Day / Week / Month. -->
+          <div style="padding:18px; border:1px solid var(--line); border-radius:14px; background:#f9fbfd;">
+            <div class="row between" style="margin-bottom:12px;">
+              <div>
+                <h4 style="font-size:14px;">${snapshotTitle}</h4>
+                <p class="small muted" style="margin-top:3px;">${periodData.periodLabel}</p>
+              </div>
+            </div>
+            <div style="display:grid; gap:9px;">
+              <div class="row between" style="padding:10px 0; border-bottom:1px solid var(--line);">
+                <span class="small muted">Patients Catered</span>
+                <b style="font-size:18px; color:var(--navy);">${periodData.patientsCatered}</b>
+              </div>
+              <div class="row between" style="padding:10px 0; border-bottom:1px solid var(--line);">
+                <span class="small muted">Appointments</span>
+                <b style="font-size:18px; color:var(--navy);">${periodData.totalAppts}</b>
+              </div>
+              <div class="row between" style="padding:10px 0; border-bottom:1px solid var(--line);">
+                <span class="small muted">Completed</span>
+                <b style="font-size:18px; color:var(--green);">${periodData.completed}</b>
+              </div>
+              <div class="row between" style="padding:10px 0;">
+                <span class="small muted">Patient Satisfaction</span>
+                <b style="font-size:18px; color:var(--amber);">${periodData.avgRating===null?'—':periodData.avgRating.toFixed(1)+' ★'}</b>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
+      <!-- Analytics Summary ginbalhin sa right side para mas hapos basahon kag amo man nga selector ang ginagamit. -->
       <div class="card" style="padding:22px;">
-        <div class="row between" style="margin-bottom:14px;">
-          <div><h3 style="font-size:16px;">Monthly Snapshot</h3><p class="small muted" style="margin-top:3px;">Current month</p></div>
-          <span class="pill pill-blue">LIVE</span>
+        <div style="margin-bottom:16px;">
+          <h3 style="font-size:16px;">Analytics Summary</h3>
+          <p class="small muted" style="margin-top:3px;">${periodData.periodLabel}</p>
         </div>
-        <div style="display:grid; gap:10px;">
-          <div class="row between" style="padding:12px 0; border-bottom:1px solid var(--line);"><span class="small muted">Patients Catered</span><b style="font-size:18px; color:var(--navy);">${monthData.patientsCatered}</b></div>
-          <div class="row between" style="padding:12px 0; border-bottom:1px solid var(--line);"><span class="small muted">Appointments</span><b style="font-size:18px; color:var(--navy);">${monthData.totalAppts}</b></div>
-          <div class="row between" style="padding:12px 0; border-bottom:1px solid var(--line);"><span class="small muted">Completed</span><b style="font-size:18px; color:var(--green);">${monthData.completed}</b></div>
-          <div class="row between" style="padding:12px 0;"><span class="small muted">Patient Satisfaction</span><b style="font-size:18px; color:var(--amber);">${monthData.avgRating===null?'—':monthData.avgRating.toFixed(1)+' ★'}</b></div>
+
+        <div style="background:#f7fafc; border:1px solid var(--line); border-radius:14px; padding:16px; line-height:1.8; font-size:13px; color:var(--ink);">
+          <div>📅 <b>${periodData.totalAppts}</b> appointment${periodData.totalAppts===1?'':'s'} in this ${dashboardPeriod}.</div>
+          <div>✅ <b>${periodData.completed}</b> completed.</div>
+          <div>🕒 <b>${periodPending}</b> pending.</div>
+          <div>🟢 <b>${periodApproved}</b> approved / checked in.</div>
+          <div>🎟️ <b>${waiting}</b> patient${waiting===1?'':'s'} currently waiting now.</div>
+          <div>🩺 Top service: <b>${topService}</b>.</div>
+        </div>
+
+        <div style="margin-top:16px; padding:14px; border-radius:14px; background:var(--blue-light);">
+          <div class="small muted" style="margin-bottom:4px;">SELECTED PERIOD</div>
+          <b style="display:block; color:var(--navy); font-size:15px;">${periodData.periodLabel}</b>
+          <div class="small muted" style="margin-top:4px;">Change Day / Week / Month above and this whole dashboard updates together.</div>
         </div>
       </div>
     </div>
@@ -1058,7 +1096,6 @@ function renderDashboard(){
    ========================================================= */
 let apptFilters = { status:'all', date:'', doctor:'', service:'', search:'' };
 
-// Ini nagarender sang appointments table suno sa napili nga filters.
 function renderAppointments(){
   const statusColor = { Pending:'pill-amber', Approved:'pill-green', Completed:'pill-blue', Cancelled:'pill-red' };
   const doctorNames = [...new Set(DB.schedules.map(s=>s.doctor))];
@@ -1123,7 +1160,6 @@ function renderAppointments(){
   `;
 }
 
-// Ini nagapabuhin sang booked count sang schedule kon kinahanglan ibalik ang slot.
 async function freeScheduleSlotIfNeeded(appt){
   if(!appt.scheduleId) return;
   const sched = DB.schedules.find(s=>s.dbId===appt.scheduleId);
@@ -1135,7 +1171,6 @@ async function freeScheduleSlotIfNeeded(appt){
   } catch(e){ /* non-critical — admin can fix manually in Schedules if this fails */ }
 }
 
-// Ini naga-update sang status sang appointment kag ginakeep in sync ang schedule slot.
 async function setApptStatus(dbId, status){
   const a = DB.appointments.find(x=>x.dbId===dbId); if(!a) return;
   try{
@@ -1155,9 +1190,7 @@ async function setApptStatus(dbId, status){
  */
 
 /* Ini nagahimo sang permanent A, B, C ... AA prefix gamit ang staff ID sang doctor. */
-// Ini nagahimo sang normalized key para hapos ikumparar ang doctor names.
 function doctorKey(name){return String(name||'').trim().toLowerCase();}
-// Ini nagahimo sang queue letter prefix base sa doctor order ukon ID.
 function queuePrefixFromId(id){
   let n=parseInt(id,10);
   if(!n||n<1)return null;
@@ -1165,23 +1198,19 @@ function queuePrefixFromId(id){
   while(n>0){n--;prefix=String.fromCharCode(65+(n%26))+prefix;n=Math.floor(n/26);}
   return prefix;
 }
-// Ini nagakuha sang queue code nga para lang sa isa ka doctor.
 function doctorCode(name){
   const doctors=DB.staff.filter(x=>isDoctorRole(x.role)&&x.name).sort((a,b)=>(Number(a.dbId)||999999)-(Number(b.dbId)||999999));
   const index=doctors.findIndex(x=>doctorKey(x.name)===doctorKey(name));
   return index>=0?queuePrefixFromId(index+1):null;
 }
-// Ini nagakuha kag nagasort sang waiting queue para sa isa ka doctor.
 function doctorQueueList(doctor){
   return DB.appointments.filter(a=>doctorKey(a.doctor)===doctorKey(doctor)&&a.status==='Approved'&&a.queueNumber)
     .sort((a,b)=>(parseInt(String(a.queueNumber).split('-').pop(),10)||0)-(parseInt(String(b.queueNumber).split('-').pop(),10)||0));
 }
 /* Ini nagakuha sang current Serving patient sang isa lang ka doctor para indi mag-overlap ang queues. */
-// Ini nagapangita sang patient nga currently ginasebisyuhan sang isa ka doctor.
 function doctorServingPatient(doctor){
   return DB.appointments.find(a=>doctorKey(a.doctor)===doctorKey(doctor)&&a.status==='Serving'&&a.queueNumber);
 }
-// Ini nagakalkula sang sunod nga queue number para sa napili nga doctor.
 function nextDoctorQueueNumber(doctor){
   const prefix=doctorCode(doctor);
   if(!prefix)throw new Error('Doctor was not found in Staff Directory.');
@@ -1190,17 +1219,14 @@ function nextDoctorQueueNumber(doctor){
   return `${prefix}-${nums.length?Math.max(...nums)+1:1}`;
 }
 /* Ini nagacheck nga Doctor ukon Medical Doctor lang gid ang doctor role. */
-// Ini nagacheck kon ang staff role isa gid ka Doctor ukon Medical Doctor.
 function isDoctorRole(role){
   const r=String(role||'').trim().toLowerCase();
   return r==='doctor'||r==='medical doctor';
 }
-// Ini nagakuha sang doctor accounts nga dapat makita sa queue management.
 function queueDoctors(){
   return [...new Set(DB.staff.filter(x=>isDoctorRole(x.role)).map(x=>x.name).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
 }
 
-// Ini nagaconfirm sang patient arrival kag naga-assign sang iya doctor-specific queue number.
 async function confirmArrivalAndAssignQueue(dbId){
   const a=DB.appointments.find(x=>x.dbId===dbId); if(!a) return;
   if(!a.doctor) return toast('Assign a doctor before confirming arrival.',true);
@@ -1214,7 +1240,6 @@ async function confirmArrivalAndAssignQueue(dbId){
   }catch(err){toast('Error: '+err.message,true);}
 }
 
-// Ini nagapang-delete sang appointment kag naga-adjust sang schedule slot kon kinahanglan.
 async function deleteAppt(dbId){
   const a = DB.appointments.find(x=>x.dbId===dbId); if(!a) return;
   try{
@@ -1225,18 +1250,15 @@ async function deleteAppt(dbId){
     toast('Appointment removed.'); navigate('appointments');
   } catch(err){ toast('Error: '+err.message, true); }
 }
-// Ini naga-format sang date para mas hapos basahon sa UI.
 function fmtDate(iso){
   const d = new Date(iso+'T00:00:00');
   return d.toLocaleDateString('en-US',{ month:'short', day:'2-digit', year:'numeric' });
 }
-// Ini naga-format sang start kag end time bilang isa ka readable time range.
 function fmtTimeRange(startHHMM, endHHMM){
   if(!startHHMM || !endHHMM) return '—';
   return `${to12h(startHHMM)} – ${to12h(endHHMM)}`;
 }
 
-// Ini naga-open sang form para makabook sang walk-in appointment.
 function openAppointmentModal(){
   const patientSuggestions = DB.patients.map(p=>`<option value="${p.name}">`).join('');
   const bookable = DB.schedules.filter(s=> s.status==='Available' && s.booked < s.capacity);
@@ -1295,7 +1317,6 @@ function openAppointmentModal(){
   });
 }
 
-// Ini nagaconvert sang 24-hour time pakadto sa 12-hour AM/PM format.
 function to12h(t){
   if(!t) return '';
   let [h,m] = t.split(':').map(Number);
@@ -1310,7 +1331,6 @@ function to12h(t){
    lets front-desk staff pull up exactly who they are and which
    appointment they're here for, without searching by name.
    ========================================================= */
-// Ini nagarender sang page para sa appointment confirmation code verification.
 function renderVerifyCode(){
   return `
     <div class="page-head">
@@ -1327,7 +1347,6 @@ function renderVerifyCode(){
   `;
 }
 
-// Ini nagapangita sang appointment gamit ang confirmation code nga gin-enter.
 function lookupVerifyCode(){
   const input = document.getElementById('verify-code-input');
   const resultEl = document.getElementById('verify-result');
@@ -1377,14 +1396,12 @@ function lookupVerifyCode(){
    ========================================================= */
 let scheduleFilters = { date:'', service:'', doctor:'', status:'' };
 
-// Ini nagadeterminar sang actual schedule status base sa saved status kag available slots.
 function scheduleEffectiveStatus(s){
   if(s.status==='Cancelled') return 'Cancelled';
   if(s.status==='Completed') return 'Completed';
   return (s.booked >= s.capacity) ? 'Full' : 'Available';
 }
 
-// Ini nagarender sang schedules table kag naga-apply sang schedule filters.
 function renderSchedules(){
   const doctorNames = [...new Set(DB.staff.filter(s=>isDoctorRole(s.role)).map(s=>s.name))];
   const serviceNames = DB.services.map(s=>s.name);
@@ -1461,12 +1478,10 @@ function renderSchedules(){
   `;
 }
 
-// Ini nagacheck kon naga-overlap ang duha ka time ranges.
 function timesOverlap(startA, endA, startB, endB){
   return startA < endB && startB < endA;
 }
 
-// Ini naga-open sang form para maghimo ukon mag-edit sang clinic schedule.
 function openScheduleModal(editId){
   const editing = DB.schedules.find(s=>s.dbId===editId);
   const doctors = DB.staff.filter(s=>isDoctorRole(s.role));
@@ -1575,7 +1590,6 @@ function openScheduleModal(editId){
   });
 }
 
-// Ini nagapakita sang complete details sang napili nga schedule.
 function viewSchedule(dbId){
   const s = DB.schedules.find(x=>x.dbId===dbId); if(!s) return;
   const eff = scheduleEffectiveStatus(s);
@@ -1598,7 +1612,6 @@ function viewSchedule(dbId){
   `);
 }
 
-// Ini naga-update sang status sang schedule sa backend kag local data.
 async function updateScheduleStatus(dbId, newStatus){
   const s = DB.schedules.find(x=>x.dbId===dbId); if(!s) return;
   try{
@@ -1607,7 +1620,6 @@ async function updateScheduleStatus(dbId, newStatus){
   } catch(err){ toast('Error: '+err.message, true); }
 }
 
-// Ini nagapang-delete sang napili nga schedule record.
 async function deleteSchedule(dbId){
   if(!confirm('Delete this schedule? Patients will no longer be able to book it.')) return;
   try{
@@ -1620,7 +1632,6 @@ async function deleteSchedule(dbId){
 /* =========================================================
    SERVICE AVAILABILITY
    ========================================================= */
-// Ini nagarender sang listahan kag status sang available clinic services.
 function renderServiceAvailability(){
   const rows = DB.services;
   return `
@@ -1660,7 +1671,6 @@ function renderServiceAvailability(){
   `;
 }
 
-// Ini naga-open sang form para magdugang sang clinic service.
 function openServiceModal(){
   openModal(`
     <div class="modal-head"><h3>Add Service</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
@@ -1684,7 +1694,6 @@ function openServiceModal(){
   });
 }
 
-// Ini nagasaylo sang service status sa Active kag Inactive.
 async function toggleServiceStatus(dbId){
   const svc = DB.services.find(s=>s.dbId===dbId); if(!svc) return;
   const newStatus = svc.status==='Available' ? 'Unavailable' : 'Available';
@@ -1694,7 +1703,6 @@ async function toggleServiceStatus(dbId){
   } catch(err){ toast('Error: '+err.message, true); }
 }
 
-// Ini nagapang-delete sang napili nga service record.
 async function deleteService(dbId){
   if(!confirm('Delete this service? Existing schedules under it will keep working, but it can no longer be selected for new ones.')) return;
   try{
@@ -1709,7 +1717,6 @@ async function deleteService(dbId){
    ========================================================= */
 const WEEKDAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
-// Ini nagarender sang availability settings sang mga doctor lamang.
 function renderDoctorAvailability(){
   const doctors = DB.staff.filter(s=>isDoctorRole(s.role));
   return `
@@ -1744,7 +1751,6 @@ function renderDoctorAvailability(){
   `;
 }
 
-// Ini naga-open sang form para i-set ang available days kag oras sang doctor.
 function openDoctorAvailabilityModal(dbId){
   const d = DB.staff.find(s=>s.dbId===dbId); if(!d) return;
   const selectedDays = d.availableDays ? d.availableDays.split(',') : [];
@@ -1792,7 +1798,6 @@ function openDoctorAvailabilityModal(dbId){
    ANNOUNCEMENTS — separate from Schedules. Shown on the patient
    dashboard, and popped up on their screen when marked Important.
    ========================================================= */
-// Ini nagarender sang announcements nga ginapakita sa system.
 function renderAnnouncements(){
   const statusColor = { Active:'pill-green', Inactive:'pill-gray', Cancelled:'pill-red' };
   const rows = [...DB.announcements];
@@ -1830,7 +1835,6 @@ function renderAnnouncements(){
   `;
 }
 
-// Ini naga-open sang form para magpost bag-o nga announcement.
 function openAnnouncementModal(){
   const scheduleOptions = DB.schedules.map(s=>`<option value="${s.dbId}">${s.service} · ${fmtDate(s.date)} · ${fmtTimeRange(s.startTime,s.endTime)}</option>`).join('');
   openModal(`
@@ -1926,7 +1930,6 @@ function openAnnouncementModal(){
   });
 }
 
-// Ini nagasaylo sang announcement status suno sa available status sequence.
 async function cycleAnnouncementStatus(dbId){
   const order = ['Active','Inactive','Cancelled'];
   const a = DB.announcements.find(x=>x.dbId===dbId); if(!a) return;
@@ -1937,7 +1940,6 @@ async function cycleAnnouncementStatus(dbId){
   } catch(err){ toast('Error: '+err.message, true); }
 }
 
-// Ini nagapang-delete sang napili nga announcement.
 async function deleteAnnouncement(dbId){
   if(!confirm('Delete this announcement?')) return;
   try{
@@ -1951,7 +1953,6 @@ async function deleteAnnouncement(dbId){
    PATIENT RECORDS
    ========================================================= */
 let patientSearch = '';
-// Ini nagarender sang Patient Records table kag search results.
 function renderPatients(){
   const rows = DB.patients.filter(p=>{
     if(!patientSearch) return true;
@@ -1988,12 +1989,10 @@ function renderPatients(){
     </div>
   `;
 }
-// Ini naga-refresh lang sang Patient Records section nga wala nagsaylo sang page.
 function renderPatientsInPlace(){
   document.getElementById('page-content').innerHTML = renderPatients();
   afterRender('patients');
 }
-// Ini nagapakita sang patient details kag iya booking history gamit ang actual patient ID kon available.
 function viewPatient(dbId){
   const p = DB.patients.find(x=>x.dbId===dbId); if(!p) return;
   const bookings = DB.appointments.filter(a =>
@@ -2026,15 +2025,12 @@ function viewPatient(dbId){
     <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">Close</button></div>
   `);
 }
-// Ini nagapakita nga disabled ang patient deletion sa current system.
 function deletePatient(){ toast('Patient deletion is disabled.'); }
-// Ini nagapahibalo nga automatic halin sa mobile app ang pagdugang sang patient records.
 function openPatientModal(){ toast('Patients are added automatically when they create a mobile account.'); }
 
 /* =========================================================
    QUEUE CONTROLS
    ========================================================= */
-// Ini nagadugang sang isa sa numeric part sang queue number.
 function incQueueNum(code){
   const m = code.match(/^([A-Za-z]+)-(\d+)$/);
   if(!m) return code;
@@ -2042,12 +2038,10 @@ function incQueueNum(code){
   return `${m[1]}-${n}`;
 }
 /* Ini nagapangita sang room/station nga gin-assign sa isa ka doctor. */
-// Ini nagapangita sang station nga naka-assign sa napili nga doctor.
 function stationForDoctor(doctor){
   const st=DB.queue.stations.find(x=>String(x.doctorName||'').trim().toLowerCase()===String(doctor||'').trim().toLowerCase());
   return st||null;
 }
-// Ini nagarender sang Queue Management para sa tanan doctor queues kag stations.
 function renderQueue(){
   const q=DB.queue,doctors=queueDoctors();
   return `
@@ -2079,7 +2073,6 @@ function renderQueue(){
     </div>`;
 }
 /* Ini nga admin controls naga-move lang sang queue sang napilian nga doctor kag wala naga-apekto sa iban. */
-// Ini nagapatawag sang sunod nga waiting patient para sa napili nga doctor.
 async function adminDoctorNext(encodedDoctor){
   const doctor=decodeURIComponent(encodedDoctor),current=doctorServingPatient(doctor),waiting=doctorQueueList(doctor),next=waiting[0];
   if(!current&&!next)return toast(`No waiting patients for ${doctor}.`,true);
@@ -2090,14 +2083,12 @@ async function adminDoctorNext(encodedDoctor){
     navigate('queue');
   }catch(err){toast('Error: '+err.message,true);}
 }
-// Ini nagarecall sang current queue number sang napili nga doctor.
 function adminDoctorRecall(encodedDoctor){
   const doctor=decodeURIComponent(encodedDoctor),current=doctorServingPatient(doctor);
   if(!current)return toast(`No patient is currently being served by ${doctor}.`,true);
   addActivity(`${current.queueNumber} Recalled · ${doctor}`,'ok');
   toast(`Recalling ${current.queueNumber} · ${doctor}.`);navigate('queue');
 }
-// Ini nagamarka sang current patient bilang no-show kag nagapadayon sa queue flow.
 async function adminDoctorNoShow(encodedDoctor){
   const doctor=decodeURIComponent(encodedDoctor),current=doctorServingPatient(doctor),waiting=doctorQueueList(doctor),next=waiting[0];
   if(!current&&!next)return toast(`No active queue for ${doctor}.`,true);
@@ -2108,7 +2099,6 @@ async function adminDoctorNoShow(encodedDoctor){
     navigate('queue');
   }catch(err){toast('Error: '+err.message,true);}
 }
-// Ini naga-reset sang queue sang isa ka doctor pagkatapos sang confirmation.
 async function adminDoctorReset(encodedDoctor){
   const doctor=decodeURIComponent(encodedDoctor),current=doctorServingPatient(doctor),waiting=doctorQueueList(doctor),active=[...(current?[current]:[]),...waiting].sort((a,b)=>(parseInt(String(a.queueNumber).split('-').pop(),10)||0)-(parseInt(String(b.queueNumber).split('-').pop(),10)||0));
   if(!active.length)return toast(`No active queue to reset for ${doctor}.`,true);
@@ -2120,19 +2110,16 @@ async function adminDoctorReset(encodedDoctor){
   }catch(err){toast('Error: '+err.message,true);}
 }
 
-// Ini nagadugang sang queue action sa activity log.
 async function addActivity(label, type){
   const meta = 'Just now · ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
   try{ await api('queue_activity','POST',{ body:{ label, meta, type } }); } catch(e){ /* non-critical */ }
   DB.queue.activity.unshift({ label, meta, type });
   DB.queue.activity = DB.queue.activity.slice(0,8);
 }
-// Ini naga-update sang shared queue state record sa backend.
 async function updateQueueState(fields){
   try{ await api('queue_state','PATCH',{ eq:'id.1', body: fields }); return true; }
   catch(err){ toast('Error: '+err.message, true); return false; }
 }
-// Ini ang legacy queue helper para magsaylo sa sunod nga patient.
 async function queueNext(){
   const q = DB.queue;
   const newCurrent = q.nextNumber;
@@ -2144,9 +2131,7 @@ async function queueNext(){
   q.currentNumber = newCurrent; q.nextNumber = newNext; q.waiting = newWaiting;
   toast(`Now serving ${q.currentNumber}.`); navigate('queue');
 }
-// Ini ang legacy queue helper para i-recall ang current queue.
 function queueRecall(){ toast(`Recalling ${DB.queue.currentNumber}...`); }
-// Ini ang legacy queue helper para i-handle ang no-show patient.
 async function queueNoShow(){
   const q = DB.queue;
   const newCurrent = q.nextNumber;
@@ -2158,14 +2143,12 @@ async function queueNoShow(){
   q.currentNumber = newCurrent; q.nextNumber = newNext; q.waiting = newWaiting;
   toast('Marked as no-show. Moved to next patient.'); navigate('queue');
 }
-// Ini ang legacy queue helper para i-pause ukon i-resume ang queue.
 async function queuePause(){
   const ok = await updateQueueState({ paused: !DB.queue.paused });
   if(!ok) return;
   DB.queue.paused = !DB.queue.paused;
   toast(DB.queue.paused ? 'Queue paused.' : 'Queue resumed.'); navigate('queue');
 }
-// Ini ang legacy queue helper para i-reset ang shared queue state.
 async function queueReset(){
   if(!confirm('Reset the queue back to A-0?')) return;
   const ok = await updateQueueState({ current_number:'A-1', next_number:'A-2', waiting:0 });
@@ -2174,19 +2157,16 @@ async function queueReset(){
   await addActivity('Queue Reset', 'warn');
   toast('Queue has been reset.'); navigate('queue');
 }
-// Ini nagasaylo sang station status pareho Open kag Closed.
 async function toggleStation(dbId){
   const s = DB.queue.stations.find(x=>x.dbId===dbId); if(!s) return;
   const newStatus = s.status==='ACTIVE' ? 'CLOSED' : 'ACTIVE';
   try{ await api('queue_stations','PATCH',{ id:dbId, body:{ status:newStatus } }); s.status = newStatus; navigate('queue'); }
   catch(err){ toast('Error: '+err.message, true); }
 }
-// Ini nagahimo sang doctor options nga pwede pili-on para sa station assignment.
 function doctorStationOptions(selectedId=''){
   return `<option value="">Unassigned</option>`+queueDoctors().map(name=>{const st=DB.staff.find(x=>String(x.name||'').trim().toLowerCase()===String(name).trim().toLowerCase());const id=st?.dbId||'';return `<option value="${id}" ${String(id)===String(selectedId)?'selected':''}>${name}</option>`;}).join('');
 }
 /* Ini nagabukas sang station form kag pwede dayon i-assign ang room sa doctor. */
-// Ini naga-open sang form para magdugang ukon mag-edit sang queue station.
 function openStationModal(){
   openModal(`
     <div class="modal-head"><h3>Add Station</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
@@ -2206,13 +2186,11 @@ function openStationModal(){
     }catch(err){toast('Error: '+err.message,true);}
   });
 }
-// Ini nagakuha sang doctor assignment halin sa isa ka station.
 async function clearDoctorStationAssignment(doctorId,exceptStationId){
   const matches=DB.queue.stations.filter(st=>String(st.doctorId||'')===String(doctorId)&&String(st.dbId)!==String(exceptStationId||''));
   for(const st of matches){await api('queue_stations','PATCH',{id:st.dbId,body:{doctor_id:null,doctor_name:null}});st.doctorId=null;st.doctorName='';}
 }
 /* Ini naga-assign ukon naga-transfer sang existing room sa napilian nga doctor. */
-// Ini naga-open sang form para mag-assign sang doctor sa station.
 function openStationAssignModal(dbId){
   const st=DB.queue.stations.find(x=>x.dbId===dbId);if(!st)return;
   openModal(`
@@ -2236,7 +2214,6 @@ function openStationAssignModal(dbId){
    ========================================================= */
 let staffRoleFilter = 'All Roles';
 let staffStatusFilter = 'Any Status';
-// Ini nagarender sang Staff Directory kag naga-apply sang role kag status filters.
 function renderStaff(){
   const statusColor = { ACTIVE:'pill-green', 'ON LEAVE':'pill-amber', INACTIVE:'pill-red' };
   const rows = DB.staff.filter(s=>{
@@ -2301,7 +2278,6 @@ function renderStaff(){
     </div>
   `;
 }
-// Ini nagasaylo sang staff status sa sunod nga available status.
 async function cycleStaffStatus(dbId){
   const order = ['ACTIVE','ON LEAVE','INACTIVE'];
   const s = DB.staff.find(x=>x.dbId===dbId); if(!s) return;
@@ -2309,7 +2285,6 @@ async function cycleStaffStatus(dbId){
   try{ await api('staff','PATCH',{ id:dbId, body:{ status:newStatus } }); s.status = newStatus; navigate('staff'); }
   catch(err){ toast('Error: '+err.message, true); }
 }
-// Ini naga-save sang bag-o nga staff status sa backend.
 async function setStaffStatus(dbId,newStatus){
   const allowed=['ACTIVE','ON LEAVE','INACTIVE'];
   const s=DB.staff.find(x=>x.dbId===dbId);
@@ -2326,7 +2301,6 @@ async function setStaffStatus(dbId,newStatus){
     navigate('staff');
   }
 }
-// Ini nagapang-delete sang napili nga staff record.
 async function deleteStaff(dbId){
   try{
     await api('staff','DELETE',{ id:dbId });
@@ -2349,7 +2323,6 @@ async function deleteStaff(dbId){
 let reportPeriod = 'month'; // 'day' | 'week' | 'month'
 let reportAnchorDate = new Date();
 
-// Ini nagakuha sang start, end, kag label sang napili nga Day, Week, ukon Month period.
 function getPeriodRange(period, anchorDate){
   const d = new Date(anchorDate);
   d.setHours(0,0,0,0);
@@ -2371,13 +2344,11 @@ function getPeriodRange(period, anchorDate){
   const label = start.toLocaleDateString('en-US',{month:'long',year:'numeric'});
   return { start, end, label };
 }
-// Ini nagacheck kon ang isa ka appointment date yara sa napili nga date range.
 function dateInRange(iso, start, end){
   if(!iso) return false;
   const dt = new Date(iso+'T00:00:00');
   return dt >= start && dt <= end;
 }
-// Ini nagasaylo sang reference date pakadto sa previous ukon next day, week, ukon month.
 function shiftPeriod(period, anchorDate, dir){
   const d = new Date(anchorDate);
   if(period==='day') d.setDate(d.getDate()+dir);
@@ -2386,7 +2357,6 @@ function shiftPeriod(period, anchorDate, dir){
   return d;
 }
 
-// Ini nagakalkula sang analytics data para sa napili nga Day, Week, ukon Month gamit ang actual records.
 function computeReportData(period, anchorDate){
   period = period || reportPeriod;
   anchorDate = anchorDate || reportAnchorDate;
@@ -2479,7 +2449,6 @@ function computeReportData(period, anchorDate){
 
 /** Fetches the RHU logo and converts it to a data URL jsPDF can embed.
  * Returns null on any failure — the PDF still generates fine without it. */
-// Ini nagaload sang RHU logo bilang data URL para ma-embed sa PDF report.
 async function loadLogoDataUrl(){
   try{
     const res = await fetch('assets/logo-full.png');
@@ -2497,7 +2466,6 @@ async function loadLogoDataUrl(){
  * Step 1 of PDF generation: ask which period to print, defaulting to
  * whatever's currently being viewed on screen for convenience.
  */
-// Ini naga-open sang pagpili sang report period antes mag-generate PDF.
 function openPdfPeriodModal(){
   const todayIso = new Date().toISOString().slice(0,10);
   openModal(`
@@ -2534,7 +2502,6 @@ function openPdfPeriodModal(){
  * RHU letterhead (with logo), real bordered tables via jsPDF-AutoTable,
  * scoped to whichever period the admin chose.
  */
-// Ini nagahimo kag nagadownload sang PDF analytics report para sa napili nga period.
 async function generatePDFReport(period, anchorDate){
   if(!window.jspdf){
     toast('PDF library did not load — check your internet connection and try again.', true);
@@ -2626,7 +2593,6 @@ async function generatePDFReport(period, anchorDate){
   toast('Report downloaded.');
 }
 
-// Ini nagahimo sang conic-gradient nga ginagamit sa service distribution donut chart.
 function donutGradient(dist){
   let acc = 0; const stops = [];
   dist.forEach(d=>{ stops.push(`${d.color} ${acc}% ${acc+d.pct}%`); acc += d.pct; });
@@ -2634,7 +2600,6 @@ function donutGradient(dist){
   return `conic-gradient(${stops.join(',')})`;
 }
 
-// Ini nagahimo sang star display base sa average patient rating.
 function starRow(avg){
   const full = Math.round(avg);
   let out = '';
@@ -2642,7 +2607,6 @@ function starRow(avg){
   return out;
 }
 
-// Ini nagarender sang full Reports & Analytics page gamit ang napili nga period.
 function renderReports(){
   const r = computeReportData(reportPeriod, reportAnchorDate);
   const maxIntake = Math.max(1, ...r.intake.map(x=>x.v));
@@ -2673,11 +2637,22 @@ function renderReports(){
       </div>
     </div>
 
-    <div class="grid grid-4" style="margin-bottom:18px;">
-      <div class="card stat-card"><div class="stat-icon" style="background:var(--teal-light); color:var(--teal);">🩺</div><div class="stat-value">${r.patientsCatered}</div><div class="stat-label">Patients Catered (this ${r.period})</div></div>
-      <div class="card stat-card"><div class="stat-icon" style="background:var(--blue-light); color:var(--blue-deep);">👥</div><div class="stat-value">${r.totalPatients}</div><div class="stat-label">Total Registered Patients</div></div>
-      <div class="card stat-card"><div class="stat-icon" style="background:var(--amber-light); color:#96721e;">⏱</div><div class="stat-value">—</div><div class="stat-label">Avg. Wait Time (no data yet)</div></div>
-      <div class="card stat-card"><div class="stat-icon" style="background:var(--blue-light); color:var(--blue-deep);">💉</div><div class="stat-value">${r.vaccinationRate===null ? '—' : r.vaccinationRate+'%'}</div><div class="stat-label">Vaccination Rate (this ${r.period})</div></div>
+    <!-- Ini ang cleaner report overview: gin-remove ang Avg. Wait Time kag Vaccination cards. -->
+    <div class="grid grid-2" style="margin-bottom:18px;">
+      <div class="card" style="padding:22px; display:flex; align-items:center; gap:16px;">
+        <div class="stat-icon" style="margin:0; width:46px; height:46px; background:var(--teal-light); color:var(--teal);">🩺</div>
+        <div>
+          <div class="stat-value">${r.patientsCatered}</div>
+          <div class="stat-label">Patients Catered · ${r.periodLabel}</div>
+        </div>
+      </div>
+      <div class="card" style="padding:22px; display:flex; align-items:center; gap:16px;">
+        <div class="stat-icon" style="margin:0; width:46px; height:46px; background:var(--blue-light); color:var(--blue-deep);">👥</div>
+        <div>
+          <div class="stat-value">${r.totalPatients}</div>
+          <div class="stat-label">Total Registered Patients</div>
+        </div>
+      </div>
     </div>
     <div class="grid grid-main">
       <div>
@@ -2750,8 +2725,15 @@ function renderReports(){
 /* =========================================================
    POST-RENDER HOOKS
    ========================================================= */
-// Ini nagabind sang page-specific event listeners pagkatapos ma-render ang isa ka page.
 function afterRender(page){
+  if(page==='dashboard'){
+    document.querySelectorAll('#dashboard-period-tabs button').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        dashboardPeriod = b.dataset.p;
+        navigate('dashboard');
+      });
+    });
+  }
   if(page==='reports'){
     document.querySelectorAll('#report-period-tabs button').forEach(b=>{
       b.addEventListener('click', ()=>{ reportPeriod = b.dataset.p; navigate('reports'); });
@@ -2815,14 +2797,12 @@ function afterRender(page){
 
 
 /* Ini nagahatag function sa Support kag Privacy links para wala visible control nga wala action. */
-// Ini naga-open sang Support information modal.
 function openSupportInfo(){
   openModal(`
     <div class="modal-head"><h3>Support</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
     <p style="color:var(--ink-soft);line-height:1.65;margin-top:10px;">For account access, queue, appointment, or system concerns, please contact your San Enrique RHU system administrator or designated IT support personnel.</p>
     <div class="modal-actions"><button class="btn btn-primary" onclick="closeModal()">OK</button></div>`);
 }
-// Ini naga-open sang Privacy information modal.
 function openPrivacyInfo(){
   openModal(`
     <div class="modal-head"><h3>Privacy</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
@@ -2837,7 +2817,6 @@ const privacyPolicyLink=document.getElementById('privacy-policy-link');
 if(privacyPolicyLink) privacyPolicyLink.addEventListener('click',(e)=>{e.preventDefault();openPrivacyInfo();});
 
 /* mobile sidebar toggle */
-// Ini naga-enable sang sidebar menu toggle para sa mobile kag smaller screens.
 function setupMobileToggle(){
   const toggle = document.getElementById('menu-toggle');
   if(window.innerWidth <= 880){ toggle.style.display='flex'; }
