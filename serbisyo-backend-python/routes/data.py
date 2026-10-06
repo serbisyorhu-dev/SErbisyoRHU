@@ -1,3 +1,4 @@
+import os
 from urllib.parse import quote
 from flask import Blueprint, request, jsonify
 
@@ -27,6 +28,36 @@ def get_bearer_token():
 def is_doctor_role(role):
     role = str(role or '').strip().lower()
     return role in ('doctor', 'medical doctor')
+
+
+# Ini nagacheck sang common staff fields para makita ang doctor bisan lain ang field nga gin-gamit sa record.
+def is_doctor_staff(person):
+    if not isinstance(person, dict):
+        return False
+
+    return any(
+        is_doctor_role(person.get(field))
+        for field in (
+            'role',
+            'staff_role',
+            'job_role',
+            'position',
+            'department',
+            'dept',
+            'specialty',
+            'specialization',
+        )
+    )
+
+
+# Ini nagakuha sang backend service key para mabasa sang public TV endpoint ang staff bisan may Supabase RLS.
+def get_service_token():
+    return (
+        os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+        or os.getenv('SUPABASE_SERVICE_KEY')
+        or os.getenv('SUPABASE_SERVICE_ROLE')
+        or None
+    )
 
 
 # Ini nagahimo sang A, B, C ... Z, AA, AB depende sa doctor order.
@@ -102,27 +133,38 @@ def public_queue_status():
     """
 
     try:
+        # Ini ang server-side service token para ang public TV endpoint makabasa sang staff bisan naka-enable ang RLS.
+        service_token = get_service_token()
+
         # Ini nagakuha sang staff, appointments kag stations para makahimo sang per-doctor queue.
         staff_status, staff_res = supabase_request(
             'GET',
-            '/rest/v1/staff?select=*&order=id.asc'
+            '/rest/v1/staff?select=*&order=id.asc',
+            None,
+            service_token
         )
 
         appointment_status, appointment_res = supabase_request(
             'GET',
-            '/rest/v1/appointments?select=*'
+            '/rest/v1/appointments?select=*',
+            None,
+            service_token
         )
 
         station_status, station_res = supabase_request(
             'GET',
-            '/rest/v1/queue_stations?select=*'
+            '/rest/v1/queue_stations?select=*',
+            None,
+            service_token
         )
 
         # Kon indi mabasa ang staff ukon appointments, balik kita sa original queue_state.
         if staff_status >= 400 or appointment_status >= 400:
             status, res = supabase_request(
                 'GET',
-                '/rest/v1/queue_state?id=eq.1&select=current_number,next_number,waiting,current_patient,current_service'
+                '/rest/v1/queue_state?id=eq.1&select=current_number,next_number,waiting,current_patient,current_service',
+                None,
+                service_token
             )
 
             if status >= 400 or not res:
@@ -152,7 +194,7 @@ def public_queue_status():
         doctors_only = [
             person
             for person in staff_rows
-            if is_doctor_role(person.get('role'))
+            if is_doctor_staff(person)
         ]
 
         # Ginasecure naton nga stable ang order sang doctors suno sa staff ID.
@@ -333,7 +375,9 @@ def public_queue_status():
         try:
             status, res = supabase_request(
                 'GET',
-                '/rest/v1/queue_state?id=eq.1&select=current_number,next_number,waiting,current_patient,current_service'
+                '/rest/v1/queue_state?id=eq.1&select=current_number,next_number,waiting,current_patient,current_service',
+                None,
+                get_service_token()
             )
 
             if status < 400 and res:
