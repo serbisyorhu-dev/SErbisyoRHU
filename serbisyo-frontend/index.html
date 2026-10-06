@@ -935,43 +935,108 @@ function navigate(page){
    DASHBOARD
    ========================================================= */
 function renderDashboard(){
-  const name = currentUser?.user_metadata?.name || currentUser?.email?.split('@')[0] || 'Admin';
-  const waiting = DB.queue.waiting;
+  const name=currentUser?.user_metadata?.name||currentUser?.email?.split('@')[0]||'Admin';
+  const waiting=DB.queue.waiting||0;
+  const today=new Date().toISOString().slice(0,10);
+  const todayAppts=DB.appointments.filter(a=>a.date===today);
+  const todayCompleted=todayAppts.filter(a=>a.status==='Completed').length;
+  const todayPending=todayAppts.filter(a=>a.status==='Pending').length;
+  const monthData=computeReportData('month',new Date());
+  const topServices=monthData.serviceDist.slice(0,4);
+  const completionRate=todayAppts.length?Math.round(todayCompleted/todayAppts.length*100):0;
+  const topService=topServices.length?topServices[0].label:'No service data yet';
   return `
     <div class="page-head">
       <h1>Good Morning, ${name}</h1>
-      <p>${waiting>0 ? `${waiting} patients are currently in queue.` : 'The queue is empty right now.'}</p>
+      <p>${waiting>0?`${waiting} patients are currently in queue.`:'The queue is empty right now.'}</p>
     </div>
-    <div class="grid grid-2">
-      <div class="card card-dash" style="padding:24px; cursor:pointer;" onclick="navigate('appointments')">
-        <div class="row between"><div class="stat-icon" style="background:var(--blue-light); color:var(--blue-deep);">📅</div><span class="muted">→</span></div>
-        <h3 style="margin-top:10px; font-size:17px;">📅 Appointments</h3>
-        <p class="muted small" style="margin-top:6px; line-height:1.5;">Manage scheduled consultations and specialist visits for today.</p>
-        <div style="margin-top:14px; font-size:12.5px;" class="muted">${DB.appointments.length} scheduled · <b style="color:var(--blue-deep)">View all →</b></div>
-      </div>
-      <div class="card card-dash" style="padding:24px; cursor:pointer;" onclick="navigate('queue')">
-        <div class="row between"><div class="stat-icon" style="background:var(--teal-light); color:var(--teal);">🎟️</div><span class="muted">→</span></div>
-        <h3 style="margin-top:10px; font-size:17px;">🎟️ Queue Management</h3>
-        <p class="muted small" style="margin-top:6px; line-height:1.5;">Real-time status of waiting patients and triage flow.</p>
-        <span class="pill pill-green" style="margin-top:14px;">● Active Now: ${String(waiting).padStart(2,'0')}</span>
-      </div>
-      <div class="card card-dash" style="padding:24px; cursor:pointer;" onclick="navigate('patients')">
-        <div class="row between"><div class="stat-icon" style="background:var(--blue-light); color:var(--blue-deep);">👥</div><span class="muted">→</span></div>
-        <h3 style="margin-top:10px; font-size:17px;">👥 Patients</h3>
-        <p class="muted small" style="margin-top:6px; line-height:1.5;">Access comprehensive digital health records and history.</p>
-        <div style="margin-top:14px; font-size:12.5px;" class="muted">Total Registered <b style="color:var(--blue-deep); font-size:15px;">${DB.patients.length}</b></div>
-      </div>
-      <div class="card card-dash" style="padding:24px; cursor:pointer;" onclick="navigate('reports')">
-        <div class="row between" style="align-items:flex-start;">
-          <div class="stat-icon" style="background:var(--amber-light); color:#96721e;">📊</div>
-          <div style="text-align:right;"><div class="small muted">PERFORMANCE</div><div class="small muted">${DB.appointments.length ? 'Live data' : 'No data yet'}</div></div>
+
+    <!-- Ini ang bag-o nga dashboard analytics overview para makita dayon ang important clinic numbers. -->
+    <div class="grid grid-main" style="margin-bottom:18px; align-items:stretch;">
+      <div class="card" style="padding:24px;">
+        <div class="row between" style="margin-bottom:18px;">
+          <div>
+            <h3 style="font-size:18px;">Clinic Analytics Overview</h3>
+            <p class="small muted" style="margin-top:4px;">Live summary from patient and appointment records.</p>
+          </div>
+          <button class="btn btn-sm btn-outline" onclick="navigate('reports')">Full Analytics →</button>
         </div>
-        <h3 style="margin-top:10px; font-size:17px;">📊 Reports</h3>
-        <p class="muted small" style="margin-top:6px; line-height:1.5;">Analyze health outcomes, resource utilization, and clinic performance.</p>
-        <div class="bar-chart" style="height:44px; gap:6px; margin-top:10px;">
-          ${computeReportData().intake.slice(-5).map(x=>`<div class="bar-col"><div class="bar" style="height:${x.v ? Math.min(100, x.v*14) : 2}%; max-width:16px;"></div></div>`).join('')}
+        <div class="grid grid-4" style="gap:12px; margin-bottom:22px;">
+          <div style="padding:16px; border:1px solid var(--line); border-radius:14px; background:#fbfdff;">
+            <div class="small muted">TOTAL PATIENTS</div>
+            <div class="stat-value" style="margin-top:5px;">${DB.patients.length}</div>
+            <div class="small muted">Registered patients</div>
+          </div>
+          <div style="padding:16px; border:1px solid var(--line); border-radius:14px; background:#fbfdff;">
+            <div class="small muted">TODAY'S VISITS</div>
+            <div class="stat-value" style="margin-top:5px;">${todayAppts.length}</div>
+            <div class="small muted">Scheduled appointments</div>
+          </div>
+          <div style="padding:16px; border:1px solid var(--line); border-radius:14px; background:#fbfdff;">
+            <div class="small muted">COMPLETED</div>
+            <div class="stat-value" style="margin-top:5px; color:var(--green);">${todayCompleted}</div>
+            <div class="small muted">${completionRate}% of today's visits</div>
+          </div>
+          <div style="padding:16px; border:1px solid var(--line); border-radius:14px; background:#fbfdff;">
+            <div class="small muted">WAITING NOW</div>
+            <div class="stat-value" style="margin-top:5px; color:var(--teal);">${waiting}</div>
+            <div class="small muted">Patients in queue</div>
+          </div>
+        </div>
+
+        <div class="grid grid-2" style="gap:20px;">
+          <div>
+            <h4 style="font-size:14px; margin-bottom:4px;">Service Trends</h4>
+            <p class="small muted" style="margin-bottom:14px;">Most requested services this month.</p>
+            ${topServices.length?topServices.map(s=>`
+              <div style="margin-bottom:11px;">
+                <div class="row between small" style="margin-bottom:5px;"><span>${s.label}</span><b>${s.pct}%</b></div>
+                <div style="height:7px; background:#edf2f6; border-radius:999px; overflow:hidden;"><div style="height:100%; width:${s.pct}%; background:var(--blue-mid); border-radius:999px;"></div></div>
+              </div>`).join(''):`<div class="empty-state small">No service trend data yet.</div>`}
+          </div>
+          <div>
+            <h4 style="font-size:14px; margin-bottom:4px;">Analytics Summary</h4>
+            <p class="small muted" style="margin-bottom:12px;">Quick operational snapshot for today.</p>
+            <div style="background:#f7fafc; border:1px solid var(--line); border-radius:14px; padding:16px; line-height:1.75; font-size:13px; color:var(--ink);">
+              <div>👥 <b>${DB.patients.length}</b> registered patients in the system.</div>
+              <div>📅 <b>${todayAppts.length}</b> appointments scheduled today.</div>
+              <div>✅ <b>${todayCompleted}</b> completed and <b>${todayPending}</b> still pending today.</div>
+              <div>🎟️ <b>${waiting}</b> patient${waiting===1?'':'s'} currently waiting in queue.</div>
+              <div>🩺 Top service this month: <b>${topService}</b>.</div>
+            </div>
+          </div>
         </div>
       </div>
+
+      <div class="card" style="padding:22px;">
+        <div class="row between" style="margin-bottom:14px;">
+          <div><h3 style="font-size:16px;">Monthly Snapshot</h3><p class="small muted" style="margin-top:3px;">Current month</p></div>
+          <span class="pill pill-blue">LIVE</span>
+        </div>
+        <div style="display:grid; gap:10px;">
+          <div class="row between" style="padding:12px 0; border-bottom:1px solid var(--line);"><span class="small muted">Patients Catered</span><b style="font-size:18px; color:var(--navy);">${monthData.patientsCatered}</b></div>
+          <div class="row between" style="padding:12px 0; border-bottom:1px solid var(--line);"><span class="small muted">Appointments</span><b style="font-size:18px; color:var(--navy);">${monthData.totalAppts}</b></div>
+          <div class="row between" style="padding:12px 0; border-bottom:1px solid var(--line);"><span class="small muted">Completed</span><b style="font-size:18px; color:var(--green);">${monthData.completed}</b></div>
+          <div class="row between" style="padding:12px 0;"><span class="small muted">Patient Satisfaction</span><b style="font-size:18px; color:var(--amber);">${monthData.avgRating===null?'—':monthData.avgRating.toFixed(1)+' ★'}</b></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ang daan nga four dashboard cards gin-compact naton bilang navigation buttons sa idalom. -->
+    <div style="margin-bottom:9px; font-size:12px; font-weight:800; color:var(--ink-soft); letter-spacing:.7px; text-transform:uppercase;">Quick Access</div>
+    <div class="grid grid-4">
+      <button class="card" onclick="navigate('appointments')" style="padding:16px 18px; border:1px solid var(--line); background:#fff; text-align:left; cursor:pointer; display:flex; align-items:center; gap:12px;">
+        <div class="stat-icon" style="margin:0; background:var(--blue-light); color:var(--blue-deep);">📅</div><div><b style="display:block; color:var(--navy);">Appointments</b><span class="small muted">${DB.appointments.length} total bookings</span></div><span style="margin-left:auto; color:var(--ink-soft);">→</span>
+      </button>
+      <button class="card" onclick="navigate('queue')" style="padding:16px 18px; border:1px solid var(--line); background:#fff; text-align:left; cursor:pointer; display:flex; align-items:center; gap:12px;">
+        <div class="stat-icon" style="margin:0; background:var(--teal-light); color:var(--teal);">🎟️</div><div><b style="display:block; color:var(--navy);">Queue Management</b><span class="small muted">${waiting} waiting now</span></div><span style="margin-left:auto; color:var(--ink-soft);">→</span>
+      </button>
+      <button class="card" onclick="navigate('patients')" style="padding:16px 18px; border:1px solid var(--line); background:#fff; text-align:left; cursor:pointer; display:flex; align-items:center; gap:12px;">
+        <div class="stat-icon" style="margin:0; background:var(--blue-light); color:var(--blue-deep);">👥</div><div><b style="display:block; color:var(--navy);">Patients</b><span class="small muted">${DB.patients.length} registered</span></div><span style="margin-left:auto; color:var(--ink-soft);">→</span>
+      </button>
+      <button class="card" onclick="navigate('reports')" style="padding:16px 18px; border:1px solid var(--line); background:#fff; text-align:left; cursor:pointer; display:flex; align-items:center; gap:12px;">
+        <div class="stat-icon" style="margin:0; background:var(--amber-light); color:#96721e;">📊</div><div><b style="display:block; color:var(--navy);">Reports</b><span class="small muted">View full analytics</span></div><span style="margin-left:auto; color:var(--ink-soft);">→</span>
+      </button>
     </div>
   `;
 }
