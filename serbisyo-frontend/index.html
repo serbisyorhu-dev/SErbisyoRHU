@@ -651,12 +651,12 @@ async function loadAllData(){
 
   DB.patients = (patients||[]).map(r=>({
     dbId:r.id, id:r.patient_no, name:r.name, age:r.age, contact:r.contact,
-    email:r.email||'—', address:r.address||'', barangay:r.barangay||'', status:r.status, userId:r.user_id||''
+    email:r.email||'—', address:r.address||'', barangay:r.barangay||'', status:r.status, userId:r.user_id||'', ownerUserId:r.owner_user_id||'', relationship:r.relationship||''
   }));
   DB.appointments = (appointments||[]).map(r=>({
     dbId:r.id, patient:r.patient, date:r.date, time:r.time, service:r.service, status:r.status,
     scheduleId:r.schedule_id, doctor:r.doctor_name||'', bookedAt:r.created_at, confirmationCode:r.confirmation_code||'',
-    queueNumber:r.queue_number||'', userId:r.user_id||'',
+    queueNumber:r.queue_number||'', userId:r.user_id||'', patientId:r.patient_id||null, bookedByUserId:r.booked_by_user_id||r.user_id||'',
     rating:r.rating||null, ratingComment:r.rating_comment||''
   }));
   DB.staff = (staff||[]).map(r=>({
@@ -1935,8 +1935,10 @@ function renderPatientsInPlace(){
 function viewPatient(dbId){
   const p = DB.patients.find(x=>x.dbId===dbId); if(!p) return;
   const bookings = DB.appointments.filter(a =>
-    (p.userId && a.userId && String(p.userId)===String(a.userId)) ||
-    String(a.patient||'').trim().toLowerCase()===String(p.name||'').trim().toLowerCase()
+    (a.patientId && String(a.patientId)===String(p.dbId)) ||
+    (!a.patientId && p.userId && a.userId && String(p.userId)===String(a.userId) &&
+      String(a.patient||'').trim().toLowerCase()===String(p.name||'').trim().toLowerCase()) ||
+    (!a.patientId && String(a.patient||'').trim().toLowerCase()===String(p.name||'').trim().toLowerCase())
   ).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')) || String(b.time||'').localeCompare(String(a.time||'')));
   openModal(`
     <div class="modal-head"><h3>Patient Record</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
@@ -1948,6 +1950,7 @@ function viewPatient(dbId){
       <div class="small"><span class="muted">Age</span><br><b>${p.age} years</b></div>
       <div class="small"><span class="muted">Contact</span><br><b>${p.contact}</b></div>
       <div class="small"><span class="muted">Email</span><br><b>${p.email}</b></div>
+      <div class="small"><span class="muted">Relationship</span><br><b>${p.relationship||'Self / Account Holder'}</b></div>
       <div class="small"><span class="muted">Barangay</span><br><b>${p.barangay||'—'}</b></div>
       <div class="small" style="grid-column:1/-1;"><span class="muted">Address</span><br><b>${p.address||'—'}</b></div>
     </div>
