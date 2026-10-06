@@ -478,7 +478,6 @@
     </nav>
 
     <div class="sidebar-bottom">
-      <button class="btn btn-primary new-entry-btn" id="new-entry-btn">+ New Entry</button>
       <div class="sidebar-links">
         <button><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 1.9-2.4 3.6M12 17h.01"/></svg> Support</button>
         <button class="logout" id="logout-btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg> Log Out</button>
@@ -903,18 +902,6 @@ let currentPage = 'dashboard';
 document.querySelectorAll('.nav-item').forEach(btn=>{
   btn.addEventListener('click', ()=> navigate(btn.dataset.page));
 });
-document.getElementById('new-entry-btn').addEventListener('click', ()=>{
-  if(currentPage==='patients') toast('Patients are added automatically when they create a mobile account.');
-  else if(currentPage==='staff') openStaffModal();
-  else if(currentPage==='queue') openStationModal();
-  else if(currentPage==='schedules') openScheduleModal();
-  else if(currentPage==='announcements') openAnnouncementModal();
-  else if(currentPage==='serviceAvailability') openServiceModal();
-  else if(currentPage==='doctorAvailability') toast('Add doctors from Staff Directory — availability is set per doctor from this page.');
-  else if(currentPage==='verifyCode') { const inp = document.getElementById('verify-code-input'); if(inp) inp.focus(); }
-  else openAppointmentModal();
-});
-
 function navigate(page){
   currentPage = page;
   document.querySelectorAll('.nav-item').forEach(b=> b.classList.toggle('active', b.dataset.page===page));
