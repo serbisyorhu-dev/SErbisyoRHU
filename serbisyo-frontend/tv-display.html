@@ -31,7 +31,7 @@ body{min-height:100vh;overflow-x:hidden;}
 .doctor-name{font-family:'Poppins',sans-serif;font-size:19px;font-weight:800;}
 .doctor-department{margin-top:2px;font-size:12px;opacity:.74;}
 .station{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.10);font-size:11px;font-weight:700;}
-/* Ini ang green live indicator sang doctor nga may queue. */
+/* Ini ang status indicator sang doctor card bisan wala pa patient sa queue. */
 .live-tag{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.12);padding:6px 14px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1px;margin-top:14px;}
 .live-dot{width:8px;height:8px;border-radius:50%;background:#4ADE80;animation:pulse 1.4s infinite;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
@@ -77,21 +77,41 @@ updateClock();setInterval(updateClock,1000);
 function escapeHtml(value){return String(value??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
 /* Ini nagahimo sang A, B, C ... Z, AA, AB prefix kon wala ginpadala sang backend. */
 function prefixFromIndex(index){let n=index+1,p='';while(n>0){n--;p=String.fromCharCode(65+(n%26))+p;n=Math.floor(n/26);}return p;}
-/* Ini nagahimo sang card sang tagsa ka doctor kag iya independent queue. */
+/* Ini nagahimo sang permanent card sang tagsa ka doctor bisan wala pa patient nga nag-book ukon naghulat. */
 function doctorCard(doctor,index){
   const prefix=doctor.prefix||prefixFromIndex(index);
   const name=doctor.doctor_name||doctor.name||doctor.doctor||`Doctor ${index+1}`;
   const department=doctor.department||doctor.position||doctor.service||doctor.specialization||'Medical Doctor';
+
+  /* Ini nagakuha sang current kag next queue nga ginpadala sang backend. */
   const current=doctor.current_number||doctor.current_queue||doctor.queue_number||'';
   const next=doctor.next_number||doctor.next_queue||'';
+
+  /* Kon wala pa queue, ang doctor card ara gihapon kag indi na nagahulat sang check-in antes magpakita. */
   const displayNumber=current||next||'—';
-  const displayLabel=current?'NOW SERVING':(next?'NEXT QUEUE':'QUEUE NUMBER');
-  const nextDisplay=current?(next||'—'):'—';
-  const waiting=doctor.waiting??doctor.waiting_count??0;
-  const service=current?(doctor.current_service||'Patient is being served.'):(next?'Waiting to be called…':'Waiting for the next patient…');
+  const displayLabel=current?'NOW SERVING':(next?'NEXT QUEUE':'QUEUE OPEN');
+  const nextDisplay=current?(next||'—'):(next||'—');
+
+  /* Ini naga-support sang waiting count kag booked count kon amo ini ang field nga ginpadala sang backend. */
+  const waiting=
+    doctor.waiting ??
+    doctor.waiting_count ??
+    doctor.booked_waiting ??
+    doctor.booked_count ??
+    0;
+
+  const service=current
+    ? (doctor.current_service||'Patient is being served.')
+    : next
+      ? (doctor.next_service||doctor.current_service||'Waiting to be called…')
+      : 'No patients waiting yet.';
+
   const stationName=doctor.station_name||doctor.station||'';
   const stationStatus=doctor.station_status||'';
-  const stationHtml=stationName?`<div class="station">🏥 ${escapeHtml(stationName)}${stationStatus?` · ${escapeHtml(stationStatus)}`:''}</div>`:'';
+  const stationHtml=stationName
+    ? `<div class="station">🏥 ${escapeHtml(stationName)}${stationStatus?` · ${escapeHtml(stationStatus)}`:''}</div>`
+    : `<div class="station">🏥 No station assigned</div>`;
+
   return `<div class="doctor-card" data-prefix="${escapeHtml(prefix)}">
     <div class="doctor-name">${escapeHtml(name)}</div>
     <div class="doctor-department">${escapeHtml(department)}</div>
@@ -106,10 +126,13 @@ function doctorCard(doctor,index){
     </div>
   </div>`;
 }
-/* Ini nagapakita sang tanan nga doctor cards nga ginbalik sang backend. */
+/* Ini nagapakita sang tanan nga doctor cards nga ginbalik sang backend bisan zero pa ang waiting patients. */
 function renderDoctorQueues(doctors){
   const grid=document.getElementById('doctorGrid');
-  if(!doctors.length){grid.innerHTML='<div class="empty-state"><h2>No Active Queue</h2><p>Waiting for patients to check in.</p></div>';return;}
+  if(!doctors.length){
+    grid.innerHTML='<div class="empty-state"><h2>No Doctor Accounts Found</h2><p>Doctor cards will appear here once doctor accounts are available.</p></div>';
+    return;
+  }
   grid.innerHTML=doctors.map((doctor,index)=>doctorCard(doctor,index)).join('');
 }
 /* Ini ang compatibility fallback para sa daan nga single-queue backend response. */
