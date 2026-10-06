@@ -1,10 +1,5 @@
-import os
 import requests
 from config import SUPABASE_URL, SUPABASE_ANON_KEY
-
-
-# Ini nagakuha sang secure service-role key halin sa Render environment kon kinahanglan sang trusted backend read.
-SUPABASE_SERVICE_ROLE_KEY = os.getenv('SUPABASE_SERVICE_ROLE_KEY', '')
 
 
 def supabase_request(method, path, body=None, token=None, extra_headers=None):
@@ -19,20 +14,9 @@ def supabase_request(method, path, body=None, token=None, extra_headers=None):
         return 500, {'error': 'Backend is not configured yet. Set SUPABASE_URL and SUPABASE_ANON_KEY as environment variables in Render.'}
 
     url = SUPABASE_URL.rstrip('/') + path
-
-    # Ini nagapili sang auth key: user token kon may ara, otherwise anon key pareho sang original behavior.
-    auth_key = token or SUPABASE_ANON_KEY
-
-    # Ini nagagamit sang service-role key bilang apikey kon amo ini ang token nga ginpasa sang trusted backend route.
-    api_key = (
-        SUPABASE_SERVICE_ROLE_KEY
-        if SUPABASE_SERVICE_ROLE_KEY and auth_key == SUPABASE_SERVICE_ROLE_KEY
-        else SUPABASE_ANON_KEY
-    )
-
     headers = {
-        'apikey': api_key,
-        'Authorization': f'Bearer {auth_key}',
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': f'Bearer {token or SUPABASE_ANON_KEY}',
         'Content-Type': 'application/json',
     }
     if extra_headers:
