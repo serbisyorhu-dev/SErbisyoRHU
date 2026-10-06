@@ -2607,6 +2607,7 @@ function starRow(avg){
   return out;
 }
 
+// Ini nagarender sang full Reports & Analytics page kag ginapa-compact ang summary cards para wala dead space sa layout.
 function renderReports(){
   const r = computeReportData(reportPeriod, reportAnchorDate);
   const maxIntake = Math.max(1, ...r.intake.map(x=>x.v));
@@ -2637,24 +2638,61 @@ function renderReports(){
       </div>
     </div>
 
-    <!-- Ini ang cleaner report overview: gin-remove ang Avg. Wait Time kag Vaccination cards. -->
-    <div class="grid grid-2" style="margin-bottom:18px;">
-      <div class="card" style="padding:22px; display:flex; align-items:center; gap:16px;">
-        <div class="stat-icon" style="margin:0; width:46px; height:46px; background:var(--teal-light); color:var(--teal);">🩺</div>
+    <!-- Ini ang compact top summary para magtapad ang Patients Catered, Total Registered Patients, kag Patient Satisfaction. -->
+    <div id="reports-summary-grid" style="display:grid; grid-template-columns:1fr 1fr 1.15fr; gap:18px; margin-bottom:18px;">
+      <div class="card" style="padding:18px 20px; display:flex; align-items:center; gap:14px; min-height:108px;">
+        <div class="stat-icon" style="margin:0; width:44px; height:44px; min-width:44px; background:var(--teal-light); color:var(--teal);">🩺</div>
         <div>
           <div class="stat-value">${r.patientsCatered}</div>
-          <div class="stat-label">Patients Catered · ${r.periodLabel}</div>
+          <div class="stat-label">Patients Catered</div>
+          <div class="small muted" style="margin-top:3px;">${r.periodLabel}</div>
         </div>
       </div>
-      <div class="card" style="padding:22px; display:flex; align-items:center; gap:16px;">
-        <div class="stat-icon" style="margin:0; width:46px; height:46px; background:var(--blue-light); color:var(--blue-deep);">👥</div>
+
+      <div class="card" style="padding:18px 20px; display:flex; align-items:center; gap:14px; min-height:108px;">
+        <div class="stat-icon" style="margin:0; width:44px; height:44px; min-width:44px; background:var(--blue-light); color:var(--blue-deep);">👥</div>
         <div>
           <div class="stat-value">${r.totalPatients}</div>
           <div class="stat-label">Total Registered Patients</div>
+          <div class="small muted" style="margin-top:3px;">All-time patient records</div>
         </div>
       </div>
+
+      <div class="card" style="padding:16px 20px; min-height:108px;">
+        <div class="row between" style="gap:12px; align-items:flex-start;">
+          <div>
+            <h4 style="font-size:14px; margin-bottom:3px;">Patient Satisfaction</h4>
+            <p class="small muted">${r.periodLabel}</p>
+          </div>
+          ${r.avgRating!==null ? `
+            <div style="text-align:right;">
+              <div style="font-size:27px; line-height:1; font-weight:800; color:var(--navy); font-family:var(--font-head);">${r.avgRating.toFixed(1)}</div>
+              <div style="font-size:14px; color:var(--amber); letter-spacing:1px; margin-top:4px;">${starRow(r.avgRating)}</div>
+            </div>
+          ` : `<span class="pill pill-gray">No ratings</span>`}
+        </div>
+
+        ${r.avgRating!==null ? `
+          <div class="small muted" style="margin-top:10px;">${r.ratingCount} rating${r.ratingCount===1?'':'s'} this ${r.period}</div>
+        ` : `
+          <div class="small muted" style="margin-top:10px; line-height:1.5;">
+            No ratings collected yet for this ${r.period}. Patients can rate completed visits from My Appointments.
+          </div>
+        `}
+      </div>
     </div>
-    <div class="grid grid-main">
+
+    <!-- Ini nga responsive style nagabalik sa single column sa mas gamay nga screen. -->
+    <style>
+      @media(max-width:1000px){
+        #reports-main-grid{grid-template-columns:1fr !important;}
+      }
+      @media(max-width:850px){
+        #reports-summary-grid{grid-template-columns:1fr !important;}
+      }
+    </style>
+
+    <div id="reports-main-grid" style="display:grid; grid-template-columns:minmax(0,1.8fr) minmax(300px,.9fr); gap:18px; align-items:start;">
       <div>
         <div class="card" style="padding:22px;">
           <h4 style="font-size:15px; margin-bottom:2px;">Patient Volume Trends</h4>
@@ -2663,6 +2701,7 @@ function renderReports(){
             ${r.volumeByDay.map(x=>`<div class="bar-col"><div class="bar" style="height:${(x.v/maxVol*100)}%;"></div><span class="bar-label">${x.d}</span></div>`).join('')}
           </div>` : `<div class="empty-state small">No appointments in this period yet.</div>`}
         </div>
+
         <div class="card" style="padding:22px; margin-top:18px;">
           <h4 style="font-size:15px; margin-bottom:2px;">Patient Intake Trends</h4>
           <p class="small muted" style="margin-bottom:12px;">Appointments booked per month (last 6 months, all-time overview)</p>
@@ -2671,27 +2710,10 @@ function renderReports(){
           </div>` : `<div class="empty-state small">No appointments yet — this chart will fill in as you schedule them.</div>`}
         </div>
       </div>
+
+      <!-- Ini ang right analytics column nga ginpasaka para magsugod dayon sa Service Distribution kag wala na dead space. -->
       <div>
         <div class="card" style="padding:20px; text-align:center;">
-          <h4 style="font-size:14.5px; margin-bottom:4px;">Patient Satisfaction</h4>
-          <p class="small muted" style="margin-bottom:10px;">${r.periodLabel}</p>
-          ${r.avgRating!==null ? `
-            <div style="font-size:32px; font-weight:800; color:var(--navy); font-family:var(--font-head);">${r.avgRating.toFixed(1)}</div>
-            <div style="font-size:20px; color:var(--amber); letter-spacing:2px; margin-top:2px;">${starRow(r.avgRating)}</div>
-            <div class="small muted" style="margin-top:6px;">${r.ratingCount} rating${r.ratingCount===1?'':'s'} this ${r.period}</div>
-            <div style="text-align:left; margin-top:16px;">
-              ${r.ratingBreakdown.map(b=>`
-                <div class="row gap8" style="margin-bottom:6px;">
-                  <span class="small" style="width:34px;">${b.star} ★</span>
-                  <div style="flex:1; height:6px; background:#eef1f4; border-radius:4px; overflow:hidden;">
-                    <div style="height:100%; width:${(b.count/maxRatingCount*100)}%; background:var(--amber); border-radius:4px;"></div>
-                  </div>
-                  <span class="small muted" style="width:20px; text-align:right;">${b.count}</span>
-                </div>`).join('')}
-            </div>
-          ` : `<p class="small muted" style="margin-top:14px;">No ratings collected yet for this ${r.period}. Patients can rate a visit from My Appointments once it's marked Completed.</p>`}
-        </div>
-        <div class="card" style="padding:20px; margin-top:18px; text-align:center;">
           <h4 style="font-size:14.5px; margin-bottom:10px;">Service Distribution</h4>
           ${r.totalAppts ? `
             <div class="donut" style="background:${donutGradient(r.serviceDist)};"><div class="donut-center"><b>${r.totalAppts}</b><span>Total</span></div></div>
@@ -2700,6 +2722,7 @@ function renderReports(){
             </div>
           ` : `<p class="small muted" style="margin-top:10px;">No appointments in this period.</p>`}
         </div>
+
         <div class="card" style="padding:20px; margin-top:18px;">
           <h4 style="font-size:14.5px; margin-bottom:12px;">Patient Volume by Barangay (all-time)</h4>
           ${r.byBarangay.length ? r.byBarangay.map(b=>`
@@ -2708,6 +2731,7 @@ function renderReports(){
               <div style="height:6px; background:#eef1f4; border-radius:4px; overflow:hidden;"><div style="height:100%; width:${Math.min(100,b.pct*2.6)}%; background:var(--blue-mid); border-radius:4px;"></div></div>
             </div>`).join('') : `<p class="small muted">No patients registered yet.</p>`}
         </div>
+
         <div class="card" style="padding:20px; margin-top:18px;">
           <h4 style="font-size:14.5px; margin-bottom:2px;">Age Groups — ${r.periodLabel}</h4>
           <p class="small muted" style="margin-bottom:12px;">Which age ranges are actually booking appointments (not included in the PDF export)</p>
