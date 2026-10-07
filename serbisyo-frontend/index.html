@@ -636,6 +636,15 @@ function closeModal(){ document.getElementById('modal-root').innerHTML=''; }
 /* =========================================================
    DATA LOADING
    ========================================================= */
+function mapAppointmentRows(rows){
+  return (rows||[]).map(r=>({
+    dbId:r.id, patient:r.patient, date:r.date, time:r.time, service:r.service, status:r.status,
+    scheduleId:r.schedule_id, doctor:r.doctor_name||'', bookedAt:r.created_at, confirmationCode:r.confirmation_code||'',
+    queueNumber:r.queue_number||'', userId:r.user_id||'', patientId:r.patient_id||null, bookedByUserId:r.booked_by_user_id||r.user_id||'',
+    rating:r.rating||null, ratingComment:r.rating_comment||''
+  }));
+}
+
 async function loadAllData(){
   const [patients, appointments, staff, queueStateArr, stations, activity, schedules, announcements, services] = await Promise.all([
     api('patients', 'GET', { order:'created_at.desc' }),
@@ -653,12 +662,7 @@ async function loadAllData(){
     dbId:r.id, id:r.patient_no, name:r.name, age:r.age, contact:r.contact,
     email:r.email||'—', address:r.address||'', barangay:r.barangay||'', status:r.status, userId:r.user_id||'', ownerUserId:r.owner_user_id||'', relationship:r.relationship||''
   }));
-  DB.appointments = (appointments||[]).map(r=>({
-    dbId:r.id, patient:r.patient, date:r.date, time:r.time, service:r.service, status:r.status,
-    scheduleId:r.schedule_id, doctor:r.doctor_name||'', bookedAt:r.created_at, confirmationCode:r.confirmation_code||'',
-    queueNumber:r.queue_number||'', userId:r.user_id||'', patientId:r.patient_id||null, bookedByUserId:r.booked_by_user_id||r.user_id||'',
-    rating:r.rating||null, ratingComment:r.rating_comment||''
-  }));
+  DB.appointments = mapAppointmentRows(appointments);
   DB.staff = (staff||[]).map(r=>({
     dbId:r.id, id:r.staff_no, name:r.name, role:r.role, dept:r.dept, status:r.status, lastLogin:r.last_login,
     availableDays:r.available_days||'', availableStart:r.available_start||'', availableEnd:r.available_end||'',
@@ -867,6 +871,7 @@ document.getElementById('logout-btn').addEventListener('click', async ()=>{
   try{ await authApi({ action:'logout' }); } catch(e){ /* ignore */ }
   clearToken();
   currentUser = null;
+  stopVerifyAutoRefresh();
   document.getElementById('user-avatar').textContent = '';
   document.getElementById('app-screen').classList.add('hidden');
   document.getElementById('login-screen').classList.remove('hidden');
@@ -903,6 +908,7 @@ document.querySelectorAll('.nav-item').forEach(btn=>{
   btn.addEventListener('click', ()=> navigate(btn.dataset.page));
 });
 function navigate(page){
+  stopVerifyAutoRefresh();
   currentPage = page;
   document.querySelectorAll('.nav-item').forEach(b=> b.classList.toggle('active', b.dataset.page===page));
   document.getElementById('topbar-title').textContent = PAGE_META[page].title;
@@ -914,6 +920,7 @@ function navigate(page){
   };
   document.getElementById('page-content').innerHTML = renderers[page]();
   afterRender(page);
+  if(page==='verifyCode') startVerifyAutoRefresh();
   document.getElementById('sidebar').classList.remove('open');
 }
 
@@ -1170,6 +1177,8 @@ async function freeScheduleSlotIfNeeded(appt){
 }
 
 async function setApptStatus(dbId, status){
+  verifyRefreshGeneration++;
+  verifyRefreshPromise = null;
   const a = DB.appointments.find(x=>x.dbId===dbId); if(!a) return;
   try{
     await api('appointments','PATCH',{ id:dbId, body:{ status } });
@@ -1226,6 +1235,8 @@ function queueDoctors(){
 }
 
 async function confirmArrivalAndAssignQueue(dbId){
+  verifyRefreshGeneration++;
+  verifyRefreshPromise = null;
   const a=DB.appointments.find(x=>x.dbId===dbId); if(!a) return;
   if(!a.doctor) return toast('Assign a doctor before confirming arrival.',true);
   try{
@@ -1329,6 +1340,65 @@ function to12h(t){
    lets front-desk staff pull up exactly who they are and which
    appointment they're here for, without searching by name.
    ========================================================= */
+let verifyRefreshTimer = null;
+let verifyRefreshPromise = null;
+let verifyRefreshGeneration = 0;
+let lastVerifiedCode = '';
+
+function stopVerifyAutoRefresh(){
+  clearInterval(verifyRefreshTimer);
+  verifyRefreshTimer = null;
+  verifyRefreshGeneration++;
+  verifyRefreshPromise = null;
+  lastVerifiedCode = '';
+}
+
+function startVerifyAutoRefresh(){
+  refreshVerifyAppointments();
+  verifyRefreshTimer = setInterval(refreshVerifyAppointments,5000);
+}
+
+function refreshVerifyAppointments(){
+  if(currentPage!=='verifyCode' || !currentUser || document.hidden) return Promise.resolve();
+  if(verifyRefreshPromise) return verifyRefreshPromise;
+  const generation = verifyRefreshGeneration;
+  const input = document.getElementById('verify-code-input');
+  const userId = currentUser.id;
+  const promise = (async()=>{
+    try{
+      const rows = await api('appointments','GET',{order:'created_at.desc'});
+      if(generation!==verifyRefreshGeneration || currentPage!=='verifyCode'
+        || currentUser?.id!==userId || document.getElementById('verify-code-input')!==input) return;
+      DB.appointments = mapAppointmentRows(rows);
+      const label = document.getElementById('verify-refresh-status');
+      if(label) label.textContent = 'Updated '+new Date().toLocaleTimeString()+'. Refreshes every 5 seconds.';
+      if(lastVerifiedCode && input.value.trim()===lastVerifiedCode) renderVerifyCodeResult();
+    }catch(error){
+      if(generation!==verifyRefreshGeneration || currentPage!=='verifyCode') return;
+      const label = document.getElementById('verify-refresh-status');
+      if(label) label.textContent = 'Could not refresh. Retrying automatically.';
+      console.error('Verify Code refresh failed:',error);
+    }
+  })();
+  verifyRefreshPromise = promise;
+  promise.finally(()=>{if(verifyRefreshPromise===promise) verifyRefreshPromise=null;});
+  return promise;
+}
+
+async function lookupVerifyCode(){
+  const input = document.getElementById('verify-code-input');
+  if(!input) return;
+  const code = input.value.trim();
+  if(!/^\d{4}$/.test(code)){renderVerifyCodeResult();return;}
+  lastVerifiedCode = code;
+  const generation = verifyRefreshGeneration;
+  await refreshVerifyAppointments();
+  if(generation===verifyRefreshGeneration && currentPage==='verifyCode'
+    && document.getElementById('verify-code-input')===input && input.value.trim()===code){
+    renderVerifyCodeResult();
+  }
+}
+
 function renderVerifyCode(){
   return `
     <div class="page-head">
@@ -1340,12 +1410,13 @@ function renderVerifyCode(){
       <input id="verify-code-input" maxlength="4" inputmode="numeric" placeholder="0000"
         style="width:100%; padding:16px; border-radius:12px; border:1.5px solid var(--line); background:#f7f9fb; font-size:28px; font-family:var(--font-mono); letter-spacing:10px; text-align:center;">
       <button class="btn btn-primary" style="width:100%; justify-content:center; margin-top:14px; padding:13px;" onclick="lookupVerifyCode()">Look Up Patient</button>
+      <p id="verify-refresh-status" class="small muted" role="status">Updates automatically every 5 seconds.</p>
       <div id="verify-result" style="margin-top:20px;"></div>
     </div>
   `;
 }
 
-function lookupVerifyCode(){
+function renderVerifyCodeResult(){
   const input = document.getElementById('verify-code-input');
   const resultEl = document.getElementById('verify-result');
   const code = input.value.trim();
@@ -1819,7 +1890,9 @@ function renderAnnouncements(){
               <td><span class="pill ${statusColor[a.status]||'pill-gray'}">${a.status}</span></td>
               <td>
                 <div class="row gap8">
-                  <button class="btn btn-sm btn-outline" onclick="cycleAnnouncementStatus(${a.dbId})">Cycle Status</button>
+                  <select class="btn btn-sm btn-outline" aria-label="Announcement status" onchange="setAnnouncementStatus(${a.dbId}, this.value, this)">
+                    ${['Active','Inactive','Cancelled'].map(status=>`<option value="${status}" ${a.status===status?'selected':''}>${status}</option>`).join('')}
+                  </select>
                   <button class="icon-btn" title="Delete" onclick="deleteAnnouncement(${a.dbId})">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
                   </button>
@@ -1926,6 +1999,26 @@ function openAnnouncementModal(){
       submitBtn.disabled = false;
     }
   });
+}
+
+async function setAnnouncementStatus(dbId, newStatus, selectElement){
+  const allowed = ['Active','Inactive','Cancelled'];
+  const announcement = DB.announcements.find(a=>a.dbId===dbId);
+  if(!announcement || !allowed.includes(newStatus)) return;
+  const previousStatus = announcement.status;
+  if(previousStatus===newStatus) return;
+  if(selectElement) selectElement.disabled = true;
+  try{
+    await api('announcements','PATCH',{id:dbId,body:{status:newStatus}});
+    announcement.status = newStatus;
+    toast(`Announcement marked ${newStatus}.`);
+    if(currentPage==='announcements') navigate('announcements');
+  }catch(error){
+    if(selectElement) selectElement.value = previousStatus;
+    toast('Error: '+error.message,true);
+  }finally{
+    if(selectElement) selectElement.disabled = false;
+  }
 }
 
 async function cycleAnnouncementStatus(dbId){
