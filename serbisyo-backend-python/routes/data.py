@@ -909,6 +909,93 @@ def admin_call_next_atomic():
         )
 
 
+# Ini nagabalik lang sang appointments nga assigned sa logged-in doctor.
+@data_bp.route('/api/doctor/appointments', methods=['GET'])
+def doctor_appointments_secure():
+    token = get_bearer_token()
+
+    if not token:
+        return json_response(
+            {
+                'error': 'Not authenticated. Please log in.'
+            },
+            401
+        )
+
+    try:
+        # Ini naga-call sang RPC para doctor-owned appointments lang gid ang mabalik sa portal.
+        status, res = supabase_request(
+            'POST',
+            '/rest/v1/rpc/doctor_appointments_secure',
+            {},
+            token
+        )
+
+        if status >= 400:
+            message = (
+                'Could not load doctor appointments.'
+            )
+
+            if isinstance(
+                res,
+                dict
+            ):
+                message = (
+                    res.get('message')
+                    or res.get('error')
+                    or message
+                )
+
+            normalized_message = (
+                str(message)
+                .strip()
+                .lower()
+            )
+
+            if (
+                'not authenticated' in normalized_message
+                or 'not authorized' in normalized_message
+                or 'doctor account' in normalized_message
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    403
+                )
+
+            return json_response(
+                {
+                    'error': message
+                },
+                400
+            )
+
+        rows = (
+            res
+            if isinstance(res, list)
+            else []
+        )
+
+        return json_response(
+            rows,
+            200
+        )
+
+    except Exception as error:
+        print(
+            'DOCTOR SECURE APPOINTMENTS ERROR:',
+            error
+        )
+
+        return json_response(
+            {
+                'error': 'Could not load doctor appointments.'
+            },
+            500
+        )
+
+
 # Ini naga-call sang next waiting patient sang logged-in doctor sa isa lang ka atomic transaction.
 @data_bp.route('/api/doctor/call-next', methods=['POST'])
 def doctor_call_next_atomic():
