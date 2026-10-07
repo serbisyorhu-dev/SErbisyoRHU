@@ -1718,115 +1718,73 @@ async function callNextPatient() {
 \========================================================= */
 
 async function completeCurrentPatient() {
-
   if (mutationBusy || isLoading) return;
 
-  const current =
-
-    getCurrentPatient();
+  const current = getCurrentPatient();
 
   if (!current) {
-
     queueMessage.textContent =
-
       'There is no current patient.';
-
     return;
-
   }
 
   mutationBusy = true;
-
   recallBtn.disabled = true;
-
   doneBtn.disabled = true;
-
   doneBtn.textContent =
-
     'Completing...';
 
   try {
-
     /*
-
-     * Completing a consultation should
-
-     * preserve the appointment record.
-
-     *
-
-     * This record can later be displayed
-
-     * in Patient Records -> Details ->
-
-     * Patient History.
-
+     * Ini naga-complete sang current Serving patient sa atomic backend
+     * para ma-verify ang doctor ownership, today nga queue, kag status.
      */
-
-    await req(
-
-      '/api/data?table=appointments&id=' +
-
-      encodeURIComponent(current.id),
-
+    const completed = await req(
+      '/api/doctor/complete-current',
       {
-
-        method: 'PATCH',
-
+        method: 'POST',
         headers: {
-
-          'Content-Type':
-
-            'application/json'
-
+          'Content-Type': 'application/json'
         },
-
         body: JSON.stringify({
-
-          status: 'Completed'
-
+          appointment_id: current.id
         })
-
       }
-
     );
+
+    if (
+      !completed ||
+      String(completed.id) !== String(current.id)
+    ) {
+      throw new Error(
+        'The server did not confirm completion.'
+      );
+    }
 
     await loadAppointments();
 
     queueMessage.textContent =
-
       'Patient completed. You may now call the next patient.';
 
   } catch (error) {
-
     console.error(error);
 
     queueMessage.textContent =
-
       error.message ||
-
       'Unable to complete the patient.';
 
   } finally {
-
     mutationBusy = false;
-
     recallBtn.disabled = false;
-
     renderBookings();
 
     doneBtn.disabled = false;
-
     doneBtn.textContent =
-
       '✓ Patient Done';
-
   }
-
 }
 
 /* =========================================================
-
    LOGOUT
 
 \========================================================= */
