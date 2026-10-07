@@ -8,221 +8,424 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+
 :root{--navy:#0f3654;--blue-deep:#124a76;--blue:#1c6ca3;--blue-mid:#2680c2;--blue-light:#eaf3fa;--teal:#12a594;--amber:#e0a030;--red:#d84c46;--green:#1f9d55;--green-light:#e7f7ed;--ink:#132433;--ink-soft:#5b6b7a;--line:#e2e8ef;--bg:#eef2f6;--card:#fff;--shadow:0 1px 2px rgba(15,54,84,.04),0 8px 24px -12px rgba(15,54,84,.12);--font-head:'Poppins',sans-serif;--font-body:'Inter',sans-serif;}
+
 *{box-sizing:border-box}html,body{margin:0;padding:0}body{font-family:var(--font-body);background:radial-gradient(1200px 500px at 15% -10%,#dcecf9 0%,transparent 60%),radial-gradient(900px 500px at 100% 0%,#e6f6f2 0%,transparent 55%),var(--bg);color:var(--ink);min-height:100vh}h1,h2,h3{font-family:var(--font-head);margin:0;color:var(--navy)}button,input{font-family:inherit}.hidden{display:none!important}.muted{color:var(--ink-soft);font-size:13px}
+
 .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}.btn{border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer}.btn:disabled{opacity:.5;cursor:not-allowed}.primary{background:linear-gradient(180deg,var(--blue-mid),var(--blue-deep));color:#fff}.success{background:var(--green);color:#fff}.outline{background:#fff;border:1px solid var(--line);color:var(--navy)}
+
 /* Pareho gid ini sang admin index.html login para consistent ang entrance sang doctor portal. */
-#loginShell{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}.login-wrap{width:100%;max-width:460px;text-align:center}.login-badge{width:64px;height:64px;border-radius:18px;margin:0 auto 22px;background:linear-gradient(160deg,#0f3654,#12866f);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 28px -10px rgba(18,74,118,.5)}.login-badge img{width:34px;height:34px;object-fit:contain}.login-title{font-size:29px;font-weight:800;color:var(--blue-deep);letter-spacing:-.3px}.login-sub{margin-top:4px;color:var(--ink-soft);font-size:14px}.login-card{margin-top:28px;padding:34px 32px 28px;text-align:left}.login-card h3{font-size:19px}.login-card .desc{color:var(--ink-soft);font-size:13.5px;margin-top:6px;line-height:1.5}.field{margin-top:18px}.field label{display:flex;justify-content:space-between;font-size:11px;font-weight:700;letter-spacing:.6px;color:#7c8a97;text-transform:uppercase;margin-bottom:7px}.input-wrap{position:relative}.input-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9aa9b6}.input-wrap input{width:100%;padding:13px 14px 13px 42px;border-radius:12px;border:1.5px solid var(--line);background:#f7f9fb;font-size:14.5px;color:var(--ink);outline:none;transition:border-color .15s,background .15s}.input-wrap input:focus{border-color:var(--blue-mid);background:#fff}.login-btn{width:100%;justify-content:center;margin-top:22px;padding:13px;font-size:15px}.login-msg{margin-top:14px;font-size:13px;padding:0;border-radius:10px}.login-msg:not(:empty){padding:10px 12px;background:#fbe9e8;color:var(--red)}.legal{margin-top:26px;text-align:center;font-size:12px;color:#93a2af}.legal .links{margin-top:6px;display:flex;justify-content:center;gap:10px}.legal a{color:#93a2af;text-decoration:none}
+
+#loginShell{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}.login-wrap{width:100%;max-width:460px;text-align:center}.login-badge{width:64px;height:64px;border-radius:18px;margin:0 auto 22px;background:linear-gradient(160deg,#0f3654,#12866f);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 28px -10px rgba(18,74,118,.5)}.login-badge img{width:34px;height:34px;object-fit:contain}.login-title{font-size:29px;font-weight:800;color:var(--blue-deep);letter-spacing:-.3px}.login-sub{margin-top:4px;color:var(--ink-soft);font-size:14px}.login-card{margin-top:28px;padding:34px 32px 28px;text-align:left}.login-card h3{font-size:19px}.login-card .desc{color:var(--ink-soft);font-size:13.5px;margin-top:6px;line-height:1.5}.field{margin-top:18px}.field label{display:flex;justify-content:space-between;font-size:11px;font-weight:700;letter-spacing:.6px;color:#7c8a97;text-transform:uppercase;margin-bottom:7px}.input-wrap{position:relative}.input-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9aa9b6}.input-wrap input{width:100%;padding:13px 14px 13px 42px;border-radius:12px;border:1.5px solid var(--line);background:#f7f9fb;font-size:14.5px;color:var(--ink);outline:none;transition:border-color .15s,*background* .15s}.input-wrap input:focus{border-color:var(--blue-mid);background:#fff}.login-btn{width:100%;justify-content:center;margin-top:22px;padding:13px;font-size:15px}.login-msg{margin-top:14px;font-size:13px;padding:0;border-radius:10px}.login-msg:not(:empty){padding:10px 12px;background:#fbe9e8;color:var(--red)}.legal{margin-top:26px;text-align:center;font-size:12px;color:#93a2af}.legal .links{margin-top:6px;display:flex;justify-content:center;gap:10px}.legal a{color:#93a2af;text-decoration:none}
+
 /* Ini ang same white sidebar style nga ginagamit sang admin index.html. */
+
 #app{display:flex;min-height:100vh}.sidebar{width:250px;min-width:250px;background:#fff;border-right:1px solid var(--line);padding:20px 16px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}.brand{display:flex;align-items:center;gap:10px;padding:6px 6px 18px}.brand-icon{width:38px;height:38px;min-width:38px;border-radius:11px;background:linear-gradient(160deg,#0f3654,#12866f);display:flex;align-items:center;justify-content:center;overflow:hidden}.brand-icon img{width:22px;height:22px;object-fit:contain;display:block}.brand-text b{display:block;font-size:14.5px;color:var(--navy);font-weight:700;line-height:1.2}.brand-text span{font-size:11.5px;color:var(--ink-soft)}.nav{display:flex;flex-direction:column;gap:8px;margin-top:6px}.nav-item{display:flex;align-items:center;gap:11px;padding:11px 14px;border-radius:12px;border:none;color:var(--ink-soft);font-size:14px;font-weight:600;text-decoration:none;background:none;text-align:left;width:100%}.nav-item:hover{background:#f4f7fa}.nav-item.active{background:linear-gradient(180deg,var(--blue-mid),var(--blue-deep));color:#fff;box-shadow:0 8px 16px -8px rgba(18,74,118,.5)}.sidebar-bottom{margin-top:auto;border-top:1px solid var(--line);padding-top:12px}.logout-side{display:flex;align-items:center;gap:10px;width:100%;padding:10px;border:none;background:none;border-radius:10px;color:var(--red);font-weight:600}.logout-side:hover{background:#fbe9e8}
+
 /* Ini ang same sticky topbar kag content spacing sang admin dashboard. */
+
 .main{flex:1;min-width:0;display:flex;flex-direction:column}.top{display:flex;align-items:center;gap:16px;padding:16px 28px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}.top h2{font-size:17px;color:var(--blue-deep)}.path{font-size:12px;color:var(--ink-soft);margin-top:1px}.doctor-info{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto}.badge{display:inline-block;padding:5px 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--blue-light);color:var(--blue)}.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(160deg,#1c6ca3,#12866f);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}.wrap{width:100%;max-width:1280px;padding:26px 28px 60px}.page-head{margin-bottom:20px}.page-head h1{font-size:25px}.page-head p{margin:5px 0 0;color:var(--ink-soft);font-size:14px}
+
 /* Ini ang queue hero card nga kapareho sang Queue Management card sa admin. */
+
 .current-card{padding:24px;border-left:5px solid var(--blue);margin-bottom:18px}.queue-label{display:inline-flex;padding:6px 12px;border-radius:999px;background:var(--blue-light);color:var(--blue);font-size:11px;font-weight:800;letter-spacing:.6px}.queue{font:800 58px var(--font-head);color:var(--navy);margin:8px 0 2px}.current-card h3{font-size:18px}.current-actions{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}#queueMessage{margin-top:12px}
+
 .section-card{padding:22px;margin-bottom:18px}.section-card h3{font-size:17px}.section-card>p{margin:4px 0 18px}.table-wrap{width:100%;overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:700px}th{text-align:left;font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:#8a99a6;padding:0 12px 10px;border-bottom:1px solid var(--line)}td{text-align:left;padding:13px 12px;border-bottom:1px solid #f0f3f6;font-size:13.5px}tbody tr:hover{background:#fafcfe}.empty{padding:25px!important;text-align:center;color:var(--ink-soft)}.status{display:inline-block;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:700}.status-approved{background:#fff3d9;color:#996400}.status-serving{background:#e8f2fb;color:var(--blue)}.status-completed{background:var(--green-light);color:#16733c}.status-other{background:#f1f3f5;color:#667788}
+
 @media(max-width:800px){.sidebar{display:none}.top{padding:14px 16px}.wrap{padding:20px 14px 50px}.doctor-info{margin-left:auto}.top .outline{display:none}.queue{font-size:46px}.section-card,.current-card{padding:18px}}
+
 .danger{background:var(--red);color:#fff}.bookings-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0}.status-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.booking-select{width:18px;height:18px;accent-color:var(--blue)}
+
 .delete-booking-btn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;background:#fff;border:1px solid var(--line);border-radius:14px;color:var(--ink-soft);cursor:pointer;flex-shrink:0}.delete-booking-btn:hover{background:#fff5f4;border-color:var(--red);color:var(--red)}.delete-booking-btn:focus-visible{outline:2px solid var(--blue);outline-offset:3px}.delete-booking-btn:disabled{opacity:.5;cursor:not-allowed}.delete-booking-btn svg{width:18px;height:18px;pointer-events:none}
+
 </style>
+
 </head>
+
 <body>
+
 <!-- Doctor login: same visual layout as the admin index.html while keeping doctor authentication unchanged. -->
+
 <div id="loginShell">
+
   <div class="login-wrap">
+
     <div class="login-badge"><img src="assets/logo-full.png" alt="San Enrique RHU"></div>
+
     <div class="login-title">SERbisyo RHU System</div>
+
     <div class="login-sub">The Clinical Sanctuary</div>
+
     <div id="login" class="card login-card">
+
       <h3>Doctor Portal</h3>
+
       <div class="desc">Please sign in to access your assigned bookings and patient queue.</div>
+
       <div class="field"><label>Username or Email</label><div class="input-wrap"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg><input id="email" type="email" placeholder="doctor@sanenrique.rhu" autocomplete="username"></div></div>
+
       <div class="field"><label>Password</label><div class="input-wrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><input id="pass" type="password" placeholder="••••••••" autocomplete="current-password"></div></div>
+
       <p id="msg" class="login-msg"></p>
+
       <button id="loginBtn" class="btn primary login-btn" type="button">Sign In &nbsp;→</button>
+
     </div>
+
     <div class="legal">Protected by ISUFST-SEC , BSIT © 2026<div class="links"><a href="#">Contact Support</a> · <a href="#">Privacy Policy</a></div></div>
+
   </div>
+
 </div>
+
 <!-- Doctor app: sidebar/topbar/card structure now matches index.html while all original IDs remain. -->
+
 <div id="app" class="hidden">
+
   <aside class="sidebar">
+
     <div class="brand"><div class="brand-icon"><img src="assets/logo-full.png" alt="San Enrique RHU"></div><div class="brand-text"><b>San Enrique RHU</b><span>Doctor Portal</span></div></div>
+
     <nav class="nav">
+
       <button class="nav-item active" type="button" data-page="queue"><span>▣</span> My Queue</button>
+
       <button class="nav-item" type="button" data-page="waiting"><span>☷</span> Waiting Patients</button>
+
       <button class="nav-item" type="button" data-page="bookings"><span>▤</span> My Bookings</button>
+
     </nav>
+
     <div class="sidebar-bottom"><button id="logoutSideBtn" class="logout-side" type="button">↪ Log Out</button></div>
+
   </aside>
+
   <div class="main">
+
     <header class="top"><div><h2 id="topTitle">My Queue</h2><div class="path" id="topPath">Doctor Portal / My Queue</div></div><div class="doctor-info"><span class="muted" id="doctorName"></span><span class="badge" id="doctorDepartment"></span><span class="badge" id="doctorStation">No station assigned</span><div class="avatar">DR</div></div></header>
+
     <main class="wrap">
 
       <!-- Ini ang My Queue page: current/serving patient lang ang ara diri. -->
+
       <div id="page-queue" class="doctor-page">
+
         <div class="page-head"><h1>Doctor Queue</h1><p>Manage only the patient currently assigned to your queue.</p></div>
+
         <section id="current" class="card current-card"><div class="queue-label">● NOW SERVING</div><div class="queue" id="currentNum">—</div><h3 id="currentPatient">No patient currently being served</h3><p class="muted" id="currentService"></p><p class="muted" id="currentSchedule"></p><div class="current-actions"><button class="btn primary" id="callNextBtn" type="button">Call Next Patient</button><button class="btn outline" id="recallBtn" type="button">Recall Patient</button><button class="btn success hidden" id="doneBtn" type="button">✓ Patient Done</button></div><p id="queueMessage" class="muted"></p></section>
+
       </div>
 
       <!-- Ini ang separate Waiting Patients page. -->
+
       <div id="page-waiting" class="doctor-page hidden">
+
         <div class="page-head"><h1>Waiting Patients</h1><p>Checked-in patients assigned to your doctor account.</p></div>
+
         <section id="waiting" class="card section-card"><h3>My Waiting Queue</h3><p class="muted">Only checked-in patients assigned to you are shown here.</p><div class="table-wrap"><table><thead><tr><th>Queue</th><th>Patient</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th></tr></thead><tbody id="waitingQueue"></tbody></table></div></section>
+
       </div>
 
       <!-- Ini ang separate My Bookings page. -->
+
       <div id="page-bookings" class="doctor-page hidden">
+
         <div class="page-head"><h1>My Bookings</h1><p>Appointments assigned to your doctor account.</p></div>
+
         <section id="bookings-card" class="card section-card"><h3>My Bookings</h3><p class="muted">Appointments assigned to your doctor account.</p><div class="bookings-tools"><label><input class="booking-select" type="checkbox" id="selectAllBookings"> Select All</label><button class="btn danger" id="deleteSelectedBtn" type="button" disabled>Delete Selected (0)</button><span class="muted" id="selectionCount" aria-live="polite">0 selected</span></div><p id="bookingsMessage" class="muted" role="status"></p><div class="table-wrap"><table><thead><tr><th>Select</th><th>Date</th><th>Time</th><th>Patient</th><th>Service</th><th>Queue</th><th>Status / Delete</th></tr></thead><tbody id="bookings"></tbody></table></div></section>
+
       </div>
 
     </main>
+
   </div>
+
 </div>
+
 <script>
+
 /* =========================================================
+
    CONFIGURATION
-========================================================= */
+
+\========================================================= */
 
 const BACKEND_URL = 'https://serbisyorhu.onrender.com';
 
 let token =
+
   localStorage.getItem('serbisyo_doctor_token') || '';
 
+let refreshToken =
+  localStorage.getItem('serbisyo_doctor_refresh_token') || '';
+
 let me = null;
+
 let doctor = null;
+
 let appointments = [];
+
 let assignedStation = null;
 
 let isLoading = false;
+
 let mutationBusy = false;
+
 const selectedBookingIds = new Set();
+
 const recallBtn = document.getElementById('recallBtn');
+
 const selectAllBookings = document.getElementById('selectAllBookings');
+
 const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+
 const selectionCount = document.getElementById('selectionCount');
+
 const bookingsMessage = document.getElementById('bookingsMessage');
 
-
 /* =========================================================
+
    DOM ELEMENTS
-========================================================= */
+
+\========================================================= */
 
 const loginSection =
+
   document.getElementById('login');
 
 const loginShell =
+
   document.getElementById('loginShell');
 
 const appSection =
+
   document.getElementById('app');
 
 const emailInput =
+
   document.getElementById('email');
 
 const passwordInput =
+
   document.getElementById('pass');
 
 const loginBtn =
+
   document.getElementById('loginBtn');
 
 const msg =
+
   document.getElementById('msg');
 
 const doctorName =
+
   document.getElementById('doctorName');
 
 const doctorDepartment =
+
   document.getElementById('doctorDepartment');
 
 const doctorStation =
+
   document.getElementById('doctorStation');
 
 const currentNum =
+
   document.getElementById('currentNum');
 
 const currentPatient =
+
   document.getElementById('currentPatient');
 
 const currentService =
+
   document.getElementById('currentService');
 
 const currentSchedule =
+
   document.getElementById('currentSchedule');
 
 const callNextBtn =
+
   document.getElementById('callNextBtn');
 
 const doneBtn =
+
   document.getElementById('doneBtn');
 
 const queueMessage =
+
   document.getElementById('queueMessage');
 
 const waitingQueue =
+
   document.getElementById('waitingQueue');
 
 const bookings =
+
   document.getElementById('bookings');
 
 const topTitle =
+
   document.getElementById('topTitle');
 
 const topPath =
+
   document.getElementById('topPath');
 
 const doctorNavItems =
+
   document.querySelectorAll('.nav-item[data-page]');
 
 const doctorPages = {
+
   queue: document.getElementById('page-queue'),
+
   waiting: document.getElementById('page-waiting'),
+
   bookings: document.getElementById('page-bookings')
+
 };
 
 /* Ini naga-switch sang My Queue, Waiting Patients, kag My Bookings nga indi na sila sabay sa isa ka page. */
+
 function showDoctorPage(page) {
 
   const pageTitles = {
+
     queue: 'My Queue',
+
     waiting: 'Waiting Patients',
+
     bookings: 'My Bookings'
+
   };
 
   Object.entries(doctorPages).forEach(
+
     ([name, element]) => {
+
       if (element) {
+
         element.classList.toggle(
+
           'hidden',
+
           name !== page
+
         );
+
       }
+
     }
+
   );
 
   doctorNavItems.forEach(item => {
+
     item.classList.toggle(
+
       'active',
+
       item.dataset.page === page
+
     );
+
   });
 
   const title =
+
     pageTitles[page] || 'My Queue';
 
   topTitle.textContent =
+
     title;
 
   topPath.textContent =
+
     'Doctor Portal / ' + title;
+
 }
 
-
 /* =========================================================
-   API REQUEST
-========================================================= */
 
-async function req(url, options = {}) {
+   API REQUEST
+
+\========================================================= */
+
+async function attemptDoctorTokenRefresh() {
+
+  if (!refreshToken) {
+    return false;
+  }
+
+  try {
+
+    const response = await fetch(
+      BACKEND_URL + '/api/auth',
+      {
+        method: 'POST',
+
+        headers: {
+          'Content-Type': 'application/json'
+        },
+
+        body: JSON.stringify({
+          action: 'refresh',
+          refresh_token: refreshToken
+        })
+      }
+    );
+
+    const data = await response
+      .json()
+      .catch(() => ({}));
+
+    if (
+      !response.ok ||
+      !data.authenticated ||
+      !data.access_token
+    ) {
+      return false;
+    }
+
+    token = data.access_token;
+    refreshToken =
+      data.refresh_token ||
+      refreshToken;
+
+    if (data.user) {
+      me = data.user;
+    }
+
+    localStorage.setItem(
+      'serbisyo_doctor_token',
+      token
+    );
+
+    if (refreshToken) {
+      localStorage.setItem(
+        'serbisyo_doctor_refresh_token',
+        refreshToken
+      );
+    }
+
+    return true;
+
+  } catch (error) {
+
+    console.error(
+      'Doctor token refresh failed:',
+      error
+    );
+
+    return false;
+  }
+}
+
+/* Ini naga-retry isa ka beses gamit ang refresh token kon expired na ang doctor access token. */
+async function req(url, options = {}, allowRefresh = true) {
 
   const headers = {
     ...(options.headers || {})
@@ -244,6 +447,24 @@ async function req(url, options = {}) {
     .json()
     .catch(() => ({}));
 
+  if (
+    response.status === 401 &&
+    allowRefresh &&
+    refreshToken
+  ) {
+
+    const refreshed =
+      await attemptDoctorTokenRefresh();
+
+    if (refreshed) {
+      return req(
+        url,
+        options,
+        false
+      );
+    }
+  }
+
   if (!response.ok) {
     throw new Error(
       data.error ||
@@ -255,55 +476,83 @@ async function req(url, options = {}) {
   return data;
 }
 
-
 /* =========================================================
+
    LOGIN
-========================================================= */
+
+\========================================================= */
 
 async function loginDoctor() {
 
   const email =
+
     emailInput.value.trim();
 
   const password =
+
     passwordInput.value;
 
   if (!email || !password) {
+
     msg.textContent =
+
       'Please enter your email and password.';
+
     return;
+
   }
 
   loginBtn.disabled = true;
+
   loginBtn.textContent = 'Signing In...';
+
   msg.textContent = '';
 
   try {
 
     const data = await req(
+
       '/api/auth',
+
       {
+
         method: 'POST',
 
         headers: {
+
           'Content-Type': 'application/json'
+
         },
 
         body: JSON.stringify({
+
           action: 'login',
+
           email,
+
           password
+
         })
+
       }
+
     );
 
     if (!data.access_token) {
+
       throw new Error(
+
         'Login succeeded but no access token was returned.'
+
       );
+
     }
 
     token = data.access_token;
+
+    refreshToken =
+      data.refresh_token || '';
+
     me = data.user;
 
     localStorage.setItem(
@@ -311,15 +560,27 @@ async function loginDoctor() {
       token
     );
 
+    if (refreshToken) {
+      localStorage.setItem(
+        'serbisyo_doctor_refresh_token',
+        refreshToken
+      );
+    }
+
     await start();
 
   } catch (error) {
 
     token = '';
+    refreshToken = '';
     me = null;
 
     localStorage.removeItem(
       'serbisyo_doctor_token'
+    );
+
+    localStorage.removeItem(
+      'serbisyo_doctor_refresh_token'
     );
 
     msg.textContent = error.message;
@@ -327,121 +588,181 @@ async function loginDoctor() {
   } finally {
 
     loginBtn.disabled = false;
+
     loginBtn.textContent = 'Sign In';
+
   }
+
 }
 
-
 /* =========================================================
+
    START DOCTOR SESSION
-========================================================= */
+
+\========================================================= */
 
 async function start() {
 
   if (!me) {
 
     const session =
+
       await req('/api/auth?action=session');
 
     if (
+
       !session ||
+
       !session.authenticated ||
+
       !session.user
+
     ) {
+
       throw new Error(
+
         'Your session has expired. Please sign in again.'
+
       );
+
     }
 
     me = session.user;
+
   }
 
-
   /*
+
    * Find the staff record connected to the
+
    * currently logged-in user.
+
    */
 
   const staff =
-    await req(
-      '/api/data?table=staff&eq=' +
-      encodeURIComponent(
-        'user_id.' + me.id
-      )
-    );
 
+    await req(
+
+      '/api/data?table=staff&eq=' +
+
+      encodeURIComponent(
+
+        'user_id.' + me.id
+
+      )
+
+    );
 
   doctor =
+
     Array.isArray(staff)
+
       ? staff[0]
+
       : null;
 
-
   if (!doctor) {
-    throw new Error(
-      'No staff record is connected to this account.'
-    );
-  }
 
+    throw new Error(
+
+      'No staff record is connected to this account.'
+
+    );
+
+  }
 
   if (
+
     !/doctor/i.test(
+
       String(doctor.role || '')
+
     )
+
   ) {
+
     throw new Error(
+
       'This account is not registered as a doctor.'
+
     );
+
   }
 
-
   doctorName.textContent =
+
     doctor.name || 'Doctor';
 
   doctorDepartment.textContent =
+
     doctor.department ||
+
     doctor.specialty ||
+
     'Doctor';
 
-
   loginSection.classList.add('hidden');
+
   loginShell.classList.add('hidden');
+
   appSection.classList.remove('hidden');
 
   await loadDoctorStation();
+
   await loadAppointments();
+
 }
 
-
-
 /* =========================================================
+
    LOAD THIS DOCTOR'S ASSIGNED STATION
-========================================================= */
+
+\========================================================= */
+
 async function loadDoctorStation(){
+
   try{
+
     const rows=await req('/api/data?table=queue_stations&order=sort_order.asc');
+
     const list=Array.isArray(rows)?rows:[];
+
     assignedStation=list.find(st=>
+
       (st.doctor_id!=null&&String(st.doctor_id)===String(doctor.id))||
+
       normalize(st.doctor_name)===normalize(doctor.name)
+
     )||null;
+
     const label=assignedStation?`${assignedStation.name} · ${assignedStation.status}`:'No station assigned';
+
     doctorStation.textContent=label;
+
   }catch(error){
+
     console.error('Failed to load station assignment:',error);
+
     assignedStation=null;
+
     doctorStation.textContent='No station assigned';
+
   }
+
 }
 
 /* =========================================================
+
    LOAD THIS DOCTOR'S APPOINTMENTS
-========================================================= */
+
+\========================================================= */
 
 async function loadAppointments() {
 
   if (!doctor || isLoading) {
+
     return;
+
   }
 
   isLoading = true;
@@ -449,258 +770,353 @@ async function loadAppointments() {
   try {
 
     const rows =
+
       await req(
+
         '/api/data?table=appointments&order=date.asc'
+
       );
 
-
     const doctorNameNormalized =
+
       normalize(doctor.name);
 
-
     appointments =
+
       (Array.isArray(rows) ? rows : [])
+
       .filter(appointment => {
 
         return normalize(
+
           appointment.doctor_name
+
         ) === doctorNameNormalized;
 
       });
-
 
     render();
 
   } catch (error) {
 
     console.error(
+
       'Failed to load appointments:',
+
       error
+
     );
 
     queueMessage.textContent =
+
       'Unable to refresh the queue.';
 
   } finally {
 
     isLoading = false;
-  }
-}
 
+  }
+
+}
 
 /* =========================================================
+
    HELPERS
-========================================================= */
+
+\========================================================= */
 
 function normalize(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase();
-}
 
+  return String(value || '')
+
+    .trim()
+
+    .toLowerCase();
+
+}
 
 /* Ini nagakuha sang local date subong sa YYYY-MM-DD format para today's queue lang ang makita. */
-function doctorToday() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
 
+function doctorToday() {
+
+  const d = new Date();
+
+  const y = d.getFullYear();
+
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+
+  const day = String(d.getDate()).padStart(2, '0');
+
+  return `${y}-${m}-${day}`;
+
+}
 
 /* Ini nagacheck kon today's appointment gid ang record. */
-function isTodayAppointment(appointment) {
-  return String(appointment?.date || '') === doctorToday();
-}
 
+function isTodayAppointment(appointment) {
+
+  return String(appointment?.date || '') === doctorToday();
+
+}
 
 function escapeHTML(value) {
 
   return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
 
+    .replace(/&/g, '&amp;')
+
+    .replace(/</g, '&lt;')
+
+    .replace(/>/g, '&gt;')
+
+    .replace(/"/g, '&quot;')
+
+    .replace(/'/g, '&#039;');
+
+}
 
 function statusName(status) {
 
   return normalize(status);
-}
 
+}
 
 function isWaiting(appointment) {
 
   const status =
+
     statusName(appointment.status);
 
   /*
+
    * Approved means:
+
    * Admin already confirmed/check-in and
+
    * the patient has a queue number.
+
    *
+
    * Today's appointment lang ang masulod sa live doctor queue.
+
    */
 
   return (
-    isTodayAppointment(appointment) &&
-    status === 'approved' &&
-    appointment.queue_number
-  );
-}
 
+    isTodayAppointment(appointment) &&
+
+    status === 'approved' &&
+
+    appointment.queue_number
+
+  );
+
+}
 
 function isServing(appointment) {
 
   return (
-    isTodayAppointment(appointment) &&
-    statusName(appointment.status) ===
-    'serving' &&
-    appointment.queue_number
-  );
-}
 
+    isTodayAppointment(appointment) &&
+
+    statusName(appointment.status) ===
+
+    'serving' &&
+
+    appointment.queue_number
+
+  );
+
+}
 
 function queueValue(queueNumber) {
 
   if (!queueNumber) {
+
     return Number.MAX_SAFE_INTEGER;
+
   }
 
   const match =
+
     String(queueNumber).match(/\d+/);
 
   return match
-    ? Number(match[0])
-    : Number.MAX_SAFE_INTEGER;
-}
 
+    ? Number(match[0])
+
+    : Number.MAX_SAFE_INTEGER;
+
+}
 
 function sortQueue(a, b) {
 
   return (
-    queueValue(a.queue_number) -
-    queueValue(b.queue_number)
-  );
-}
 
+    queueValue(a.queue_number) -
+
+    queueValue(b.queue_number)
+
+  );
+
+}
 
 function getWaitingPatients() {
 
   return appointments
-    .filter(isWaiting)
-    .sort(sortQueue);
-}
 
+    .filter(isWaiting)
+
+    .sort(sortQueue);
+
+}
 
 function getCurrentPatient() {
 
   return (
-    appointments.find(isServing) ||
-    null
-  );
-}
 
+    appointments.find(isServing) ||
+
+    null
+
+  );
+
+}
 
 function statusBadge(status) {
 
   const normalized =
+
     statusName(status);
 
   let cssClass =
+
     'status-other';
 
   if (normalized === 'approved') {
+
     cssClass =
+
       'status-approved';
+
   }
 
   if (normalized === 'serving') {
+
     cssClass =
+
       'status-serving';
+
   }
 
   if (normalized === 'completed') {
+
     cssClass =
+
       'status-completed';
+
   }
 
   return `
+
     <span class="status ${cssClass}">
+
       ${escapeHTML(status || 'Unknown')}
+
     </span>
+
   `;
+
 }
 
-
 /* =========================================================
+
    RENDER
-========================================================= */
+
+\========================================================= */
 
 function render() {
 
   renderCurrentPatient();
+
   renderWaitingQueue();
+
   renderBookings();
+
 }
 
-
 /* =========================================================
+
    CURRENT PATIENT
-========================================================= */
+
+\========================================================= */
 
 function renderCurrentPatient() {
+
   recallBtn.classList.remove('hidden');
+
   recallBtn.disabled = mutationBusy || !getCurrentPatient();
 
   const current =
+
     getCurrentPatient();
 
   const waiting =
-    getWaitingPatients();
 
+    getWaitingPatients();
 
   if (current) {
 
     currentNum.textContent =
+
       current.queue_number || '—';
 
     currentPatient.textContent =
+
       current.patient ||
+
       'Unknown Patient';
 
     currentService.textContent =
+
       current.service || '';
 
     currentSchedule.textContent =
+
       [
+
         current.date,
+
         current.time
+
       ]
+
       .filter(Boolean)
+
       .join(' • ');
 
-
     doneBtn.classList.remove(
+
       'hidden'
+
     );
 
     callNextBtn.classList.remove('hidden');
+
     callNextBtn.disabled = true;
 
     queueMessage.textContent =
+
       'Finish the current patient before calling the next patient.';
 
     return;
-  }
 
+  }
 
   currentNum.textContent = '—';
 
   currentPatient.textContent =
+
     'No patient currently being served';
 
   currentService.textContent = '';
@@ -708,23 +1124,31 @@ function renderCurrentPatient() {
   currentSchedule.textContent = '';
 
   doneBtn.classList.add(
+
     'hidden'
+
   );
 
   callNextBtn.classList.remove(
-    'hidden'
-  );
 
+    'hidden'
+
+  );
 
   if (waiting.length > 0) {
 
     callNextBtn.disabled = false;
 
     queueMessage.textContent =
+
       `${waiting.length} patient${
+
         waiting.length === 1
+
           ? ''
+
           : 's'
+
       } waiting in your queue.`;
 
   } else {
@@ -732,260 +1156,429 @@ function renderCurrentPatient() {
     callNextBtn.disabled = true;
 
     queueMessage.textContent =
+
       'No checked-in patients are waiting.';
+
   }
+
 }
 
-
 /* =========================================================
+
    WAITING QUEUE
-========================================================= */
+
+\========================================================= */
 
 function renderWaitingQueue() {
 
   const waiting =
-    getWaitingPatients();
 
+    getWaitingPatients();
 
   if (!waiting.length) {
 
     waitingQueue.innerHTML = `
+
       <tr>
+
         <td
+
           colspan="6"
+
           class="empty"
+
         >
+
           No patients are currently waiting.
+
         </td>
+
       </tr>
+
     `;
 
     return;
+
   }
 
-
   waitingQueue.innerHTML =
+
     waiting
+
       .map(appointment => `
 
         <tr>
 
           <td>
+
             <strong>
+
               ${escapeHTML(
+
                 appointment.queue_number
+
               )}
+
             </strong>
+
           </td>
 
           <td>
+
             ${escapeHTML(
+
               appointment.patient || '—'
+
             )}
+
           </td>
 
           <td>
+
             ${escapeHTML(
+
               appointment.service || '—'
+
             )}
+
           </td>
 
           <td>
+
             ${escapeHTML(
+
               appointment.date || '—'
+
             )}
+
           </td>
 
           <td>
+
             ${escapeHTML(
+
               appointment.time || '—'
+
             )}
+
           </td>
 
           <td>
+
             ${statusBadge(
+
               appointment.status
+
             )}
+
           </td>
 
         </tr>
 
       `)
+
       .join('');
+
 }
 
-
 /* =========================================================
+
    ALL BOOKINGS
-========================================================= */
+
+\========================================================= */
 
 function renderBookings() {
+
   const availableIds = new Set(appointments.map(a => String(a.id)));
+
   for (const id of selectedBookingIds) {
+
     if (!availableIds.has(id)) selectedBookingIds.delete(id);
+
   }
+
   const sorted = [...appointments].sort((a, b) =>
+
     `${a.date || ''} ${a.time || ''}`.localeCompare(`${b.date || ''} ${b.time || ''}`)
+
   );
+
   bookings.innerHTML = sorted.length ? sorted.map(appointment => {
+
     const id = escapeHTML(appointment.id);
+
     return `<tr>
+
       <td><input type="checkbox" class="booking-select" data-booking-id="${id}"
+
         aria-label="Select booking for ${escapeHTML(appointment.patient || 'patient')}"
+
         ${selectedBookingIds.has(String(appointment.id)) ? 'checked' : ''}
+
         ${mutationBusy ? 'disabled' : ''}></td>
+
       <td>${escapeHTML(appointment.date || '—')}</td>
+
       <td>${escapeHTML(appointment.time || '—')}</td>
+
       <td>${escapeHTML(appointment.patient || '—')}</td>
+
       <td>${escapeHTML(appointment.service || '—')}</td>
+
       <td>${escapeHTML(appointment.queue_number || '—')}</td>
+
       <td><div class="status-actions">${statusBadge(appointment.status)}
+
         <button class="delete-booking-btn" title="Delete booking" type="button" data-delete-id="${id}"
+
           aria-label="Delete booking for ${escapeHTML(appointment.patient || 'patient')}"
+
           ${mutationBusy ? 'disabled' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></svg></button></div></td>
+
     </tr>`;
+
   }).join('') : '<tr><td colspan="7" class="empty">No bookings are assigned to you.</td></tr>';
+
   updateBookingSelection();
+
 }
 
 function updateBookingSelection() {
+
   const count = selectedBookingIds.size;
+
   selectionCount.textContent = `${count} selected`;
+
   deleteSelectedBtn.textContent = `Delete Selected (${count})`;
+
   deleteSelectedBtn.disabled = mutationBusy || count === 0;
+
   selectAllBookings.disabled = mutationBusy || appointments.length === 0;
+
   selectAllBookings.checked = appointments.length > 0 && count === appointments.length;
+
   selectAllBookings.indeterminate = count > 0 && count < appointments.length;
+
 }
 
 async function deleteBookings(ids) {
+
   if (mutationBusy || isLoading || !doctor) return;
+
   const wanted = new Set(ids.map(String));
+
   const targets = appointments.filter(a => wanted.has(String(a.id)));
+
   if (!targets.length) return;
+
   const details = targets.length === 1
+
     ? `booking for ${targets[0].patient || 'this patient'}`
+
     : `${targets.length} selected bookings`;
+
   if (!window.confirm(`Permanently delete ${details}? This removes the appointment record and its history. This cannot be undone.`)) return;
+
   mutationBusy = true;
+
   render();
+
   doneBtn.disabled = true;
+
   callNextBtn.disabled = true;
+
   let deleted = 0;
+
   const failures = [];
+
   try {
+
     for (const appointment of targets) {
+
       try {
+
         const rows = await req('/api/data?table=appointments&id=' + encodeURIComponent(appointment.id), {method: 'DELETE'});
+
         if (!Array.isArray(rows) || !rows.some(row => String(row.id) === String(appointment.id))) {
+
           throw new Error('The server did not confirm deletion. Check appointment permissions.');
+
         }
+
         deleted++;
+
         selectedBookingIds.delete(String(appointment.id));
+
         appointments = appointments.filter(a => String(a.id) !== String(appointment.id));
+
       } catch (error) {
+
         failures.push(`${appointment.patient || appointment.id}: ${error.message}`);
+
       }
+
     }
+
   } finally {
+
     mutationBusy = false;
+
     doneBtn.disabled = false;
+
     render();
+
     await loadAppointments();
+
     bookingsMessage.textContent = `${deleted} booking${deleted === 1 ? '' : 's'} deleted.`
+
       + (failures.length ? ` ${failures.length} could not be deleted: ${failures.join('; ')}` : '');
+
   }
+
 }
 
 async function recallCurrentPatient() {
+
   if (mutationBusy || isLoading) return;
+
   const current = getCurrentPatient();
+
   if (!current) return;
+
   mutationBusy = true;
+
   recallBtn.disabled = true;
+
   recallBtn.textContent = 'Recalling...';
+
   doneBtn.disabled = true;
+
   let resultMessage = '';
+
   try {
+
     const lastCalledAt = new Date().toISOString();
+
     const rows = await req('/api/data?table=appointments&id=' + encodeURIComponent(current.id), {
+
       method: 'PATCH',
+
       headers: {'Content-Type': 'application/json'},
+
       body: JSON.stringify({last_called_at: lastCalledAt})
+
     });
+
     if (!Array.isArray(rows) || !rows.some(row => String(row.id) === String(current.id))) {
+
       throw new Error('The server did not confirm the recall. Check appointment permissions.');
+
     }
+
     resultMessage = `Queue ${current.queue_number || '—'} recalled.`;
+
   } catch (error) {
+
     console.error(error);
+
     resultMessage = error.message || 'Unable to recall the patient.';
+
   } finally {
+
     mutationBusy = false;
+
     recallBtn.disabled = false;
+
     recallBtn.textContent = 'Recall Patient';
+
     doneBtn.disabled = false;
+
     await loadAppointments();
+
     queueMessage.textContent = resultMessage;
+
   }
+
 }
 
 /* =========================================================
+
    CALL NEXT PATIENT
-========================================================= */
+
+\========================================================= */
 
 async function callNextPatient() {
+
   if (mutationBusy || isLoading) return;
 
   /*
+
    * Keep the local guard for a clearer doctor message,
+
    * but the backend RPC is now the final source of truth.
+
    */
 
   const current =
+
     getCurrentPatient();
 
   if (current) {
 
     queueMessage.textContent =
+
       'Complete the current patient first.';
 
     return;
+
   }
 
-
   mutationBusy = true;
-  callNextBtn.disabled = true;
-  callNextBtn.textContent =
-    'Calling...';
 
+  callNextBtn.disabled = true;
+
+  callNextBtn.textContent =
+
+    'Calling...';
 
   try {
 
     /*
+
      * Ini naga-call sang next Approved patient atomically sa backend
+
      * para indi magdoble ang Call Next bisan duha ka doctor tabs ang bukas.
+
      */
 
     const called =
+
       await req(
+
         '/api/doctor/call-next',
+
         {
+
           method: 'POST',
 
           headers: {
+
             'Content-Type':
+
               'application/json'
+
           },
 
           body: JSON.stringify({})
-        }
-      );
 
+        }
+
+      );
 
     await loadAppointments();
 
     queueMessage.textContent =
+
       `Now serving ${called.queue_number || 'the next patient'}.`;
 
   } catch (error) {
@@ -993,84 +1586,117 @@ async function callNextPatient() {
     console.error(error);
 
     queueMessage.textContent =
+
       error.message ||
+
       'Unable to call the next patient.';
 
   } finally {
+
     mutationBusy = false;
+
     recallBtn.disabled = false;
+
     renderBookings();
 
     callNextBtn.textContent =
+
       'Call Next Patient';
 
     callNextBtn.disabled =
+
       !!getCurrentPatient() ||
+
       !getWaitingPatients().length;
+
   }
+
 }
 
-
 /* =========================================================
+
    COMPLETE CURRENT PATIENT
-========================================================= */
+
+\========================================================= */
 
 async function completeCurrentPatient() {
+
   if (mutationBusy || isLoading) return;
 
   const current =
-    getCurrentPatient();
 
+    getCurrentPatient();
 
   if (!current) {
 
     queueMessage.textContent =
+
       'There is no current patient.';
 
     return;
+
   }
 
-
   mutationBusy = true;
-  recallBtn.disabled = true;
-  doneBtn.disabled = true;
-  doneBtn.textContent =
-    'Completing...';
 
+  recallBtn.disabled = true;
+
+  doneBtn.disabled = true;
+
+  doneBtn.textContent =
+
+    'Completing...';
 
   try {
 
     /*
+
      * Completing a consultation should
+
      * preserve the appointment record.
+
      *
+
      * This record can later be displayed
+
      * in Patient Records -> Details ->
+
      * Patient History.
+
      */
 
     await req(
+
       '/api/data?table=appointments&id=' +
+
       encodeURIComponent(current.id),
+
       {
+
         method: 'PATCH',
 
         headers: {
+
           'Content-Type':
+
             'application/json'
+
         },
 
         body: JSON.stringify({
-          status: 'Completed'
-        })
-      }
-    );
 
+          status: 'Completed'
+
+        })
+
+      }
+
+    );
 
     await loadAppointments();
 
-
     queueMessage.textContent =
+
       'Patient completed. You may now call the next patient.';
 
   } catch (error) {
@@ -1078,24 +1704,34 @@ async function completeCurrentPatient() {
     console.error(error);
 
     queueMessage.textContent =
+
       error.message ||
+
       'Unable to complete the patient.';
 
   } finally {
+
     mutationBusy = false;
+
     recallBtn.disabled = false;
+
     renderBookings();
 
     doneBtn.disabled = false;
+
     doneBtn.textContent =
+
       '✓ Patient Done';
+
   }
+
 }
 
-
 /* =========================================================
+
    LOGOUT
-========================================================= */
+
+\========================================================= */
 
 function logoutDoctor() {
 
@@ -1103,100 +1739,172 @@ function logoutDoctor() {
     'serbisyo_doctor_token'
   );
 
+  localStorage.removeItem(
+    'serbisyo_doctor_refresh_token'
+  );
+
   token = '';
+  refreshToken = '';
+
   me = null;
+
   doctor = null;
+
   appointments = [];
 
   location.reload();
+
 }
 
-
 /* =========================================================
+
    EVENTS
-========================================================= */
+
+\========================================================= */
 
 recallBtn.addEventListener('click', recallCurrentPatient);
+
 selectAllBookings.addEventListener('change', () => {
+
   if (mutationBusy) return;
+
   selectedBookingIds.clear();
+
   if (selectAllBookings.checked) {
+
     appointments.forEach(a => selectedBookingIds.add(String(a.id)));
+
   }
+
   renderBookings();
+
 });
+
 bookings.addEventListener('change', event => {
+
   if (mutationBusy) return;
+
   const checkbox = event.target.closest('[data-booking-id]');
+
   if (!checkbox) return;
+
   const id = checkbox.dataset.bookingId;
+
   if (checkbox.checked) selectedBookingIds.add(id);
+
   else selectedBookingIds.delete(id);
+
   updateBookingSelection();
+
 });
+
 bookings.addEventListener('click', event => {
+
   const button = event.target.closest('[data-delete-id]');
+
   if (button) deleteBookings([button.dataset.deleteId]);
+
 });
+
 deleteSelectedBtn.addEventListener('click', () => deleteBookings([...selectedBookingIds]));
 
 loginBtn.addEventListener(
+
   'click',
+
   loginDoctor
+
 );
 
 const logoutSideBtn = document.getElementById('logoutSideBtn');
+
 if (logoutSideBtn) logoutSideBtn.addEventListener('click', logoutDoctor);
 
 /* Ini naga-open sang tagsa ka doctor page halin sa sidebar. */
+
 doctorNavItems.forEach(item => {
+
   item.addEventListener('click', () => {
+
     showDoctorPage(
+
       item.dataset.page
+
     );
+
   });
+
 });
 
 showDoctorPage('queue');
 
 callNextBtn.addEventListener(
+
   'click',
+
   callNextPatient
+
 );
 
 doneBtn.addEventListener(
+
   'click',
+
   completeCurrentPatient
+
 );
 
-
 /*
+
  * Allow Enter to submit login.
+
  */
 
 passwordInput.addEventListener(
+
   'keydown',
+
   event => {
 
     if (event.key === 'Enter') {
+
       loginDoctor();
+
     }
 
   }
+
 );
 
-
 /* =========================================================
+
    RESTORE SESSION
-========================================================= */
+
+\========================================================= */
 
 (async function restoreSession() {
 
-  if (!token) {
+  if (!token && !refreshToken) {
     return;
   }
 
   try {
+
+    /*
+     * Kon wala na ang access token pero may refresh token pa,
+     * mag-refresh anay antes mag-login liwat ang doctor.
+     */
+    if (!token && refreshToken) {
+
+      const refreshed =
+        await attemptDoctorTokenRefresh();
+
+      if (!refreshed) {
+        throw new Error(
+          'Your session has expired. Please sign in again.'
+        );
+      }
+    }
 
     await start();
 
@@ -1208,13 +1916,19 @@ passwordInput.addEventListener(
       'serbisyo_doctor_token'
     );
 
+    localStorage.removeItem(
+      'serbisyo_doctor_refresh_token'
+    );
+
     token = '';
+    refreshToken = '';
     me = null;
     doctor = null;
 
     loginSection.classList.remove(
       'hidden'
     );
+
     loginShell.classList.remove('hidden');
 
     appSection.classList.add(
@@ -1227,21 +1941,32 @@ passwordInput.addEventListener(
 
 })();
 
-
 /* =========================================================
+
    AUTO REFRESH
-========================================================= */
+
+\========================================================= */
 
 /*
+
  * Refresh every 5 seconds so changes made by
+
  * Admin are reflected in the Doctor Portal.
+
  *
+
  * The TV display should use the same
+
  * appointment statuses:
+
  *
+
  * Approved  = Waiting
+
  * Serving   = Now Serving
+
  * Completed = Finished
+
  */
 
 setInterval(() => {
@@ -1249,11 +1974,17 @@ setInterval(() => {
   if (doctor && !mutationBusy) {
 
     loadAppointments()
+
       .catch(error => {
+
         console.error(
+
           'Auto refresh failed:',
+
           error
+
         );
+
       });
 
   }
@@ -1263,4 +1994,5 @@ setInterval(() => {
 </script>
 
 </body>
+
 </html>
