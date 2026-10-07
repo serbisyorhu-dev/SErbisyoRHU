@@ -1536,71 +1536,71 @@ async function deleteBookings(ids) {
 }
 
 async function recallCurrentPatient() {
-
   if (mutationBusy || isLoading) return;
 
   const current = getCurrentPatient();
 
-  if (!current) return;
+  if (!current) {
+    queueMessage.textContent =
+      'There is no current patient to recall.';
+    return;
+  }
 
   mutationBusy = true;
-
   recallBtn.disabled = true;
-
   recallBtn.textContent = 'Recalling...';
-
   doneBtn.disabled = true;
 
   let resultMessage = '';
 
   try {
+    /*
+     * Ini naga-recall sang current Serving patient sa atomic backend
+     * para ma-verify ang doctor ownership, today nga queue, kag status.
+     */
+    const recalled = await req(
+      '/api/doctor/recall-current',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          appointment_id: current.id
+        })
+      }
+    );
 
-    const lastCalledAt = new Date().toISOString();
-
-    const rows = await req('/api/data?table=appointments&id=' + encodeURIComponent(current.id), {
-
-      method: 'PATCH',
-
-      headers: {'Content-Type': 'application/json'},
-
-      body: JSON.stringify({last_called_at: lastCalledAt})
-
-    });
-
-    if (!Array.isArray(rows) || !rows.some(row => String(row.id) === String(current.id))) {
-
-      throw new Error('The server did not confirm the recall. Check appointment permissions.');
-
+    if (
+      !recalled ||
+      String(recalled.id) !== String(current.id)
+    ) {
+      throw new Error(
+        'The server did not confirm the recall.'
+      );
     }
 
-    resultMessage = `Queue ${current.queue_number || '—'} recalled.`;
+    resultMessage =
+      `Queue ${recalled.queue_number || current.queue_number || '—'} recalled.`;
 
   } catch (error) {
-
     console.error(error);
-
-    resultMessage = error.message || 'Unable to recall the patient.';
+    resultMessage =
+      error.message ||
+      'Unable to recall the patient.';
 
   } finally {
-
     mutationBusy = false;
-
     recallBtn.disabled = false;
-
     recallBtn.textContent = 'Recall Patient';
-
     doneBtn.disabled = false;
 
     await loadAppointments();
-
     queueMessage.textContent = resultMessage;
-
   }
-
 }
 
 /* =========================================================
-
    CALL NEXT PATIENT
 
 \========================================================= */
