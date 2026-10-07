@@ -1320,7 +1320,8 @@ function fmtTimeRange(startHHMM, endHHMM){
 
 function openAppointmentModal(){
   const patientSuggestions = DB.patients.map(p=>`<option value="${p.name}">`).join('');
-  const bookable = DB.schedules.filter(s=> s.status==='Available' && s.booked < s.capacity);
+  const today = queueToday();
+  const bookable = DB.schedules.filter(s=> s.status==='Available' && s.booked < s.capacity && String(s.date||'')>=today);
   const scheduleOptions = bookable.map(s=>
     `<option value="${s.dbId}">${s.service} · ${s.doctor} · ${fmtDate(s.date)} · ${fmtTimeRange(s.startTime,s.endTime)} · ${s.capacity-s.booked} slot(s) left</option>`
   ).join('');
@@ -1340,38 +1341,103 @@ function openAppointmentModal(){
       <div id="appt-error" class="small" style="display:none; background:var(--red-light); color:var(--red); padding:10px 12px; border-radius:10px; margin-top:8px;"></div>
       <div class="modal-actions">
         <button type="button" class="btn btn-outline" onclick="closeModal()">Cancel</button>
-        <button type="submit" class="btn btn-primary" ${bookable.length?'':'disabled'}>Book Appointment</button>
+        <button type="submit" class="btn btn-primary" id="appt-submit-btn" ${bookable.length?'':'disabled'}>Book Appointment</button>
       </div>
     </form>
   `);
+
   document.getElementById('appt-form').addEventListener('submit', async (e)=>{
     e.preventDefault();
+
     const errEl = document.getElementById('appt-error');
+    const submitBtn = document.getElementById('appt-submit-btn');
     errEl.style.display = 'none';
+
     const f = new FormData(e.target);
+    const patientName = String(f.get('patient')||'').trim();
     const scheduleId = Number(f.get('schedule_id'));
     const sched = DB.schedules.find(s=>s.dbId===scheduleId);
-    if(!sched){ errEl.textContent = 'Please select a schedule.'; errEl.style.display='block'; return; }
-    if(sched.booked >= sched.capacity){ errEl.textContent = 'That schedule just filled up — pick another.'; errEl.style.display='block'; return; }
 
-    const newBooked = sched.booked + 1;
-    try{
-      await api('schedules','PATCH',{ id:sched.dbId, body:{ booked:newBooked } });
-      sched.booked = newBooked;
-    } catch(err){ errEl.textContent = 'Error: '+err.message; errEl.style.display='block'; return; }
+    if(!patientName){
+      errEl.textContent = 'Enter the patient name.';
+      errEl.style.display = 'block';
+      return;
+    }
 
-    const payload = {
-      patient: f.get('patient').trim(), date: sched.date, time: fmtTimeRange(sched.startTime, sched.endTime),
-      service: sched.service, status:'Pending', schedule_id: sched.dbId, doctor_name: sched.doctor
-    };
+    if(!sched){
+      errEl.textContent = 'Please select a schedule.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    if(String(sched.date||'') < queueToday()){
+      errEl.textContent = 'Past schedules cannot be booked.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    if(sched.booked >= sched.capacity){
+      errEl.textContent = 'That schedule just filled up — pick another.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Booking…';
+
     try{
-      const data = await api('appointments','POST',{ body: payload });
-      const row = Array.isArray(data) ? data[0] : data;
-      DB.appointments.unshift({ dbId:row.id, patient:row.patient, date:row.date, time:row.time, service:row.service, status:row.status, scheduleId:row.schedule_id, doctor:row.doctor_name||'', bookedAt:row.created_at, confirmationCode:row.confirmation_code||'', rating:null, ratingComment:'', queueNumber:'' });
-      closeModal(); toast('Appointment booked.'); navigate('appointments');
+      /* Ini naga-book sang walk-in kag slot sa isa lang ka atomic backend transaction. */
+      const token = getToken();
+      const res = await safeFetch(`${BACKEND_URL}/api/admin/book-appointment`, {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          ...(token ? {'Authorization':`Bearer ${token}`} : {})
+        },
+        body:JSON.stringify({
+          schedule_id:sched.dbId,
+          patient:patientName
+        })
+      });
+
+      const data = await res.json().catch(()=>({}));
+
+      if(!res.ok){
+        throw new Error(data.error || data.message || `Request failed (${res.status})`);
+      }
+
+      const row = data;
+      DB.appointments.unshift({
+        dbId:row.id,
+        patient:row.patient,
+        date:row.date,
+        time:row.time,
+        service:row.service,
+        status:row.status,
+        scheduleId:row.schedule_id,
+        doctor:row.doctor_name||'',
+        bookedAt:row.created_at,
+        confirmationCode:row.confirmation_code||'',
+        queueNumber:row.queue_number||'',
+        userId:row.user_id||'',
+        patientId:row.patient_id||null,
+        bookedByUserId:row.booked_by_user_id||row.user_id||'',
+        rating:row.rating||null,
+        ratingComment:row.rating_comment||''
+      });
+
+      /* Ang database amo na ang nag-increment sang slot; local cache lang ini para insakto dayon ang UI. */
+      sched.booked = Math.min(sched.capacity, (Number(sched.booked)||0) + 1);
+
+      closeModal();
+      toast('Appointment booked.');
+      navigate('appointments');
+
     } catch(err){
-      try{ await api('schedules','PATCH',{ id:sched.dbId, body:{ booked:sched.booked-1 } }); sched.booked -= 1; } catch(e2){}
-      errEl.textContent = 'Error: '+err.message; errEl.style.display='block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Book Appointment';
+      errEl.textContent = 'Error: ' + err.message;
+      errEl.style.display = 'block';
     }
   });
 }
