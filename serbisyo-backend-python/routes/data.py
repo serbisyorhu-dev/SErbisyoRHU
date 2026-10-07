@@ -179,9 +179,11 @@ def public_queue_status():
         )
 
 
-@data_bp.route('/api/data', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
-def data_proxy():
+# Ini naga-book sang slot kag appointment sa isa lang ka atomic Supabase transaction.
+@data_bp.route('/api/book-appointment', methods=['POST'])
+def book_appointment_atomic():
     token = get_bearer_token()
+
     if not token:
         return json_response(
             {
@@ -190,7 +192,154 @@ def data_proxy():
             401
         )
 
-    table = request.args.get('table', '')
+    body = (
+        request.get_json(
+            silent=True
+        )
+        or {}
+    )
+
+    schedule_id = body.get(
+        'schedule_id'
+    )
+
+    patient_id = body.get(
+        'patient_id'
+    )
+
+    # Ini nagasiguro nga valid numeric IDs ang ginpadala sang Android app.
+    try:
+        schedule_id = int(
+            schedule_id
+        )
+
+        patient_id = int(
+            patient_id
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+        return json_response(
+            {
+                'error': 'A valid schedule and patient are required.'
+            },
+            400
+        )
+
+    try:
+        # Ini naga-call sang atomic PostgreSQL function nga naga-lock sang schedule row.
+        status, res = supabase_request(
+            'POST',
+            '/rest/v1/rpc/book_appointment_atomic',
+            {
+                'p_schedule_id': schedule_id,
+                'p_patient_id': patient_id
+            },
+            token
+        )
+
+        if status >= 400:
+            message = (
+                'Could not book this appointment.'
+            )
+
+            if isinstance(
+                res,
+                dict
+            ):
+                message = (
+                    res.get('message')
+                    or res.get('error')
+                    or message
+                )
+
+            normalized_message = (
+                str(message)
+                .strip()
+                .lower()
+            )
+
+            # Ini nga errors ginatreat as booking conflict para makahatag clear message ang Android app.
+            conflict_messages = (
+                'already full',
+                'full',
+                'no longer available',
+                'past schedules',
+                'past schedule',
+                'already has an active booking',
+                'schedule not found',
+            )
+
+            if any(
+                text in normalized_message
+                for text in conflict_messages
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    409
+                )
+
+            return json_response(
+                {
+                    'error': message
+                },
+                400
+            )
+
+        rows = (
+            res
+            if isinstance(res, list)
+            else []
+        )
+
+        if not rows:
+            return json_response(
+                {
+                    'error': 'Booking was not created.'
+                },
+                500
+            )
+
+        # Android expects one Appointment object, indi list.
+        return json_response(
+            rows[0],
+            201
+        )
+
+    except Exception as error:
+        print(
+            'ATOMIC BOOKING ERROR:',
+            error
+        )
+
+        return json_response(
+            {
+                'error': 'Could not complete the booking.'
+            },
+            500
+        )
+
+
+@data_bp.route('/api/data', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
+def data_proxy():
+    token = get_bearer_token()
+
+    if not token:
+        return json_response(
+            {
+                'error': 'Not authenticated. Please log in.'
+            },
+            401
+        )
+
+    table = request.args.get(
+        'table',
+        ''
+    )
 
     if table not in ALLOWED_TABLES:
         return json_response(
@@ -202,7 +351,10 @@ def data_proxy():
 
     query = []
 
-    row_id = request.args.get('id')
+    row_id = request.args.get(
+        'id'
+    )
+
     if row_id is not None:
         query.append(
             'id=eq.' + quote(
@@ -211,15 +363,24 @@ def data_proxy():
             )
         )
 
-    eq = request.args.get('eq')
+    eq = request.args.get(
+        'eq'
+    )
+
     if eq and '.' in eq:
-        col, val = eq.split('.', 1)
+        col, val = eq.split(
+            '.',
+            1
+        )
 
         query.append(
             f'{quote(col, safe="")}=eq.{quote(val, safe="")}'
         )
 
-    order = request.args.get('order')
+    order = request.args.get(
+        'order'
+    )
+
     if order:
         query.append(
             'order=' + quote(
@@ -228,7 +389,10 @@ def data_proxy():
             )
         )
 
-    limit = request.args.get('limit')
+    limit = request.args.get(
+        'limit'
+    )
+
     if limit:
         try:
             query.append(
@@ -236,16 +400,22 @@ def data_proxy():
                     int(limit)
                 )
             )
+
         except ValueError:
             pass
 
     path = f'/rest/v1/{table}'
 
     if query:
-        path += '?' + '&'.join(query)
+        path += (
+            '?'
+            + '&'.join(query)
+        )
 
     method = request.method
+
     body = None
+
     extra_headers = {}
 
     if method == 'GET':
