@@ -685,7 +685,7 @@ async function loadAllData(){
   DB.queue.currentPatient = q.current_patient || '—';
   DB.queue.currentService = q.current_service || '—';
   DB.queue.nextNumber = q.next_number || 'A-2';
-  DB.queue.waiting = liveWaitingCount();
+  DB.queue.waiting = q.waiting ?? 0;
   DB.queue.paused = !!q.paused;
   DB.queue.stations = (stations||[]).map(r=>({ dbId:r.id, name:r.name, status:r.status, doctorId:r.doctor_id||null, doctorName:r.doctor_name||'' }));
   DB.queue.activity = (activity||[]).map(r=>({ label:r.label, meta:r.meta, type:r.type }));
@@ -930,24 +930,19 @@ function navigate(page){
    ========================================================= */
 let dashboardPeriod = 'day'; // 'day' | 'week' | 'month'
 
-// Live waiting count comes from checked-in appointments, not legacy queue_state.
-function liveWaitingCount(now = new Date()){
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone:'Asia/Manila', year:'numeric', month:'2-digit', day:'2-digit'
-  }).formatToParts(now);
-  const value = type => parts.find(part=>part.type===type).value;
-  const today = `${value('year')}-${value('month')}-${value('day')}`;
-  return DB.appointments.filter(appointment =>
-    String(appointment.date||'').trim()===today
-    && String(appointment.status||'').trim().toLowerCase()==='approved'
-    && String(appointment.queueNumber||'').trim()!==''
-    && String(appointment.doctor||'').trim()!==''
-  ).length;
-}
-
 function renderDashboard(){
   const name=currentUser?.user_metadata?.name||currentUser?.email?.split('@')[0]||'Admin';
-  const waiting=liveWaitingCount();
+  const queueDateParts = new Intl.DateTimeFormat('en-US', {
+    timeZone:'Asia/Manila', year:'numeric', month:'2-digit', day:'2-digit'
+  }).formatToParts(new Date());
+  const queueDateValue = type => queueDateParts.find(part=>part.type===type).value;
+  const queueToday = `${queueDateValue('year')}-${queueDateValue('month')}-${queueDateValue('day')}`;
+  const waiting = DB.appointments.filter(a =>
+    String(a.date||'').trim()===queueToday
+    && String(a.status||'').trim().toLowerCase()==='approved'
+    && String(a.queueNumber||'').trim()!==''
+    && String(a.doctor||'').trim()!==''
+  ).length;
 
   // Ini ang isa lang ka period selector nga naga-control sang dashboard metrics, service trends, snapshot, kag summary.
   const periodData=computeReportData(dashboardPeriod,new Date());
@@ -1258,7 +1253,8 @@ async function confirmArrivalAndAssignQueue(dbId){
     const assignedNumber=nextDoctorQueueNumber(a.doctor);
     await api('appointments','PATCH',{id:dbId,body:{status:'Approved',queue_number:assignedNumber}});
     a.status='Approved'; a.queueNumber=assignedNumber;
-    DB.queue.waiting=liveWaitingCount();
+    DB.queue.waiting=(DB.queue.waiting||0)+1;
+    try{ await updateQueueState({waiting:DB.queue.waiting}); }catch(e){}
     toast(`Checked in — ${assignedNumber} · ${a.doctor}.`); navigate(currentPage);
   }catch(err){toast('Error: '+err.message,true);}
 }
@@ -2684,3 +2680,284 @@ async function generatePDFReport(period, anchorDate){
     styles: { fontSize: 10 },
     margin: { left: 14, right: 14 }
   });
+
+  const pageCount = doc.internal.getNumberOfPages();
+  for(let i=1;i<=pageCount;i++){
+    doc.setPage(i);
+    doc.setFontSize(8); doc.setTextColor(150);
+    doc.text('Generated automatically by SERbisyo RHU System — ISUFST BSIT Thesis Project', 14, 290);
+    doc.text(`Page ${i} of ${pageCount}`, 182, 290);
+  }
+
+  const filename = `SERbisyo-Report-${r.period}-${anchorDate.toISOString().slice(0,10)}.pdf`;
+  doc.save(filename);
+  toast('Report downloaded.');
+}
+
+function donutGradient(dist){
+  let acc = 0; const stops = [];
+  dist.forEach(d=>{ stops.push(`${d.color} ${acc}% ${acc+d.pct}%`); acc += d.pct; });
+  if(acc < 100) stops.push(`#eef1f4 ${acc}% 100%`);
+  return `conic-gradient(${stops.join(',')})`;
+}
+
+function starRow(avg){
+  const full = Math.round(avg);
+  let out = '';
+  for(let i=1;i<=5;i++) out += i<=full ? '★' : '☆';
+  return out;
+}
+
+function renderReports(){
+  const r = computeReportData(reportPeriod, reportAnchorDate);
+  const maxIntake = Math.max(1, ...r.intake.map(x=>x.v));
+  const maxVol = Math.max(1, ...r.volumeByDay.map(x=>x.v));
+  const maxRatingCount = Math.max(1, ...r.ratingBreakdown.map(x=>x.count));
+
+  return `
+    <div class="page-head row between">
+      <div><h1>Clinical Analytics</h1><p>Historical data and performance metrics — computed live from your records.</p></div>
+      <button class="btn btn-primary" onclick="openPdfPeriodModal()">⬇ Generate PDF Report</button>
+    </div>
+
+    <div class="card" style="padding:14px 18px; margin-bottom:18px;">
+      <div class="row between" style="flex-wrap:wrap; gap:12px;">
+        <div class="tab-row" id="report-period-tabs">
+          ${['day','week','month'].map(p=>`<button data-p="${p}" class="${reportPeriod===p?'active':''}">${p==='day'?'Day':p==='week'?'Week':'Month'}</button>`).join('')}
+        </div>
+        <div class="row gap8">
+          <button class="icon-btn" id="report-prev-btn" title="Previous">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <div style="font-weight:700; font-size:13.5px; color:var(--navy); min-width:180px; text-align:center;">${r.periodLabel}</div>
+          <button class="icon-btn" id="report-next-btn" title="Next">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+          <button class="btn btn-sm btn-outline" id="report-today-btn">Today</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ini ang cleaner report overview: gin-remove ang Avg. Wait Time kag Vaccination cards. -->
+    <div class="grid grid-2" style="margin-bottom:18px;">
+      <div class="card" style="padding:22px; display:flex; align-items:center; gap:16px;">
+        <div class="stat-icon" style="margin:0; width:46px; height:46px; background:var(--teal-light); color:var(--teal);">🩺</div>
+        <div>
+          <div class="stat-value">${r.patientsCatered}</div>
+          <div class="stat-label">Patients Catered · ${r.periodLabel}</div>
+        </div>
+      </div>
+      <div class="card" style="padding:22px; display:flex; align-items:center; gap:16px;">
+        <div class="stat-icon" style="margin:0; width:46px; height:46px; background:var(--blue-light); color:var(--blue-deep);">👥</div>
+        <div>
+          <div class="stat-value">${r.totalPatients}</div>
+          <div class="stat-label">Total Registered Patients</div>
+        </div>
+      </div>
+    </div>
+    <div class="grid grid-main">
+      <div>
+        <div class="card" style="padding:22px;">
+          <h4 style="font-size:15px; margin-bottom:2px;">Patient Volume Trends</h4>
+          <p class="small muted" style="margin-bottom:12px;">Appointments by day of week — ${r.periodLabel}</p>
+          ${r.totalAppts ? `<div class="bar-chart">
+            ${r.volumeByDay.map(x=>`<div class="bar-col"><div class="bar" style="height:${(x.v/maxVol*100)}%;"></div><span class="bar-label">${x.d}</span></div>`).join('')}
+          </div>` : `<div class="empty-state small">No appointments in this period yet.</div>`}
+        </div>
+        <div class="card" style="padding:22px; margin-top:18px;">
+          <h4 style="font-size:15px; margin-bottom:2px;">Patient Intake Trends</h4>
+          <p class="small muted" style="margin-bottom:12px;">Appointments booked per month (last 6 months, all-time overview)</p>
+          ${r.intake.some(x=>x.v) ? `<div class="bar-chart">
+            ${r.intake.map(x=>`<div class="bar-col"><div class="bar" style="height:${(x.v/maxIntake*100)}%;"></div><span class="bar-label">${x.m}</span></div>`).join('')}
+          </div>` : `<div class="empty-state small">No appointments yet — this chart will fill in as you schedule them.</div>`}
+        </div>
+      </div>
+      <div>
+        <div class="card" style="padding:20px; text-align:center;">
+          <h4 style="font-size:14.5px; margin-bottom:4px;">Patient Satisfaction</h4>
+          <p class="small muted" style="margin-bottom:10px;">${r.periodLabel}</p>
+          ${r.avgRating!==null ? `
+            <div style="font-size:32px; font-weight:800; color:var(--navy); font-family:var(--font-head);">${r.avgRating.toFixed(1)}</div>
+            <div style="font-size:20px; color:var(--amber); letter-spacing:2px; margin-top:2px;">${starRow(r.avgRating)}</div>
+            <div class="small muted" style="margin-top:6px;">${r.ratingCount} rating${r.ratingCount===1?'':'s'} this ${r.period}</div>
+            <div style="text-align:left; margin-top:16px;">
+              ${r.ratingBreakdown.map(b=>`
+                <div class="row gap8" style="margin-bottom:6px;">
+                  <span class="small" style="width:34px;">${b.star} ★</span>
+                  <div style="flex:1; height:6px; background:#eef1f4; border-radius:4px; overflow:hidden;">
+                    <div style="height:100%; width:${(b.count/maxRatingCount*100)}%; background:var(--amber); border-radius:4px;"></div>
+                  </div>
+                  <span class="small muted" style="width:20px; text-align:right;">${b.count}</span>
+                </div>`).join('')}
+            </div>
+          ` : `<p class="small muted" style="margin-top:14px;">No ratings collected yet for this ${r.period}. Patients can rate a visit from My Appointments once it's marked Completed.</p>`}
+        </div>
+        <div class="card" style="padding:20px; margin-top:18px; text-align:center;">
+          <h4 style="font-size:14.5px; margin-bottom:10px;">Service Distribution</h4>
+          ${r.totalAppts ? `
+            <div class="donut" style="background:${donutGradient(r.serviceDist)};"><div class="donut-center"><b>${r.totalAppts}</b><span>Total</span></div></div>
+            <div style="text-align:left; margin-top:14px;">
+              ${r.serviceDist.map(d=>`<div class="legend-row"><span class="legend-dot" style="background:${d.color};"></span>${d.label} <b style="margin-left:auto;">${d.pct}%</b></div>`).join('')}
+            </div>
+          ` : `<p class="small muted" style="margin-top:10px;">No appointments in this period.</p>`}
+        </div>
+        <div class="card" style="padding:20px; margin-top:18px;">
+          <h4 style="font-size:14.5px; margin-bottom:12px;">Patient Volume by Barangay (all-time)</h4>
+          ${r.byBarangay.length ? r.byBarangay.map(b=>`
+            <div style="margin-bottom:10px;">
+              <div class="row between small" style="margin-bottom:4px;"><span>${b.label}</span><b>${b.pct}%</b></div>
+              <div style="height:6px; background:#eef1f4; border-radius:4px; overflow:hidden;"><div style="height:100%; width:${Math.min(100,b.pct*2.6)}%; background:var(--blue-mid); border-radius:4px;"></div></div>
+            </div>`).join('') : `<p class="small muted">No patients registered yet.</p>`}
+        </div>
+        <div class="card" style="padding:20px; margin-top:18px;">
+          <h4 style="font-size:14.5px; margin-bottom:2px;">Age Groups — ${r.periodLabel}</h4>
+          <p class="small muted" style="margin-bottom:12px;">Which age ranges are actually booking appointments (not included in the PDF export)</p>
+          ${r.ageMatchedCount ? r.ageDistribution.map(a=>`
+            <div style="margin-bottom:10px;">
+              <div class="row between small" style="margin-bottom:4px;"><span>${a.label}</span><b>${a.pct}% <span class="muted">(${a.count})</span></b></div>
+              <div style="height:6px; background:#eef1f4; border-radius:4px; overflow:hidden;"><div style="height:100%; width:${a.pct}%; background:var(--teal); border-radius:4px;"></div></div>
+            </div>`).join('') : `<p class="small muted">No age data available for appointments in this period yet — patients can set their age from Profile &gt; Edit Profile in the mobile app.</p>`}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* =========================================================
+   POST-RENDER HOOKS
+   ========================================================= */
+function afterRender(page){
+  if(page==='dashboard'){
+    document.querySelectorAll('#dashboard-period-tabs button').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        dashboardPeriod = b.dataset.p;
+        navigate('dashboard');
+      });
+    });
+  }
+  if(page==='reports'){
+    document.querySelectorAll('#report-period-tabs button').forEach(b=>{
+      b.addEventListener('click', ()=>{ reportPeriod = b.dataset.p; navigate('reports'); });
+    });
+    const prevBtn = document.getElementById('report-prev-btn');
+    if(prevBtn) prevBtn.addEventListener('click', ()=>{ reportAnchorDate = shiftPeriod(reportPeriod, reportAnchorDate, -1); navigate('reports'); });
+    const nextBtn = document.getElementById('report-next-btn');
+    if(nextBtn) nextBtn.addEventListener('click', ()=>{ reportAnchorDate = shiftPeriod(reportPeriod, reportAnchorDate, 1); navigate('reports'); });
+    const todayBtn = document.getElementById('report-today-btn');
+    if(todayBtn) todayBtn.addEventListener('click', ()=>{ reportAnchorDate = new Date(); navigate('reports'); });
+  }
+  if(page==='appointments'){
+    document.querySelectorAll('#appt-tabs button').forEach(b=>{
+      b.addEventListener('click', ()=>{ apptFilters.status = b.dataset.f; navigate('appointments'); });
+    });
+    const search = document.getElementById('appt-search');
+    if(search){
+      search.addEventListener('input', (e)=>{ apptFilters.search = e.target.value; navigate('appointments'); });
+      search.focus(); search.setSelectionRange(search.value.length, search.value.length);
+    }
+    const dateF = document.getElementById('appt-date-filter');
+    if(dateF) dateF.addEventListener('change', (e)=>{ apptFilters.date = e.target.value; navigate('appointments'); });
+    const docF = document.getElementById('appt-doctor-filter');
+    if(docF) docF.addEventListener('change', (e)=>{ apptFilters.doctor = e.target.value; navigate('appointments'); });
+    const svcF = document.getElementById('appt-service-filter');
+    if(svcF) svcF.addEventListener('change', (e)=>{ apptFilters.service = e.target.value; navigate('appointments'); });
+  }
+  if(page==='verifyCode'){
+    const input = document.getElementById('verify-code-input');
+    if(input){
+      input.focus();
+      input.addEventListener('keydown', (e)=>{ if(e.key==='Enter') lookupVerifyCode(); });
+      input.addEventListener('input', (e)=>{ e.target.value = e.target.value.replace(/\D/g,'').slice(0,4); });
+    }
+  }
+  if(page==='schedules'){
+    const dateF = document.getElementById('sched-date-filter');
+    if(dateF) dateF.addEventListener('change', (e)=>{ scheduleFilters.date = e.target.value; navigate('schedules'); });
+    const svcF = document.getElementById('sched-service-filter');
+    if(svcF) svcF.addEventListener('change', (e)=>{ scheduleFilters.service = e.target.value; navigate('schedules'); });
+    const docF = document.getElementById('sched-doctor-filter');
+    if(docF) docF.addEventListener('change', (e)=>{ scheduleFilters.doctor = e.target.value; navigate('schedules'); });
+    const statF = document.getElementById('sched-status-filter');
+    if(statF) statF.addEventListener('change', (e)=>{ scheduleFilters.status = e.target.value; navigate('schedules'); });
+  }
+  if(page==='patients'){
+    const search = document.getElementById('patient-search');
+    if(search){
+      search.addEventListener('input', (e)=>{ patientSearch = e.target.value.trim().toLowerCase(); renderPatientsInPlace(); });
+      search.focus(); search.setSelectionRange(search.value.length, search.value.length);
+    }
+  }
+  if(page==='staff'){
+    document.querySelectorAll('#role-tabs button').forEach(b=>{
+      b.addEventListener('click', ()=>{ staffRoleFilter = b.dataset.r; navigate('staff'); });
+    });
+    const sel = document.getElementById('status-filter');
+    if(sel) sel.addEventListener('change', (e)=>{ staffStatusFilter = e.target.value; navigate('staff'); });
+  }
+}
+
+
+/* Ini nagahatag function sa Support kag Privacy links para wala visible control nga wala action. */
+function openSupportInfo(){
+  openModal(`
+    <div class="modal-head"><h3>Support</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <p style="color:var(--ink-soft);line-height:1.65;margin-top:10px;">For account access, queue, appointment, or system concerns, please contact your San Enrique RHU system administrator or designated IT support personnel.</p>
+    <div class="modal-actions"><button class="btn btn-primary" onclick="closeModal()">OK</button></div>`);
+}
+function openPrivacyInfo(){
+  openModal(`
+    <div class="modal-head"><h3>Privacy</h3><button class="modal-close" onclick="closeModal()">✕</button></div>
+    <p style="color:var(--ink-soft);line-height:1.65;margin-top:10px;">Use patient and staff information only for authorized RHU operations. Keep account credentials private and log out after using a shared device.</p>
+    <div class="modal-actions"><button class="btn btn-primary" onclick="closeModal()">OK</button></div>`);
+}
+const supportBtn=document.getElementById('support-btn');
+if(supportBtn) supportBtn.addEventListener('click',openSupportInfo);
+const contactSupportLink=document.getElementById('contact-support-link');
+if(contactSupportLink) contactSupportLink.addEventListener('click',(e)=>{e.preventDefault();openSupportInfo();});
+const privacyPolicyLink=document.getElementById('privacy-policy-link');
+if(privacyPolicyLink) privacyPolicyLink.addEventListener('click',(e)=>{e.preventDefault();openPrivacyInfo();});
+
+/* mobile sidebar toggle */
+function setupMobileToggle(){
+  const toggle = document.getElementById('menu-toggle');
+  if(window.innerWidth <= 880){ toggle.style.display='flex'; }
+  toggle.addEventListener('click', ()=> document.getElementById('sidebar').classList.toggle('open'));
+  window.addEventListener('resize', ()=>{ toggle.style.display = window.innerWidth<=880 ? 'flex' : 'none'; });
+}
+setupMobileToggle();
+
+/* =========================================================
+   BOOTSTRAP — check for a locally-stored token on load, and
+   verify with the backend that it's still valid.
+   ========================================================= */
+renderAuthMode();
+
+(async function boot(){
+  const token = getToken();
+  if(!token) return; // never logged in, or already logged out — show login screen as-is
+
+  try{
+    const res = await safeFetch(`${BACKEND_URL}/api/auth?action=session`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if(data.authenticated){
+      currentUser = data.user;
+      await enterApp();
+    } else {
+      // Stored access token's no good — try a silent refresh before giving up.
+      const refreshed = await attemptTokenRefresh();
+      if(refreshed){
+        await enterApp();
+      } else {
+        clearToken(); // refresh token's also dead — genuinely need to log in again
+      }
+    }
+  } catch(err){
+    // Only surface this if it's a real connectivity problem, not just "not logged in yet".
+    showMsg(err.message, 'err');
+  }
+})();
+</script>
+</body>
+</html>
