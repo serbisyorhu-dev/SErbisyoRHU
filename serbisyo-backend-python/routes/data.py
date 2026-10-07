@@ -626,6 +626,112 @@ def admin_assign_queue_atomic():
         )
 
 
+# Ini naga-call sang next waiting patient sang logged-in doctor sa isa lang ka atomic transaction.
+@data_bp.route('/api/doctor/call-next', methods=['POST'])
+def doctor_call_next_atomic():
+    token = get_bearer_token()
+
+    if not token:
+        return json_response(
+            {
+                'error': 'Not authenticated. Please log in.'
+            },
+            401
+        )
+
+    try:
+        status, res = supabase_request(
+            'POST',
+            '/rest/v1/rpc/doctor_call_next_atomic',
+            {},
+            token
+        )
+
+        if status >= 400:
+            message = 'Could not call the next patient.'
+
+            if isinstance(res, dict):
+                message = (
+                    res.get('message')
+                    or res.get('error')
+                    or message
+                )
+
+            normalized_message = (
+                str(message)
+                .strip()
+                .lower()
+            )
+
+            conflict_messages = (
+                'current patient must be completed first',
+                'no waiting patients',
+                'doctor record not found',
+            )
+
+            if any(
+                text in normalized_message
+                for text in conflict_messages
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    409
+                )
+
+            if (
+                'not authenticated' in normalized_message
+                or 'not authorized' in normalized_message
+                or 'doctor account' in normalized_message
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    403
+                )
+
+            return json_response(
+                {
+                    'error': message
+                },
+                400
+            )
+
+        rows = (
+            res
+            if isinstance(res, list)
+            else []
+        )
+
+        if not rows:
+            return json_response(
+                {
+                    'error': 'No waiting patients.'
+                },
+                409
+            )
+
+        return json_response(
+            rows[0],
+            200
+        )
+
+    except Exception as error:
+        print(
+            'DOCTOR ATOMIC CALL NEXT ERROR:',
+            error
+        )
+
+        return json_response(
+            {
+                'error': 'Could not call the next patient.'
+            },
+            500
+        )
+
+
 # Ini naga-cancel ukon naga-delete sang appointment kag naga-release sang schedule slot atomically.
 @data_bp.route('/api/admin/release-appointment', methods=['POST'])
 def admin_release_appointment_atomic():
