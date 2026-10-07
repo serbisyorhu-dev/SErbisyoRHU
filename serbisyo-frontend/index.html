@@ -1281,22 +1281,50 @@ function queueDoctors(){
 
 async function confirmArrivalAndAssignQueue(dbId){
   verifyRefreshGeneration++;
-  verifyRefreshPromise = null;
-  const a=DB.appointments.find(x=>x.dbId===dbId); if(!a) return;
+  verifyRefreshPromise=null;
 
-  /* Ini nagapugong nga old/future appointment mahatagan sang today's queue number. */
+  const a=DB.appointments.find(x=>x.dbId===dbId);
+  if(!a)return;
+
+  /* Queue number can only be assigned to today's appointment. */
   if(!isTodayAppointment(a)){
     return toast('Queue numbers can only be assigned to today\'s appointments.',true);
   }
 
-  if(!a.doctor) return toast('Assign a doctor before confirming arrival.',true);
+  if(!a.doctor){
+    return toast('Assign a doctor before confirming arrival.',true);
+  }
+
   try{
-    const assignedNumber=nextDoctorQueueNumber(a.doctor);
-    await api('appointments','PATCH',{id:dbId,body:{status:'Approved',queue_number:assignedNumber}});
-    a.status='Approved'; a.queueNumber=assignedNumber;
-    /* Waiting count is now derived automatically from today's Approved appointments for this doctor. */
-    toast(`Checked in — ${assignedNumber} · ${a.doctor}.`); navigate(currentPage);
-  }catch(err){toast('Error: '+err.message,true);}
+    /* Ini naga-assign sang official daily doctor queue number sa atomic backend transaction. */
+    const token=getToken();
+    const res=await safeFetch(`${BACKEND_URL}/api/admin/assign-queue`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        ...(token?{'Authorization':`Bearer ${token}`}:{})
+      },
+      body:JSON.stringify({
+        appointment_id:dbId
+      })
+    });
+
+    const row=await res.json().catch(()=>({}));
+
+    if(!res.ok){
+      throw new Error(row.error||row.message||`Request failed (${res.status})`);
+    }
+
+    a.status=row.status||'Approved';
+    a.queueNumber=row.queue_number||a.queueNumber||'';
+    a.doctor=row.doctor_name||a.doctor;
+
+    toast(`Checked in — ${a.queueNumber||'Queue assigned'} · ${a.doctor}.`);
+    navigate(currentPage);
+
+  }catch(err){
+    toast('Error: '+err.message,true);
+  }
 }
 
 async function deleteAppt(dbId){
