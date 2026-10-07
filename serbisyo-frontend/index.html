@@ -1168,28 +1168,58 @@ function renderAppointments(){
   `;
 }
 
-async function freeScheduleSlotIfNeeded(appt){
-  if(!appt.scheduleId) return;
-  const sched = DB.schedules.find(s=>s.dbId===appt.scheduleId);
-  if(!sched) return;
-  const newBooked = Math.max(0, sched.booked - 1);
-  try{
-    await api('schedules','PATCH',{ id:sched.dbId, body:{ booked:newBooked } });
-    sched.booked = newBooked;
-  } catch(e){ /* non-critical — admin can fix manually in Schedules if this fails */ }
+async function releaseAppointmentAtomic(appt, action){
+  if(!appt?.dbId) throw new Error('Appointment not found.');
+
+  const token=getToken();
+  const res=await safeFetch(`${BACKEND_URL}/api/admin/release-appointment`,{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      ...(token?{'Authorization':`Bearer ${token}`}:{})
+    },
+    body:JSON.stringify({
+      appointment_id:appt.dbId,
+      action
+    })
+  });
+
+  const row=await res.json().catch(()=>({}));
+
+  if(!res.ok){
+    throw new Error(row.error||row.message||`Request failed (${res.status})`);
+  }
+
+  return row;
 }
 
 async function setApptStatus(dbId, status){
   verifyRefreshGeneration++;
   verifyRefreshPromise = null;
   const a = DB.appointments.find(x=>x.dbId===dbId); if(!a) return;
+
   try{
-    await api('appointments','PATCH',{ id:dbId, body:{ status } });
-    const wasActive = a.status==='Pending' || a.status==='Approved';
-    a.status = status;
-    if(status==='Cancelled' && wasActive) await freeScheduleSlotIfNeeded(a);
-    toast(`Marked as ${status}.`); navigate(currentPage);
-  } catch(err){ toast('Error: '+err.message, true); }
+    if(status==='Cancelled'){
+      /* Ini naga-cancel kag naga-release sang schedule slot sa isa lang ka atomic backend transaction. */
+      const row=await releaseAppointmentAtomic(a,'cancel');
+      a.status=row.status||'Cancelled';
+      a.queueNumber=row.queue_number||'';
+
+      const sched=DB.schedules.find(s=>s.dbId===a.scheduleId);
+      if(sched && Number(sched.booked)>0){
+        sched.booked=Math.max(0,Number(sched.booked)-1);
+      }
+    }else{
+      await api('appointments','PATCH',{ id:dbId, body:{ status } });
+      a.status=status;
+    }
+
+    toast(`Marked as ${status}.`);
+    navigate(currentPage);
+
+  }catch(err){
+    toast('Error: '+err.message,true);
+  }
 }
 
 /**
@@ -1328,13 +1358,27 @@ async function confirmArrivalAndAssignQueue(dbId){
 
 async function deleteAppt(dbId){
   const a = DB.appointments.find(x=>x.dbId===dbId); if(!a) return;
+
   try{
-    const wasActive = a.status==='Pending' || a.status==='Approved';
-    await api('appointments','DELETE',{ id:dbId });
-    if(wasActive) await freeScheduleSlotIfNeeded(a);
-    DB.appointments = DB.appointments.filter(x=>x.dbId!==dbId);
-    toast('Appointment removed.'); navigate('appointments');
-  } catch(err){ toast('Error: '+err.message, true); }
+    const wasActive=['Pending','Approved','Serving'].includes(a.status);
+
+    /* Ini naga-delete sang appointment kag naga-release sang slot atomically kon active pa ang booking. */
+    await releaseAppointmentAtomic(a,'delete');
+
+    if(wasActive){
+      const sched=DB.schedules.find(s=>s.dbId===a.scheduleId);
+      if(sched && Number(sched.booked)>0){
+        sched.booked=Math.max(0,Number(sched.booked)-1);
+      }
+    }
+
+    DB.appointments=DB.appointments.filter(x=>x.dbId!==dbId);
+    toast('Appointment removed.');
+    navigate('appointments');
+
+  }catch(err){
+    toast('Error: '+err.message,true);
+  }
 }
 function fmtDate(iso){
   const d = new Date(iso+'T00:00:00');
