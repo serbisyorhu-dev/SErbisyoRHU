@@ -2434,17 +2434,48 @@ async function adminDoctorNext(encodedDoctor){
   }
 }
 async function adminDoctorRecall(encodedDoctor){
-  const doctor=decodeURIComponent(encodedDoctor),current=doctorServingPatient(doctor);
-  if(!current)return toast(`No patient is currently being served by ${doctor}.`,true);
+  const doctor=decodeURIComponent(encodedDoctor);
+  const current=doctorServingPatient(doctor);
+
+  if(!current){
+    return toast(`No patient is currently being served by ${doctor}.`,true);
+  }
+
   try{
-    const calledAt=new Date().toISOString();
-    /* Recall changes only last_called_at para mag-alert liwat ang same patient sa Android app. */
-    await api('appointments','PATCH',{id:current.dbId,body:{last_called_at:calledAt}});
-    current.lastCalledAt=calledAt;
-    await addActivity(`${current.queueNumber} Recalled · ${doctor}`,'ok');
-    toast(`Recalling ${current.queueNumber} · ${doctor}.`);
+    /* Ini naga-recall sang current Serving patient pinaagi sa atomic admin endpoint. */
+    const token=getToken();
+    const res=await safeFetch(`${BACKEND_URL}/api/admin/recall-current`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        ...(token?{'Authorization':`Bearer ${token}`}:{})
+      },
+      body:JSON.stringify({
+        appointment_id:current.dbId
+      })
+    });
+
+    const row=await res.json().catch(()=>({}));
+
+    if(!res.ok){
+      throw new Error(row.error||row.message||`Request failed (${res.status})`);
+    }
+
+    current.lastCalledAt=row.last_called_at||current.lastCalledAt||'';
+    current.status=row.status||current.status||'Serving';
+    current.queueNumber=row.queue_number||current.queueNumber||'';
+
+    await addActivity(`${current.queueNumber||'Queue'} Recalled · ${doctor}`,'ok');
+    toast(`Recalling ${current.queueNumber||'current patient'} · ${doctor}.`);
+
+    const appointments=await api('appointments','GET',{order:'created_at.desc'});
+    DB.appointments=mapAppointmentRows(appointments);
+
     navigate('queue');
-  }catch(err){toast('Error: '+err.message,true);}
+
+  }catch(err){
+    toast('Error: '+err.message,true);
+  }
 }
 async function adminDoctorNoShow(encodedDoctor){
   const doctor=decodeURIComponent(encodedDoctor),current=doctorServingPatient(doctor),waiting=doctorQueueList(doctor),next=waiting[0];
