@@ -1459,79 +1459,80 @@ function updateBookingSelection() {
 }
 
 async function deleteBookings(ids) {
-
   if (mutationBusy || isLoading || !doctor) return;
 
   const wanted = new Set(ids.map(String));
-
   const targets = appointments.filter(a => wanted.has(String(a.id)));
 
   if (!targets.length) return;
 
   const details = targets.length === 1
-
     ? `booking for ${targets[0].patient || 'this patient'}`
-
     : `${targets.length} selected bookings`;
 
-  if (!window.confirm(`Permanently delete ${details}? This removes the appointment record and its history. This cannot be undone.`)) return;
+  if (!window.confirm(
+    `Permanently delete ${details}? This removes the appointment record and its history. This cannot be undone.`
+  )) return;
 
   mutationBusy = true;
-
   render();
-
   doneBtn.disabled = true;
-
   callNextBtn.disabled = true;
 
   let deleted = 0;
-
   const failures = [];
 
   try {
-
     for (const appointment of targets) {
-
       try {
+        /* Ini naga-delete kag naga-release sang slot atomically kag ginaverify nga iya gid sang logged-in doctor ang booking. */
+        const deletedAppointment = await req(
+          '/api/doctor/delete-appointment',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              appointment_id: appointment.id
+            })
+          }
+        );
 
-        const rows = await req('/api/data?table=appointments&id=' + encodeURIComponent(appointment.id), {method: 'DELETE'});
-
-        if (!Array.isArray(rows) || !rows.some(row => String(row.id) === String(appointment.id))) {
-
-          throw new Error('The server did not confirm deletion. Check appointment permissions.');
-
+        if (
+          !deletedAppointment ||
+          String(deletedAppointment.id) !== String(appointment.id)
+        ) {
+          throw new Error('The server did not confirm deletion.');
         }
 
         deleted++;
-
         selectedBookingIds.delete(String(appointment.id));
-
-        appointments = appointments.filter(a => String(a.id) !== String(appointment.id));
+        appointments = appointments.filter(
+          a => String(a.id) !== String(appointment.id)
+        );
 
       } catch (error) {
-
-        failures.push(`${appointment.patient || appointment.id}: ${error.message}`);
-
+        failures.push(
+          `${appointment.patient || appointment.id}: ${error.message}`
+        );
       }
-
     }
 
   } finally {
-
     mutationBusy = false;
-
     doneBtn.disabled = false;
-
     render();
-
     await loadAppointments();
 
-    bookingsMessage.textContent = `${deleted} booking${deleted === 1 ? '' : 's'} deleted.`
-
-      + (failures.length ? ` ${failures.length} could not be deleted: ${failures.join('; ')}` : '');
-
+    bookingsMessage.textContent =
+      `${deleted} booking${deleted === 1 ? '' : 's'} deleted.`
+      + (
+        failures.length
+          ? ` ${failures.length} could not be deleted: ${failures.join('; ')}`
+          : ''
+      );
   }
-
 }
 
 async function recallCurrentPatient() {
