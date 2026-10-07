@@ -2062,6 +2062,54 @@ def data_proxy():
 
     method = request.method
 
+    # Ini nagablock sang generic appointment mutations para indi ma-bypass ang atomic queue endpoints.
+    # Android feedback currently uses generic PATCH, gani rating fields lang ang ginapabilin diri.
+    if table == 'appointments' and method in ('POST', 'PUT', 'PATCH', 'DELETE'):
+        if method != 'PATCH':
+            return json_response(
+                {
+                    'error': 'Appointment changes must use the dedicated appointment endpoints.'
+                },
+                403
+            )
+
+        if row_id is None:
+            return json_response(
+                {
+                    'error': 'A specific appointment is required.'
+                },
+                400
+            )
+
+        rating_body = (
+            request.get_json(
+                silent=True
+            )
+            or {}
+        )
+
+        allowed_rating_fields = {
+            'rating',
+            'rating_comment',
+        }
+
+        requested_fields = set(
+            rating_body.keys()
+        )
+
+        if (
+            not requested_fields
+            or not requested_fields.issubset(
+                allowed_rating_fields
+            )
+        ):
+            return json_response(
+                {
+                    'error': 'Generic appointment updates are limited to rating feedback.'
+                },
+                403
+            )
+
     body = None
 
     extra_headers = {}
