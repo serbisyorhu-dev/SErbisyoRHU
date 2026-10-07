@@ -499,6 +499,22 @@ function normalize(value) {
 }
 
 
+/* Ini nagakuha sang local date subong sa YYYY-MM-DD format para today's queue lang ang makita. */
+function doctorToday() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+
+/* Ini nagacheck kon today's appointment gid ang record. */
+function isTodayAppointment(appointment) {
+  return String(appointment?.date || '') === doctorToday();
+}
+
+
 function escapeHTML(value) {
 
   return String(value ?? '')
@@ -525,9 +541,12 @@ function isWaiting(appointment) {
    * Approved means:
    * Admin already confirmed/check-in and
    * the patient has a queue number.
+   *
+   * Today's appointment lang ang masulod sa live doctor queue.
    */
 
   return (
+    isTodayAppointment(appointment) &&
     status === 'approved' &&
     appointment.queue_number
   );
@@ -537,8 +556,10 @@ function isWaiting(appointment) {
 function isServing(appointment) {
 
   return (
+    isTodayAppointment(appointment) &&
     statusName(appointment.status) ===
-    'serving'
+    'serving' &&
+    appointment.queue_number
   );
 }
 
