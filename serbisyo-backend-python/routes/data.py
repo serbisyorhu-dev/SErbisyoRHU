@@ -626,6 +626,147 @@ def admin_assign_queue_atomic():
         )
 
 
+# Ini naga-mark No Show sa current patient kag naga-call sang next patient atomically.
+@data_bp.route('/api/admin/no-show-next', methods=['POST'])
+def admin_no_show_next_atomic():
+    token = get_bearer_token()
+
+    if not token:
+        return json_response(
+            {
+                'error': 'Not authenticated. Please log in.'
+            },
+            401
+        )
+
+    body = (
+        request.get_json(
+            silent=True
+        )
+        or {}
+    )
+
+    doctor_id = body.get(
+        'doctor_id'
+    )
+
+    try:
+        doctor_id = int(
+            doctor_id
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+        return json_response(
+            {
+                'error': 'A valid doctor is required.'
+            },
+            400
+        )
+
+    try:
+        # Ini naga-call sang RPC nga naga-lock sang doctor queue antes mag-No Show kag Call Next.
+        status, res = supabase_request(
+            'POST',
+            '/rest/v1/rpc/admin_no_show_next_atomic',
+            {
+                'p_doctor_id': doctor_id
+            },
+            token
+        )
+
+        if status >= 400:
+            message = (
+                'Could not update this doctor queue.'
+            )
+
+            if isinstance(
+                res,
+                dict
+            ):
+                message = (
+                    res.get('message')
+                    or res.get('error')
+                    or message
+                )
+
+            normalized_message = (
+                str(message)
+                .strip()
+                .lower()
+            )
+
+            conflict_messages = (
+                'doctor record not found',
+                'selected staff member is not a doctor',
+                'no patient is currently being served',
+            )
+
+            if any(
+                text in normalized_message
+                for text in conflict_messages
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    409
+                )
+
+            if (
+                'not authenticated' in normalized_message
+                or 'not authorized' in normalized_message
+                or 'staff account' in normalized_message
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    403
+                )
+
+            return json_response(
+                {
+                    'error': message
+                },
+                400
+            )
+
+        result = (
+            res[0]
+            if isinstance(res, list) and res
+            else res
+        )
+
+        if not isinstance(result, dict):
+            return json_response(
+                {
+                    'error': 'Queue update returned no result.'
+                },
+                500
+            )
+
+        return json_response(
+            result,
+            200
+        )
+
+    except Exception as error:
+        print(
+            'ADMIN ATOMIC NO SHOW NEXT ERROR:',
+            error
+        )
+
+        return json_response(
+            {
+                'error': 'Could not update this doctor queue.'
+            },
+            500
+        )
+
+
 # Ini naga-recall sang current Serving appointment halin sa admin atomically.
 @data_bp.route('/api/admin/recall-current', methods=['POST'])
 def admin_recall_current_atomic():
