@@ -1155,7 +1155,6 @@ function renderAppointments(){
               <td>
                 <div class="row gap8">
                   ${a.status==='Pending'?`<button class="btn btn-sm btn-outline" onclick="confirmArrivalAndAssignQueue(${a.dbId})">Confirm</button>`:''}
-                  ${a.status==='Approved'?`<button class="btn btn-sm btn-outline" onclick="setApptStatus(${a.dbId},'Completed')">Complete</button>`:''}
                   ${(a.status==='Pending'||a.status==='Approved')?`<button class="btn btn-sm btn-outline" style="color:var(--red);" onclick="setApptStatus(${a.dbId},'Cancelled')">Cancel</button>`:''}
                   <button class="icon-btn" title="Delete" onclick="deleteAppt(${a.dbId})">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
@@ -1594,7 +1593,7 @@ function renderVerifyCodeResult(){
       ${match.queueNumber ? `<div style="margin-top:12px; text-align:center; background:var(--white); border-radius:12px; padding:14px;"><div class="small muted">Assigned Queue Number</div><div style="font-size:26px; font-weight:800; color:var(--navy); font-family:var(--font-mono);">${match.queueNumber}</div></div>` : ''}
       <div class="row gap8" style="margin-top:16px;">
         ${match.status==='Pending'?`<button class="btn btn-sm btn-primary" onclick="confirmArrivalAndAssignQueue(${match.dbId}); document.getElementById('verify-code-input').value='';">Confirm Arrival</button>`:''}
-        ${match.status==='Approved'?`<button class="btn btn-sm btn-primary" onclick="setApptStatus(${match.dbId},'Completed'); document.getElementById('verify-code-input').value='';">Mark Completed</button>`:''}
+        ${match.status==='Approved'?`<span class="small muted">Waiting for the doctor to call this queue number.</span>`:''}
       </div>
     </div>
   `;
