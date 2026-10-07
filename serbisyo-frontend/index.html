@@ -1220,21 +1220,62 @@ function doctorCode(name){
   const index=doctors.findIndex(x=>doctorKey(x.name)===doctorKey(name));
   return index>=0?queuePrefixFromId(index+1):null;
 }
+/* Ini nagakuha sang local date subong sa YYYY-MM-DD format. */
+function queueToday(){
+  const d=new Date();
+  const y=d.getFullYear();
+  const m=String(d.getMonth()+1).padStart(2,'0');
+  const day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+/* Ini nagacheck kon today's appointment gid ang record. */
+function isTodayAppointment(a){
+  return String(a?.date||'')===queueToday();
+}
+
+/* Ini naga-list sang Approved patients sang sini nga doctor para TODAY lang. */
 function doctorQueueList(doctor){
-  return DB.appointments.filter(a=>doctorKey(a.doctor)===doctorKey(doctor)&&a.status==='Approved'&&a.queueNumber)
-    .sort((a,b)=>(parseInt(String(a.queueNumber).split('-').pop(),10)||0)-(parseInt(String(b.queueNumber).split('-').pop(),10)||0));
+  return DB.appointments
+    .filter(a=>
+      isTodayAppointment(a) &&
+      doctorKey(a.doctor)===doctorKey(doctor) &&
+      a.status==='Approved' &&
+      a.queueNumber
+    )
+    .sort((a,b)=>
+      (parseInt(String(a.queueNumber).split('-').pop(),10)||0) -
+      (parseInt(String(b.queueNumber).split('-').pop(),10)||0)
+    );
 }
-/* Ini nagakuha sang current Serving patient sang isa lang ka doctor para indi mag-overlap ang queues. */
+
+/* Ini nagakuha sang current Serving patient sang doctor para TODAY lang. */
 function doctorServingPatient(doctor){
-  return DB.appointments.find(a=>doctorKey(a.doctor)===doctorKey(doctor)&&a.status==='Serving'&&a.queueNumber);
+  return DB.appointments.find(a=>
+    isTodayAppointment(a) &&
+    doctorKey(a.doctor)===doctorKey(doctor) &&
+    a.status==='Serving' &&
+    a.queueNumber
+  );
 }
+
+/* Ini nagahimo sang sunod nga queue number gamit lang ang TODAY nga queue. */
 function nextDoctorQueueNumber(doctor){
   const prefix=doctorCode(doctor);
   if(!prefix)throw new Error('Doctor was not found in Staff Directory.');
-  const nums=DB.appointments.filter(a=>doctorKey(a.doctor)===doctorKey(doctor)&&String(a.queueNumber||'').startsWith(prefix+'-'))
-    .map(a=>parseInt(String(a.queueNumber).split('-').pop(),10)).filter(Number.isFinite);
+
+  const nums=DB.appointments
+    .filter(a=>
+      isTodayAppointment(a) &&
+      doctorKey(a.doctor)===doctorKey(doctor) &&
+      String(a.queueNumber||'').startsWith(prefix+'-')
+    )
+    .map(a=>parseInt(String(a.queueNumber).split('-').pop(),10))
+    .filter(Number.isFinite);
+
   return `${prefix}-${nums.length?Math.max(...nums)+1:1}`;
 }
+
 /* Ini nagacheck nga Doctor ukon Medical Doctor lang gid ang doctor role. */
 function isDoctorRole(role){
   const r=String(role||'').trim().toLowerCase();
@@ -1248,6 +1289,12 @@ async function confirmArrivalAndAssignQueue(dbId){
   verifyRefreshGeneration++;
   verifyRefreshPromise = null;
   const a=DB.appointments.find(x=>x.dbId===dbId); if(!a) return;
+
+  /* Ini nagapugong nga old/future appointment mahatagan sang today's queue number. */
+  if(!isTodayAppointment(a)){
+    return toast('Queue numbers can only be assigned to today\'s appointments.',true);
+  }
+
   if(!a.doctor) return toast('Assign a doctor before confirming arrival.',true);
   try{
     const assignedNumber=nextDoctorQueueNumber(a.doctor);
