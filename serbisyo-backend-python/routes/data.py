@@ -324,6 +324,165 @@ def book_appointment_atomic():
         )
 
 
+# Ini naga-book sang admin walk-in kag naga-reserve sang slot sa isa lang ka atomic transaction.
+@data_bp.route('/api/admin/book-appointment', methods=['POST'])
+def admin_book_appointment_atomic():
+    token = get_bearer_token()
+
+    if not token:
+        return json_response(
+            {
+                'error': 'Not authenticated. Please log in.'
+            },
+            401
+        )
+
+    body = (
+        request.get_json(
+            silent=True
+        )
+        or {}
+    )
+
+    schedule_id = body.get(
+        'schedule_id'
+    )
+
+    patient_name = str(
+        body.get('patient')
+        or ''
+    ).strip()
+
+    try:
+        schedule_id = int(
+            schedule_id
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+        return json_response(
+            {
+                'error': 'A valid schedule is required.'
+            },
+            400
+        )
+
+    if not patient_name:
+        return json_response(
+            {
+                'error': 'Patient name is required.'
+            },
+            400
+        )
+
+    try:
+        # Ini naga-call sang separate admin RPC para atomic ang walk-in booking kag slot reservation.
+        status, res = supabase_request(
+            'POST',
+            '/rest/v1/rpc/admin_book_appointment_atomic',
+            {
+                'p_schedule_id': schedule_id,
+                'p_patient': patient_name
+            },
+            token
+        )
+
+        if status >= 400:
+            message = (
+                'Could not book this walk-in appointment.'
+            )
+
+            if isinstance(
+                res,
+                dict
+            ):
+                message = (
+                    res.get('message')
+                    or res.get('error')
+                    or message
+                )
+
+            normalized_message = (
+                str(message)
+                .strip()
+                .lower()
+            )
+
+            conflict_messages = (
+                'already full',
+                'full',
+                'no longer available',
+                'past schedules',
+                'past schedule',
+                'schedule not found',
+            )
+
+            if any(
+                text in normalized_message
+                for text in conflict_messages
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    409
+                )
+
+            if (
+                'not authorized' in normalized_message
+                or 'not authenticated' in normalized_message
+                or 'staff account' in normalized_message
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    403
+                )
+
+            return json_response(
+                {
+                    'error': message
+                },
+                400
+            )
+
+        rows = (
+            res
+            if isinstance(res, list)
+            else []
+        )
+
+        if not rows:
+            return json_response(
+                {
+                    'error': 'Walk-in booking was not created.'
+                },
+                500
+            )
+
+        # Admin web expects one appointment object, indi list.
+        return json_response(
+            rows[0],
+            201
+        )
+
+    except Exception as error:
+        print(
+            'ADMIN ATOMIC BOOKING ERROR:',
+            error
+        )
+
+        return json_response(
+            {
+                'error': 'Could not complete the walk-in booking.'
+            },
+            500
+        )
+
+
 @data_bp.route('/api/data', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
 def data_proxy():
     token = get_bearer_token()
