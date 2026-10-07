@@ -938,8 +938,8 @@ async function callNextPatient() {
   if (mutationBusy || isLoading) return;
 
   /*
-   * A doctor cannot call another patient
-   * while currently serving someone.
+   * Keep the local guard for a clearer doctor message,
+   * but the backend RPC is now the final source of truth.
    */
 
   const current =
@@ -954,22 +954,6 @@ async function callNextPatient() {
   }
 
 
-  const waiting =
-    getWaitingPatients();
-
-  const next =
-    waiting[0];
-
-
-  if (!next) {
-
-    queueMessage.textContent =
-      'No patients are waiting.';
-
-    return;
-  }
-
-
   mutationBusy = true;
   callNextBtn.disabled = true;
   callNextBtn.textContent =
@@ -979,30 +963,30 @@ async function callNextPatient() {
   try {
 
     /*
-     * Change only THIS doctor's next
-     * appointment to Serving.
+     * Ini naga-call sang next Approved patient atomically sa backend
+     * para indi magdoble ang Call Next bisan duha ka doctor tabs ang bukas.
      */
 
-    await req(
-      '/api/data?table=appointments&id=' +
-      encodeURIComponent(next.id),
-      {
-        method: 'PATCH',
+    const called =
+      await req(
+        '/api/doctor/call-next',
+        {
+          method: 'POST',
 
-        headers: {
-          'Content-Type':
-            'application/json'
-        },
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
 
-        body: JSON.stringify({
-          status: 'Serving',
-          last_called_at: new Date().toISOString()
-        })
-      }
-    );
+          body: JSON.stringify({})
+        }
+      );
 
 
     await loadAppointments();
+
+    queueMessage.textContent =
+      `Now serving ${called.queue_number || 'the next patient'}.`;
 
   } catch (error) {
 
@@ -1020,7 +1004,9 @@ async function callNextPatient() {
     callNextBtn.textContent =
       'Call Next Patient';
 
-    callNextBtn.disabled = !!getCurrentPatient() || !getWaitingPatients().length;
+    callNextBtn.disabled =
+      !!getCurrentPatient() ||
+      !getWaitingPatients().length;
   }
 }
 
