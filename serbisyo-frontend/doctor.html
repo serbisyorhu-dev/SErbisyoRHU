@@ -1,12 +1,21 @@
 <!DOCTYPE html>
+
 <html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>SERbisyo RHU — Doctor Portal</title>
+
 <link rel="icon" type="image/png" href="assets/logo-full.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
+
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
 
 :root{--navy:#0f3654;--blue-deep:#124a76;--blue:#1c6ca3;--blue-mid:#2680c2;--blue-light:#eaf3fa;--teal:#12a594;--amber:#e0a030;--red:#d84c46;--green:#1f9d55;--green-light:#e7f7ed;--ink:#132433;--ink-soft:#5b6b7a;--line:#e2e8ef;--bg:#eef2f6;--card:#fff;--shadow:0 1px 2px rgba(15,54,84,.04),0 8px 24px -12px rgba(15,54,84,.12);--font-head:'Poppins',sans-serif;--font-body:'Inter',sans-serif;}
@@ -17,7 +26,7 @@
 
 /* Pareho gid ini sang admin index.html login para consistent ang entrance sang doctor portal. */
 
-#loginShell{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}.login-wrap{width:100%;max-width:460px;text-align:center}.login-badge{width:64px;height:64px;border-radius:18px;margin:0 auto 22px;background:linear-gradient(160deg,#0f3654,#12866f);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 28px -10px rgba(18,74,118,.5)}.login-badge img{width:34px;height:34px;object-fit:contain}.login-title{font-size:29px;font-weight:800;color:var(--blue-deep);letter-spacing:-.3px}.login-sub{margin-top:4px;color:var(--ink-soft);font-size:14px}.login-card{margin-top:28px;padding:34px 32px 28px;text-align:left}.login-card h3{font-size:19px}.login-card .desc{color:var(--ink-soft);font-size:13.5px;margin-top:6px;line-height:1.5}.field{margin-top:18px}.field label{display:flex;justify-content:space-between;font-size:11px;font-weight:700;letter-spacing:.6px;color:#7c8a97;text-transform:uppercase;margin-bottom:7px}.input-wrap{position:relative}.input-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9aa9b6}.input-wrap input{width:100%;padding:13px 14px 13px 42px;border-radius:12px;border:1.5px solid var(--line);background:#f7f9fb;font-size:14.5px;color:var(--ink);outline:none;transition:border-color .15s,*background* .15s}.input-wrap input:focus{border-color:var(--blue-mid);background:#fff}.login-btn{width:100%;justify-content:center;margin-top:22px;padding:13px;font-size:15px}.login-msg{margin-top:14px;font-size:13px;padding:0;border-radius:10px}.login-msg:not(:empty){padding:10px 12px;background:#fbe9e8;color:var(--red)}.legal{margin-top:26px;text-align:center;font-size:12px;color:#93a2af}.legal .links{margin-top:6px;display:flex;justify-content:center;gap:10px}.legal a{color:#93a2af;text-decoration:none}
+#loginShell{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}.login-wrap{width:100%;max-width:460px;text-align:center}.login-badge{width:64px;height:64px;border-radius:18px;margin:0 auto 22px;background:linear-gradient(160deg,#0f3654,#12866f);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 28px -10px rgba(18,74,118,.5)}.login-badge img{width:34px;height:34px;object-fit:contain}.login-title{font-size:29px;font-weight:800;color:var(--blue-deep);letter-spacing:-.3px}.login-sub{margin-top:4px;color:var(--ink-soft);font-size:14px}.login-card{margin-top:28px;padding:34px 32px 28px;text-align:left}.login-card h3{font-size:19px}.login-card .desc{color:var(--ink-soft);font-size:13.5px;margin-top:6px;line-height:1.5}.field{margin-top:18px}.field label{display:flex;justify-content:space-between;font-size:11px;font-weight:700;letter-spacing:.6px;color:#7c8a97;text-transform:uppercase;margin-bottom:7px}.input-wrap{position:relative}.input-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9aa9b6}.input-wrap input{width:100%;padding:13px 14px 13px 42px;border-radius:12px;border:1.5px solid var(--line);background:#f7f9fb;font-size:14.5px;color:var(--ink);outline:none;transition:border-color .15s,background .15s}.input-wrap input:focus{border-color:var(--blue-mid);background:#fff}.login-btn{width:100%;justify-content:center;margin-top:22px;padding:13px;font-size:15px}.login-msg{margin-top:14px;font-size:13px;padding:0;border-radius:10px}.login-msg:not(:empty){padding:10px 12px;background:#fbe9e8;color:var(--red)}.legal{margin-top:26px;text-align:center;font-size:12px;color:#93a2af}.legal .links{margin-top:6px;display:flex;justify-content:center;gap:10px}.legal a{color:#93a2af;text-decoration:none}
 
 /* Ini ang same white sidebar style nga ginagamit sang admin index.html. */
 
@@ -158,6 +167,7 @@ let token =
   localStorage.getItem('serbisyo_doctor_token') || '';
 
 let refreshToken =
+
   localStorage.getItem('serbisyo_doctor_refresh_token') || '';
 
 let me = null;
@@ -357,58 +367,91 @@ function showDoctorPage(page) {
 async function attemptDoctorTokenRefresh() {
 
   if (!refreshToken) {
+
     return false;
+
   }
 
   try {
 
     const response = await fetch(
+
       BACKEND_URL + '/api/auth',
+
       {
+
         method: 'POST',
 
         headers: {
+
           'Content-Type': 'application/json'
+
         },
 
         body: JSON.stringify({
+
           action: 'refresh',
+
           refresh_token: refreshToken
+
         })
+
       }
+
     );
 
     const data = await response
+
       .json()
+
       .catch(() => ({}));
 
     if (
+
       !response.ok ||
+
       !data.authenticated ||
+
       !data.access_token
+
     ) {
+
       return false;
+
     }
 
     token = data.access_token;
+
     refreshToken =
+
       data.refresh_token ||
+
       refreshToken;
 
     if (data.user) {
+
       me = data.user;
+
     }
 
     localStorage.setItem(
+
       'serbisyo_doctor_token',
+
       token
+
     );
 
     if (refreshToken) {
+
       localStorage.setItem(
+
         'serbisyo_doctor_refresh_token',
+
         refreshToken
+
       );
+
     }
 
     return true;
@@ -416,64 +459,101 @@ async function attemptDoctorTokenRefresh() {
   } catch (error) {
 
     console.error(
+
       'Doctor token refresh failed:',
+
       error
+
     );
 
     return false;
+
   }
+
 }
 
 /* Ini naga-retry isa ka beses gamit ang refresh token kon expired na ang doctor access token. */
+
 async function req(url, options = {}, allowRefresh = true) {
 
   const headers = {
+
     ...(options.headers || {})
+
   };
 
   if (token) {
+
     headers.Authorization = 'Bearer ' + token;
+
   }
 
   const response = await fetch(
+
     BACKEND_URL + url,
+
     {
+
       ...options,
+
       headers
+
     }
+
   );
 
   const data = await response
+
     .json()
+
     .catch(() => ({}));
 
   if (
+
     response.status === 401 &&
+
     allowRefresh &&
+
     refreshToken
+
   ) {
 
     const refreshed =
+
       await attemptDoctorTokenRefresh();
 
     if (refreshed) {
+
       return req(
+
         url,
+
         options,
+
         false
+
       );
+
     }
+
   }
 
   if (!response.ok) {
+
     throw new Error(
+
       data.error ||
+
       data.message ||
+
       'Request failed.'
+
     );
+
   }
 
   return data;
+
 }
 
 /* =========================================================
@@ -551,20 +631,29 @@ async function loginDoctor() {
     token = data.access_token;
 
     refreshToken =
+
       data.refresh_token || '';
 
     me = data.user;
 
     localStorage.setItem(
+
       'serbisyo_doctor_token',
+
       token
+
     );
 
     if (refreshToken) {
+
       localStorage.setItem(
+
         'serbisyo_doctor_refresh_token',
+
         refreshToken
+
       );
+
     }
 
     await start();
@@ -572,15 +661,21 @@ async function loginDoctor() {
   } catch (error) {
 
     token = '';
+
     refreshToken = '';
+
     me = null;
 
     localStorage.removeItem(
+
       'serbisyo_doctor_token'
+
     );
 
     localStorage.removeItem(
+
       'serbisyo_doctor_refresh_token'
+
     );
 
     msg.textContent = error.message;
@@ -671,13 +766,13 @@ async function start() {
 
   }
 
+  const doctorRole = normalize(doctor.role);
+
   if (
 
-    !/doctor/i.test(
+    doctorRole !== 'doctor' &&
 
-      String(doctor.role || '')
-
-    )
+    doctorRole !== 'medical doctor'
 
   ) {
 
@@ -694,6 +789,8 @@ async function start() {
     doctor.name || 'Doctor';
 
   doctorDepartment.textContent =
+
+    doctor.dept ||
 
     doctor.department ||
 
@@ -1736,14 +1833,19 @@ async function completeCurrentPatient() {
 function logoutDoctor() {
 
   localStorage.removeItem(
+
     'serbisyo_doctor_token'
+
   );
 
   localStorage.removeItem(
+
     'serbisyo_doctor_refresh_token'
+
   );
 
   token = '';
+
   refreshToken = '';
 
   me = null;
@@ -1885,25 +1987,37 @@ passwordInput.addEventListener(
 (async function restoreSession() {
 
   if (!token && !refreshToken) {
+
     return;
+
   }
 
   try {
 
     /*
+
      * Kon wala na ang access token pero may refresh token pa,
+
      * mag-refresh anay antes mag-login liwat ang doctor.
+
      */
+
     if (!token && refreshToken) {
 
       const refreshed =
+
         await attemptDoctorTokenRefresh();
 
       if (!refreshed) {
+
         throw new Error(
+
           'Your session has expired. Please sign in again.'
+
         );
+
       }
+
     }
 
     await start();
@@ -1913,30 +2027,43 @@ passwordInput.addEventListener(
     console.error(error);
 
     localStorage.removeItem(
+
       'serbisyo_doctor_token'
+
     );
 
     localStorage.removeItem(
+
       'serbisyo_doctor_refresh_token'
+
     );
 
     token = '';
+
     refreshToken = '';
+
     me = null;
+
     doctor = null;
 
     loginSection.classList.remove(
+
       'hidden'
+
     );
 
     loginShell.classList.remove('hidden');
 
     appSection.classList.add(
+
       'hidden'
+
     );
 
     msg.textContent =
+
       error.message;
+
   }
 
 })();
