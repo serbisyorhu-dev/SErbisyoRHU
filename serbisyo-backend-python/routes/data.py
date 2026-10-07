@@ -626,6 +626,167 @@ def admin_assign_queue_atomic():
         )
 
 
+# Ini naga-cancel ukon naga-delete sang appointment kag naga-release sang schedule slot atomically.
+@data_bp.route('/api/admin/release-appointment', methods=['POST'])
+def admin_release_appointment_atomic():
+    token = get_bearer_token()
+
+    if not token:
+        return json_response(
+            {
+                'error': 'Not authenticated. Please log in.'
+            },
+            401
+        )
+
+    body = (
+        request.get_json(
+            silent=True
+        )
+        or {}
+    )
+
+    appointment_id = body.get(
+        'appointment_id'
+    )
+
+    action = str(
+        body.get('action')
+        or 'cancel'
+    ).strip().lower()
+
+    try:
+        appointment_id = int(
+            appointment_id
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+        return json_response(
+            {
+                'error': 'A valid appointment is required.'
+            },
+            400
+        )
+
+    if action not in (
+        'cancel',
+        'delete'
+    ):
+        return json_response(
+            {
+                'error': 'Action must be cancel or delete.'
+            },
+            400
+        )
+
+    try:
+        # Ini naga-call sang RPC nga naga-lock sang appointment kag schedule antes mag-release slot.
+        status, res = supabase_request(
+            'POST',
+            '/rest/v1/rpc/admin_release_appointment_atomic',
+            {
+                'p_appointment_id': appointment_id,
+                'p_action': action
+            },
+            token
+        )
+
+        if status >= 400:
+            message = (
+                'Could not update this appointment.'
+            )
+
+            if isinstance(
+                res,
+                dict
+            ):
+                message = (
+                    res.get('message')
+                    or res.get('error')
+                    or message
+                )
+
+            normalized_message = (
+                str(message)
+                .strip()
+                .lower()
+            )
+
+            conflict_messages = (
+                'appointment not found',
+                'already cancelled',
+                'already completed',
+                'cannot cancel',
+                'cannot delete',
+            )
+
+            if any(
+                text in normalized_message
+                for text in conflict_messages
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    409
+                )
+
+            if (
+                'not authorized' in normalized_message
+                or 'not authenticated' in normalized_message
+                or 'staff account' in normalized_message
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    403
+                )
+
+            return json_response(
+                {
+                    'error': message
+                },
+                400
+            )
+
+        rows = (
+            res
+            if isinstance(res, list)
+            else []
+        )
+
+        if not rows:
+            return json_response(
+                {
+                    'error': 'Appointment update returned no result.'
+                },
+                500
+            )
+
+        # The RPC returns the affected appointment row for both cancel and delete.
+        return json_response(
+            rows[0],
+            200
+        )
+
+    except Exception as error:
+        print(
+            'ADMIN ATOMIC APPOINTMENT RELEASE ERROR:',
+            error
+        )
+
+        return json_response(
+            {
+                'error': 'Could not update this appointment.'
+            },
+            500
+        )
+
+
 @data_bp.route('/api/data', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
 def data_proxy():
     token = get_bearer_token()
