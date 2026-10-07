@@ -2382,26 +2382,56 @@ function renderQueue(){
 }
 /* Ini nga admin controls naga-move lang sang queue sang napilian nga doctor kag wala naga-apekto sa iban. */
 async function adminDoctorNext(encodedDoctor){
-  const doctor=decodeURIComponent(encodedDoctor),current=doctorServingPatient(doctor),waiting=doctorQueueList(doctor),next=waiting[0];
-  if(!current&&!next)return toast(`No waiting patients for ${doctor}.`,true);
+  const doctor=decodeURIComponent(encodedDoctor);
+  const doctorStaff=DB.staff.find(s=>
+    isDoctorRole(s.role) &&
+    String(s.name||'').trim().toLowerCase()===String(doctor||'').trim().toLowerCase()
+  );
+
+  if(!doctorStaff?.dbId){
+    return toast(`Doctor record not found for ${doctor}.`,true);
+  }
+
   try{
-    if(current){
-      await api('appointments','PATCH',{id:current.dbId,body:{status:'Completed'}});
-      current.status='Completed';
-      await addActivity(`${current.queueNumber} Completed · ${doctor}`,'ok');
+    /* Ini naga-call sang next patient pinaagi sa atomic admin endpoint para indi mag-race sa Doctor portal. */
+    const token=getToken();
+    const res=await safeFetch(`${BACKEND_URL}/api/admin/call-next`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        ...(token?{'Authorization':`Bearer ${token}`}:{})
+      },
+      body:JSON.stringify({
+        doctor_id:doctorStaff.dbId
+      })
+    });
+
+    const row=await res.json().catch(()=>({}));
+
+    if(!res.ok){
+      throw new Error(row.error||row.message||`Request failed (${res.status})`);
     }
-    if(next){
-      const calledAt=new Date().toISOString();
-      /* Ini naga-update sang last_called_at para mabatyagan sang Android app ang Call Next halin sa admin. */
-      await api('appointments','PATCH',{id:next.dbId,body:{status:'Serving',last_called_at:calledAt}});
-      next.status='Serving';
-      next.lastCalledAt=calledAt;
-      await addActivity(`${next.queueNumber} Now Serving · ${doctor}`,'ok');
-      toast(`Now serving ${next.queueNumber} · ${doctor}.`);
+
+    const called=DB.appointments.find(a=>String(a.dbId)===String(row.id));
+    if(called){
+      called.status=row.status||'Serving';
+      called.lastCalledAt=row.last_called_at||called.lastCalledAt||'';
+      called.queueNumber=row.queue_number||called.queueNumber||'';
+      called.doctor=row.doctor_name||called.doctor||doctor;
     }
-    else toast(`${doctor}'s queue is now clear.`);
+
+    await addActivity(`${row.queue_number||called?.queueNumber||'Queue'} Now Serving · ${doctor}`,'ok');
+    toast(`Now serving ${row.queue_number||called?.queueNumber||'next patient'} · ${doctor}.`);
+
+    /* Refresh appointments para ang admin queue UI amo gid ang current database state. */
+    const appointments=await api('appointments','GET',{order:'created_at.desc'});
+    DB.appointments=mapAppointmentRows(appointments);
+
     navigate('queue');
-  }catch(err){toast('Error: '+err.message,true);}
+
+  }catch(err){
+    toast('Error: '+err.message,true);
+  }
 }
 async function adminDoctorRecall(encodedDoctor){
   const doctor=decodeURIComponent(encodedDoctor),current=doctorServingPatient(doctor);
