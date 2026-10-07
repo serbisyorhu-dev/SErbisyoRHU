@@ -874,6 +874,148 @@ def doctor_call_next_atomic():
         )
 
 
+# Ini naga-recall sang current Serving appointment sang logged-in doctor atomically.
+@data_bp.route('/api/doctor/recall-current', methods=['POST'])
+def doctor_recall_current_atomic():
+    token = get_bearer_token()
+
+    if not token:
+        return json_response(
+            {
+                'error': 'Not authenticated. Please log in.'
+            },
+            401
+        )
+
+    body = (
+        request.get_json(
+            silent=True
+        )
+        or {}
+    )
+
+    appointment_id = body.get(
+        'appointment_id'
+    )
+
+    try:
+        appointment_id = int(
+            appointment_id
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+        return json_response(
+            {
+                'error': 'A valid appointment is required.'
+            },
+            400
+        )
+
+    try:
+        # Ini naga-call sang RPC nga naga-verify doctor ownership, today, kag Serving status antes mag-recall.
+        status, res = supabase_request(
+            'POST',
+            '/rest/v1/rpc/doctor_recall_current_atomic',
+            {
+                'p_appointment_id': appointment_id
+            },
+            token
+        )
+
+        if status >= 400:
+            message = (
+                'Could not recall this patient.'
+            )
+
+            if isinstance(
+                res,
+                dict
+            ):
+                message = (
+                    res.get('message')
+                    or res.get('error')
+                    or message
+                )
+
+            normalized_message = (
+                str(message)
+                .strip()
+                .lower()
+            )
+
+            conflict_messages = (
+                'appointment not found',
+                'appointment is not assigned to this doctor',
+                'appointment is not for today',
+                'appointment is not currently serving',
+            )
+
+            if any(
+                text in normalized_message
+                for text in conflict_messages
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    409
+                )
+
+            if (
+                'not authenticated' in normalized_message
+                or 'not authorized' in normalized_message
+                or 'doctor account' in normalized_message
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    403
+                )
+
+            return json_response(
+                {
+                    'error': message
+                },
+                400
+            )
+
+        rows = (
+            res
+            if isinstance(res, list)
+            else []
+        )
+
+        if not rows:
+            return json_response(
+                {
+                    'error': 'Patient was not recalled.'
+                },
+                500
+            )
+
+        return json_response(
+            rows[0],
+            200
+        )
+
+    except Exception as error:
+        print(
+            'DOCTOR ATOMIC RECALL CURRENT ERROR:',
+            error
+        )
+
+        return json_response(
+            {
+                'error': 'Could not recall this patient.'
+            },
+            500
+        )
+
+
 # Ini naga-complete sang current Serving appointment sang logged-in doctor atomically.
 @data_bp.route('/api/doctor/complete-current', methods=['POST'])
 def doctor_complete_current_atomic():
