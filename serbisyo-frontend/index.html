@@ -2550,14 +2550,70 @@ async function adminDoctorNoShow(encodedDoctor){
   }
 }
 async function adminDoctorReset(encodedDoctor){
-  const doctor=decodeURIComponent(encodedDoctor),current=doctorServingPatient(doctor),waiting=doctorQueueList(doctor),active=[...(current?[current]:[]),...waiting].sort((a,b)=>(parseInt(String(a.queueNumber).split('-').pop(),10)||0)-(parseInt(String(b.queueNumber).split('-').pop(),10)||0));
-  if(!active.length)return toast(`No active queue to reset for ${doctor}.`,true);
-  if(!confirm(`Reset ${doctor}'s active queue back to ${doctorCode(doctor)}-1?`))return;
-  const prefix=doctorCode(doctor);if(!prefix)return toast('Doctor prefix could not be found.',true);
+  const doctor=decodeURIComponent(encodedDoctor);
+  const doctorStaff=DB.staff.find(s=>
+    isDoctorRole(s.role) &&
+    String(s.name||'').trim().toLowerCase()===String(doctor||'').trim().toLowerCase()
+  );
+
+  if(!doctorStaff?.dbId){
+    return toast(`Doctor record not found for ${doctor}.`,true);
+  }
+
+  if(!confirm(`Reset ${doctor}'s active queue back to ${doctorCode(doctor)}-1?`)){
+    return;
+  }
+
   try{
-    for(let i=0;i<active.length;i++){const a=active[i],queueNumber=`${prefix}-${i+1}`;await api('appointments','PATCH',{id:a.dbId,body:{status:'Approved',queue_number:queueNumber}});a.status='Approved';a.queueNumber=queueNumber;}
-    await addActivity(`Queue Reset · ${doctor}`,'warn');toast(`${doctor}'s active queue has been reset.`);navigate('queue');
-  }catch(err){toast('Error: '+err.message,true);}
+    /* Ini naga-reset kag naga-renumber sang active doctor queue sa isa lang ka atomic backend transaction. */
+    const token=getToken();
+    const res=await safeFetch(`${BACKEND_URL}/api/admin/reset-queue`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        ...(token?{'Authorization':`Bearer ${token}`}:{})
+      },
+      body:JSON.stringify({
+        doctor_id:doctorStaff.dbId
+      })
+    });
+
+    const rows=await res.json().catch(()=>[]);
+
+    if(!res.ok){
+      const message=rows?.error||rows?.message||`Request failed (${res.status})`;
+      throw new Error(message);
+    }
+
+    if(!Array.isArray(rows) || !rows.length){
+      throw new Error('No active queue to reset.');
+    }
+
+    const returnedById=new Map(
+      rows.map(row=>[String(row.id),row])
+    );
+
+    DB.appointments.forEach(a=>{
+      const row=returnedById.get(String(a.dbId));
+      if(!row)return;
+
+      a.status=row.status||'Approved';
+      a.queueNumber=row.queue_number||a.queueNumber||'';
+      a.lastCalledAt=row.last_called_at||a.lastCalledAt||'';
+      a.doctor=row.doctor_name||a.doctor||doctor;
+    });
+
+    await addActivity(`Queue Reset · ${doctor}`,'warn');
+    toast(`${doctor}'s active queue has been reset.`);
+
+    const appointments=await api('appointments','GET',{order:'created_at.desc'});
+    DB.appointments=mapAppointmentRows(appointments);
+
+    navigate('queue');
+
+  }catch(err){
+    toast('Error: '+err.message,true);
+  }
 }
 
 async function addActivity(label, type){
