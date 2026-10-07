@@ -626,6 +626,147 @@ def admin_assign_queue_atomic():
         )
 
 
+# Ini naga-reset kag naga-renumber sang active doctor queue atomically.
+@data_bp.route('/api/admin/reset-queue', methods=['POST'])
+def admin_reset_queue_atomic():
+    token = get_bearer_token()
+
+    if not token:
+        return json_response(
+            {
+                'error': 'Not authenticated. Please log in.'
+            },
+            401
+        )
+
+    body = (
+        request.get_json(
+            silent=True
+        )
+        or {}
+    )
+
+    doctor_id = body.get(
+        'doctor_id'
+    )
+
+    try:
+        doctor_id = int(
+            doctor_id
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+        return json_response(
+            {
+                'error': 'A valid doctor is required.'
+            },
+            400
+        )
+
+    try:
+        # Ini naga-call sang RPC nga naga-lock kag naga-renumber sang active queue sang doctor sa isa ka transaction.
+        status, res = supabase_request(
+            'POST',
+            '/rest/v1/rpc/admin_reset_queue_atomic',
+            {
+                'p_doctor_id': doctor_id
+            },
+            token
+        )
+
+        if status >= 400:
+            message = (
+                'Could not reset this doctor queue.'
+            )
+
+            if isinstance(
+                res,
+                dict
+            ):
+                message = (
+                    res.get('message')
+                    or res.get('error')
+                    or message
+                )
+
+            normalized_message = (
+                str(message)
+                .strip()
+                .lower()
+            )
+
+            conflict_messages = (
+                'doctor record not found',
+                'selected staff member is not a doctor',
+                'no active queue to reset',
+            )
+
+            if any(
+                text in normalized_message
+                for text in conflict_messages
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    409
+                )
+
+            if (
+                'not authenticated' in normalized_message
+                or 'not authorized' in normalized_message
+                or 'staff account' in normalized_message
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    403
+                )
+
+            return json_response(
+                {
+                    'error': message
+                },
+                400
+            )
+
+        rows = (
+            res
+            if isinstance(res, list)
+            else []
+        )
+
+        if not rows:
+            return json_response(
+                {
+                    'error': 'No active queue to reset.'
+                },
+                409
+            )
+
+        return json_response(
+            rows,
+            200
+        )
+
+    except Exception as error:
+        print(
+            'ADMIN ATOMIC RESET QUEUE ERROR:',
+            error
+        )
+
+        return json_response(
+            {
+                'error': 'Could not reset this doctor queue.'
+            },
+            500
+        )
+
+
 # Ini naga-mark No Show sa current patient kag naga-call sang next patient atomically.
 @data_bp.route('/api/admin/no-show-next', methods=['POST'])
 def admin_no_show_next_atomic():
