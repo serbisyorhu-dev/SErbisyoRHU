@@ -1613,13 +1613,37 @@ function renderVerifyCodeResult(){
     return;
   }
 
-  const match = DB.appointments.find(a => a.confirmationCode === code);
-  if(!match){
-    resultEl.innerHTML = `<p class="small" style="color:var(--red);">No appointment found with that code.</p>`;
+  /* Verify Code is for today's active appointment only para indi mapili ang old/future booking nga pareho ang 4-digit code. */
+  const matches = DB.appointments.filter(a =>
+    a.confirmationCode === code &&
+    isTodayAppointment(a) &&
+    ['Pending','Approved','Serving'].includes(a.status)
+  );
+
+  if(matches.length === 0){
+    resultEl.innerHTML = `<p class="small" style="color:var(--red);">No active appointment for today was found with that code.</p>`;
     return;
   }
 
-  const statusColor = { Pending:'pill-amber', Approved:'pill-green', Completed:'pill-blue', Cancelled:'pill-red' };
+  if(matches.length > 1){
+    resultEl.innerHTML = `
+      <div class="card" style="padding:16px; background:var(--amber-light); border:none;">
+        <b style="color:#96721e;">More than one active appointment uses this code today.</b>
+        <p class="small muted" style="margin-top:6px;">Please verify the patient name, service, or appointment details instead of selecting one automatically.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const match = matches[0];
+  const statusColor = {
+    Pending:'pill-amber',
+    Approved:'pill-green',
+    Serving:'pill-blue',
+    Completed:'pill-blue',
+    Cancelled:'pill-red'
+  };
+
   resultEl.innerHTML = `
     <div class="card" style="padding:18px; background:var(--blue-light); border:none;">
       <div class="row gap12">
@@ -1629,15 +1653,27 @@ function renderVerifyCodeResult(){
           <div class="small muted">${match.service} · ${match.doctor||'—'}</div>
         </div>
       </div>
+
       <div class="grid grid-2" style="gap:10px; margin-top:14px;">
         <div class="small"><span class="muted">Date</span><br><b>${fmtDate(match.date)}</b></div>
         <div class="small"><span class="muted">Time</span><br><b>${match.time}</b></div>
       </div>
-      <div style="margin-top:12px;"><span class="pill ${statusColor[match.status]||'pill-gray'}">${match.status}</span></div>
-      ${match.queueNumber ? `<div style="margin-top:12px; text-align:center; background:var(--white); border-radius:12px; padding:14px;"><div class="small muted">Assigned Queue Number</div><div style="font-size:26px; font-weight:800; color:var(--navy); font-family:var(--font-mono);">${match.queueNumber}</div></div>` : ''}
+
+      <div style="margin-top:12px;">
+        <span class="pill ${statusColor[match.status]||'pill-gray'}">${match.status}</span>
+      </div>
+
+      ${match.queueNumber ? `
+        <div style="margin-top:12px; text-align:center; background:var(--white); border-radius:12px; padding:14px;">
+          <div class="small muted">Assigned Queue Number</div>
+          <div style="font-size:26px; font-weight:800; color:var(--navy); font-family:var(--font-mono);">${match.queueNumber}</div>
+        </div>
+      ` : ''}
+
       <div class="row gap8" style="margin-top:16px;">
         ${match.status==='Pending'?`<button class="btn btn-sm btn-primary" onclick="confirmArrivalAndAssignQueue(${match.dbId}); document.getElementById('verify-code-input').value='';">Confirm Arrival</button>`:''}
         ${match.status==='Approved'?`<span class="small muted">Waiting for the doctor to call this queue number.</span>`:''}
+        ${match.status==='Serving'?`<span class="small muted">This queue number is currently being served.</span>`:''}
       </div>
     </div>
   `;
