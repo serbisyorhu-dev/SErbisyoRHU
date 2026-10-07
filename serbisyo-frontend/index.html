@@ -2478,14 +2478,76 @@ async function adminDoctorRecall(encodedDoctor){
   }
 }
 async function adminDoctorNoShow(encodedDoctor){
-  const doctor=decodeURIComponent(encodedDoctor),current=doctorServingPatient(doctor),waiting=doctorQueueList(doctor),next=waiting[0];
-  if(!current&&!next)return toast(`No active queue for ${doctor}.`,true);
+  const doctor=decodeURIComponent(encodedDoctor);
+  const current=doctorServingPatient(doctor);
+  const doctorStaff=DB.staff.find(s=>
+    isDoctorRole(s.role) &&
+    String(s.name||'').trim().toLowerCase()===String(doctor||'').trim().toLowerCase()
+  );
+
+  if(!current){
+    return toast(`No patient is currently being served by ${doctor}.`,true);
+  }
+
+  if(!doctorStaff?.dbId){
+    return toast(`Doctor record not found for ${doctor}.`,true);
+  }
+
   try{
-    if(current){await api('appointments','PATCH',{id:current.dbId,body:{status:'No Show'}});current.status='No Show';await addActivity(`${current.queueNumber} No Show · ${doctor}`,'warn');}
-    if(next){await api('appointments','PATCH',{id:next.dbId,body:{status:'Serving'}});next.status='Serving';await addActivity(`${next.queueNumber} Now Serving · ${doctor}`,'ok');toast(`No show recorded. Now serving ${next.queueNumber}.`);}
-    else toast(`No show recorded. No more waiting patients for ${doctor}.`);
+    /* Ini naga-No Show kag naga-call sang next patient sa isa lang ka atomic backend transaction. */
+    const token=getToken();
+    const res=await safeFetch(`${BACKEND_URL}/api/admin/no-show-next`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        ...(token?{'Authorization':`Bearer ${token}`}:{})
+      },
+      body:JSON.stringify({
+        doctor_id:doctorStaff.dbId
+      })
+    });
+
+    const data=await res.json().catch(()=>({}));
+
+    if(!res.ok){
+      throw new Error(data.error||data.message||`Request failed (${res.status})`);
+    }
+
+    const noShow=data.no_show||null;
+    const next=data.next||null;
+
+    if(noShow){
+      const localCurrent=DB.appointments.find(a=>String(a.dbId)===String(noShow.id));
+      if(localCurrent){
+        localCurrent.status=noShow.status||'No Show';
+        localCurrent.lastCalledAt=noShow.last_called_at||localCurrent.lastCalledAt||'';
+      }
+
+      await addActivity(`${noShow.queue_number||current.queueNumber||'Queue'} No Show · ${doctor}`,'warn');
+    }
+
+    if(next){
+      const localNext=DB.appointments.find(a=>String(a.dbId)===String(next.id));
+      if(localNext){
+        localNext.status=next.status||'Serving';
+        localNext.lastCalledAt=next.last_called_at||localNext.lastCalledAt||'';
+        localNext.queueNumber=next.queue_number||localNext.queueNumber||'';
+      }
+
+      await addActivity(`${next.queue_number||'Queue'} Now Serving · ${doctor}`,'ok');
+      toast(`No show recorded. Now serving ${next.queue_number||'next patient'}.`);
+    }else{
+      toast(`No show recorded. No more waiting patients for ${doctor}.`);
+    }
+
+    const appointments=await api('appointments','GET',{order:'created_at.desc'});
+    DB.appointments=mapAppointmentRows(appointments);
+
     navigate('queue');
-  }catch(err){toast('Error: '+err.message,true);}
+
+  }catch(err){
+    toast('Error: '+err.message,true);
+  }
 }
 async function adminDoctorReset(encodedDoctor){
   const doctor=decodeURIComponent(encodedDoctor),current=doctorServingPatient(doctor),waiting=doctorQueueList(doctor),active=[...(current?[current]:[]),...waiting].sort((a,b)=>(parseInt(String(a.queueNumber).split('-').pop(),10)||0)-(parseInt(String(b.queueNumber).split('-').pop(),10)||0));
