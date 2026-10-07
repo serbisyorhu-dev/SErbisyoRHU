@@ -732,6 +732,148 @@ def doctor_call_next_atomic():
         )
 
 
+# Ini naga-delete sang appointment sang logged-in doctor kag naga-release sang slot atomically.
+@data_bp.route('/api/doctor/delete-appointment', methods=['POST'])
+def doctor_delete_appointment_atomic():
+    token = get_bearer_token()
+
+    if not token:
+        return json_response(
+            {
+                'error': 'Not authenticated. Please log in.'
+            },
+            401
+        )
+
+    body = (
+        request.get_json(
+            silent=True
+        )
+        or {}
+    )
+
+    appointment_id = body.get(
+        'appointment_id'
+    )
+
+    try:
+        appointment_id = int(
+            appointment_id
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+        return json_response(
+            {
+                'error': 'A valid appointment is required.'
+            },
+            400
+        )
+
+    try:
+        # Ini naga-call sang RPC nga naga-verify ownership sang doctor kag naga-release sang slot atomically.
+        status, res = supabase_request(
+            'POST',
+            '/rest/v1/rpc/doctor_delete_appointment_atomic',
+            {
+                'p_appointment_id': appointment_id
+            },
+            token
+        )
+
+        if status >= 400:
+            message = (
+                'Could not delete this appointment.'
+            )
+
+            if isinstance(
+                res,
+                dict
+            ):
+                message = (
+                    res.get('message')
+                    or res.get('error')
+                    or message
+                )
+
+            normalized_message = (
+                str(message)
+                .strip()
+                .lower()
+            )
+
+            conflict_messages = (
+                'appointment not found',
+                'appointment is not assigned to this doctor',
+                'completed appointments cannot be deleted',
+                'serving appointments cannot be deleted',
+            )
+
+            if any(
+                text in normalized_message
+                for text in conflict_messages
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    409
+                )
+
+            if (
+                'not authenticated' in normalized_message
+                or 'not authorized' in normalized_message
+                or 'doctor account' in normalized_message
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    403
+                )
+
+            return json_response(
+                {
+                    'error': message
+                },
+                400
+            )
+
+        rows = (
+            res
+            if isinstance(res, list)
+            else []
+        )
+
+        if not rows:
+            return json_response(
+                {
+                    'error': 'Appointment was not deleted.'
+                },
+                500
+            )
+
+        return json_response(
+            rows[0],
+            200
+        )
+
+    except Exception as error:
+        print(
+            'DOCTOR ATOMIC DELETE APPOINTMENT ERROR:',
+            error
+        )
+
+        return json_response(
+            {
+                'error': 'Could not delete this appointment.'
+            },
+            500
+        )
+
+
 # Ini naga-cancel ukon naga-delete sang appointment kag naga-release sang schedule slot atomically.
 @data_bp.route('/api/admin/release-appointment', methods=['POST'])
 def admin_release_appointment_atomic():
