@@ -21,6 +21,7 @@
 .current-card{padding:24px;border-left:5px solid var(--blue);margin-bottom:18px}.queue-label{display:inline-flex;padding:6px 12px;border-radius:999px;background:var(--blue-light);color:var(--blue);font-size:11px;font-weight:800;letter-spacing:.6px}.queue{font:800 58px var(--font-head);color:var(--navy);margin:8px 0 2px}.current-card h3{font-size:18px}.current-actions{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}#queueMessage{margin-top:12px}
 .section-card{padding:22px;margin-bottom:18px}.section-card h3{font-size:17px}.section-card>p{margin:4px 0 18px}.table-wrap{width:100%;overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:700px}th{text-align:left;font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:#8a99a6;padding:0 12px 10px;border-bottom:1px solid var(--line)}td{text-align:left;padding:13px 12px;border-bottom:1px solid #f0f3f6;font-size:13.5px}tbody tr:hover{background:#fafcfe}.empty{padding:25px!important;text-align:center;color:var(--ink-soft)}.status{display:inline-block;padding:5px 9px;border-radius:999px;font-size:11px;font-weight:700}.status-approved{background:#fff3d9;color:#996400}.status-serving{background:#e8f2fb;color:var(--blue)}.status-completed{background:var(--green-light);color:#16733c}.status-other{background:#f1f3f5;color:#667788}
 @media(max-width:800px){.sidebar{display:none}.top{padding:14px 16px}.wrap{padding:20px 14px 50px}.doctor-info{margin-left:auto}.top .outline{display:none}.queue{font-size:46px}.section-card,.current-card{padding:18px}}
+.danger{background:var(--red);color:#fff}.bookings-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0}.status-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.booking-select{width:18px;height:18px;accent-color:var(--blue)}
 </style>
 </head>
 <body>
@@ -59,7 +60,7 @@
       <!-- Ini ang My Queue page: current/serving patient lang ang ara diri. -->
       <div id="page-queue" class="doctor-page">
         <div class="page-head"><h1>Doctor Queue</h1><p>Manage only the patient currently assigned to your queue.</p></div>
-        <section id="current" class="card current-card"><div class="queue-label">● NOW SERVING</div><div class="queue" id="currentNum">—</div><h3 id="currentPatient">No patient currently being served</h3><p class="muted" id="currentService"></p><p class="muted" id="currentSchedule"></p><div class="current-actions"><button class="btn primary" id="callNextBtn" type="button">Call Next Patient</button><button class="btn success hidden" id="doneBtn" type="button">✓ Patient Done</button></div><p id="queueMessage" class="muted"></p></section>
+        <section id="current" class="card current-card"><div class="queue-label">● NOW SERVING</div><div class="queue" id="currentNum">—</div><h3 id="currentPatient">No patient currently being served</h3><p class="muted" id="currentService"></p><p class="muted" id="currentSchedule"></p><div class="current-actions"><button class="btn primary" id="callNextBtn" type="button">Call Next Patient</button><button class="btn outline hidden" id="recallBtn" type="button">Recall Patient</button><button class="btn success hidden" id="doneBtn" type="button">✓ Patient Done</button></div><p id="queueMessage" class="muted"></p></section>
       </div>
 
       <!-- Ini ang separate Waiting Patients page. -->
@@ -71,7 +72,7 @@
       <!-- Ini ang separate My Bookings page. -->
       <div id="page-bookings" class="doctor-page hidden">
         <div class="page-head"><h1>My Bookings</h1><p>Appointments assigned to your doctor account.</p></div>
-        <section id="bookings-card" class="card section-card"><h3>My Bookings</h3><p class="muted">Appointments assigned to your doctor account.</p><div class="table-wrap"><table><thead><tr><th>Date</th><th>Time</th><th>Patient</th><th>Service</th><th>Queue</th><th>Status</th></tr></thead><tbody id="bookings"></tbody></table></div></section>
+        <section id="bookings-card" class="card section-card"><h3>My Bookings</h3><p class="muted">Appointments assigned to your doctor account.</p><div class="bookings-tools"><label><input class="booking-select" type="checkbox" id="selectAllBookings"> Select All</label><button class="btn danger" id="deleteSelectedBtn" type="button" disabled>Delete Selected (0)</button><span class="muted" id="selectionCount" aria-live="polite">0 selected</span></div><p id="bookingsMessage" class="muted" role="status"></p><div class="table-wrap"><table><thead><tr><th>Select</th><th>Date</th><th>Time</th><th>Patient</th><th>Service</th><th>Queue</th><th>Status / Delete</th></tr></thead><tbody id="bookings"></tbody></table></div></section>
       </div>
 
     </main>
@@ -93,6 +94,13 @@ let appointments = [];
 let assignedStation = null;
 
 let isLoading = false;
+let mutationBusy = false;
+const selectedBookingIds = new Set();
+const recallBtn = document.getElementById('recallBtn');
+const selectAllBookings = document.getElementById('selectAllBookings');
+const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+const selectionCount = document.getElementById('selectionCount');
+const bookingsMessage = document.getElementById('bookingsMessage');
 
 
 /* =========================================================
@@ -623,6 +631,8 @@ function render() {
 ========================================================= */
 
 function renderCurrentPatient() {
+  recallBtn.classList.toggle('hidden', !getCurrentPatient());
+  recallBtn.disabled = mutationBusy;
 
   const current =
     getCurrentPatient();
@@ -789,94 +799,122 @@ function renderWaitingQueue() {
 ========================================================= */
 
 function renderBookings() {
-
-  if (!appointments.length) {
-
-    bookings.innerHTML = `
-      <tr>
-        <td
-          colspan="6"
-          class="empty"
-        >
-          No bookings are assigned to you.
-        </td>
-      </tr>
-    `;
-
-    return;
+  const availableIds = new Set(appointments.map(a => String(a.id)));
+  for (const id of selectedBookingIds) {
+    if (!availableIds.has(id)) selectedBookingIds.delete(id);
   }
-
-
-  const sorted =
-    [...appointments]
-      .sort((a, b) => {
-
-        const dateA =
-          `${a.date || ''} ${a.time || ''}`;
-
-        const dateB =
-          `${b.date || ''} ${b.time || ''}`;
-
-        return dateA.localeCompare(
-          dateB
-        );
-      });
-
-
-  bookings.innerHTML =
-    sorted
-      .map(appointment => `
-
-        <tr>
-
-          <td>
-            ${escapeHTML(
-              appointment.date || '—'
-            )}
-          </td>
-
-          <td>
-            ${escapeHTML(
-              appointment.time || '—'
-            )}
-          </td>
-
-          <td>
-            ${escapeHTML(
-              appointment.patient || '—'
-            )}
-          </td>
-
-          <td>
-            ${escapeHTML(
-              appointment.service || '—'
-            )}
-          </td>
-
-          <td>
-            ${escapeHTML(
-              appointment.queue_number || '—'
-            )}
-          </td>
-
-          <td>
-            ${statusBadge(
-              appointment.status
-            )}
-          </td>
-
-        </tr>
-
-      `)
-      .join('');
+  const sorted = [...appointments].sort((a, b) =>
+    `${a.date || ''} ${a.time || ''}`.localeCompare(`${b.date || ''} ${b.time || ''}`)
+  );
+  bookings.innerHTML = sorted.length ? sorted.map(appointment => {
+    const id = escapeHTML(appointment.id);
+    return `<tr>
+      <td><input type="checkbox" class="booking-select" data-booking-id="${id}"
+        aria-label="Select booking for ${escapeHTML(appointment.patient || 'patient')}"
+        ${selectedBookingIds.has(String(appointment.id)) ? 'checked' : ''}
+        ${mutationBusy ? 'disabled' : ''}></td>
+      <td>${escapeHTML(appointment.date || '—')}</td>
+      <td>${escapeHTML(appointment.time || '—')}</td>
+      <td>${escapeHTML(appointment.patient || '—')}</td>
+      <td>${escapeHTML(appointment.service || '—')}</td>
+      <td>${escapeHTML(appointment.queue_number || '—')}</td>
+      <td><div class="status-actions">${statusBadge(appointment.status)}
+        <button class="btn danger" type="button" data-delete-id="${id}"
+          aria-label="Delete booking for ${escapeHTML(appointment.patient || 'patient')}"
+          ${mutationBusy ? 'disabled' : ''}>Delete</button></div></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="7" class="empty">No bookings are assigned to you.</td></tr>';
+  updateBookingSelection();
 }
 
+function updateBookingSelection() {
+  const count = selectedBookingIds.size;
+  selectionCount.textContent = `${count} selected`;
+  deleteSelectedBtn.textContent = `Delete Selected (${count})`;
+  deleteSelectedBtn.disabled = mutationBusy || count === 0;
+  selectAllBookings.disabled = mutationBusy || appointments.length === 0;
+  selectAllBookings.checked = appointments.length > 0 && count === appointments.length;
+  selectAllBookings.indeterminate = count > 0 && count < appointments.length;
+}
+
+async function deleteBookings(ids) {
+  if (mutationBusy || isLoading || !doctor) return;
+  const wanted = new Set(ids.map(String));
+  const targets = appointments.filter(a => wanted.has(String(a.id)));
+  if (!targets.length) return;
+  const details = targets.length === 1
+    ? `booking for ${targets[0].patient || 'this patient'}`
+    : `${targets.length} selected bookings`;
+  if (!window.confirm(`Permanently delete ${details}? This removes the appointment record and its history. This cannot be undone.`)) return;
+  mutationBusy = true;
+  render();
+  doneBtn.disabled = true;
+  callNextBtn.disabled = true;
+  let deleted = 0;
+  const failures = [];
+  try {
+    for (const appointment of targets) {
+      try {
+        const rows = await req('/api/data?table=appointments&id=' + encodeURIComponent(appointment.id), {method: 'DELETE'});
+        if (!Array.isArray(rows) || !rows.some(row => String(row.id) === String(appointment.id))) {
+          throw new Error('The server did not confirm deletion. Check appointment permissions.');
+        }
+        deleted++;
+        selectedBookingIds.delete(String(appointment.id));
+        appointments = appointments.filter(a => String(a.id) !== String(appointment.id));
+      } catch (error) {
+        failures.push(`${appointment.patient || appointment.id}: ${error.message}`);
+      }
+    }
+  } finally {
+    mutationBusy = false;
+    doneBtn.disabled = false;
+    render();
+    await loadAppointments();
+    bookingsMessage.textContent = `${deleted} booking${deleted === 1 ? '' : 's'} deleted.`
+      + (failures.length ? ` ${failures.length} could not be deleted: ${failures.join('; ')}` : '');
+  }
+}
+
+async function recallCurrentPatient() {
+  if (mutationBusy || isLoading) return;
+  const current = getCurrentPatient();
+  if (!current) return;
+  mutationBusy = true;
+  recallBtn.disabled = true;
+  recallBtn.textContent = 'Recalling...';
+  doneBtn.disabled = true;
+  let resultMessage = '';
+  try {
+    const lastCalledAt = new Date().toISOString();
+    const rows = await req('/api/data?table=appointments&id=' + encodeURIComponent(current.id), {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({last_called_at: lastCalledAt})
+    });
+    if (!Array.isArray(rows) || !rows.some(row => String(row.id) === String(current.id))) {
+      throw new Error('The server did not confirm the recall. Check appointment permissions.');
+    }
+    resultMessage = `Queue ${current.queue_number || '—'} recalled.`;
+  } catch (error) {
+    console.error(error);
+    resultMessage = error.message || 'Unable to recall the patient.';
+  } finally {
+    mutationBusy = false;
+    recallBtn.disabled = false;
+    recallBtn.textContent = 'Recall Patient';
+    doneBtn.disabled = false;
+    await loadAppointments();
+    queueMessage.textContent = resultMessage;
+  }
+}
 
 /* =========================================================
    CALL NEXT PATIENT
 ========================================================= */
 
 async function callNextPatient() {
+  if (mutationBusy || isLoading) return;
 
   /*
    * A doctor cannot call another patient
@@ -911,6 +949,7 @@ async function callNextPatient() {
   }
 
 
+  mutationBusy = true;
   callNextBtn.disabled = true;
   callNextBtn.textContent =
     'Calling...';
@@ -935,7 +974,8 @@ async function callNextPatient() {
         },
 
         body: JSON.stringify({
-          status: 'Serving'
+          status: 'Serving',
+          last_called_at: new Date().toISOString()
         })
       }
     );
@@ -952,11 +992,14 @@ async function callNextPatient() {
       'Unable to call the next patient.';
 
   } finally {
+    mutationBusy = false;
+    recallBtn.disabled = false;
+    renderBookings();
 
     callNextBtn.textContent =
       'Call Next Patient';
 
-    callNextBtn.disabled = false;
+    callNextBtn.disabled = !getWaitingPatients().length;
   }
 }
 
@@ -966,6 +1009,7 @@ async function callNextPatient() {
 ========================================================= */
 
 async function completeCurrentPatient() {
+  if (mutationBusy || isLoading) return;
 
   const current =
     getCurrentPatient();
@@ -980,6 +1024,8 @@ async function completeCurrentPatient() {
   }
 
 
+  mutationBusy = true;
+  recallBtn.disabled = true;
   doneBtn.disabled = true;
   doneBtn.textContent =
     'Completing...';
@@ -1029,6 +1075,9 @@ async function completeCurrentPatient() {
       'Unable to complete the patient.';
 
   } finally {
+    mutationBusy = false;
+    recallBtn.disabled = false;
+    renderBookings();
 
     doneBtn.disabled = false;
     doneBtn.textContent =
@@ -1059,6 +1108,30 @@ function logoutDoctor() {
 /* =========================================================
    EVENTS
 ========================================================= */
+
+recallBtn.addEventListener('click', recallCurrentPatient);
+selectAllBookings.addEventListener('change', () => {
+  if (mutationBusy) return;
+  selectedBookingIds.clear();
+  if (selectAllBookings.checked) {
+    appointments.forEach(a => selectedBookingIds.add(String(a.id)));
+  }
+  renderBookings();
+});
+bookings.addEventListener('change', event => {
+  if (mutationBusy) return;
+  const checkbox = event.target.closest('[data-booking-id]');
+  if (!checkbox) return;
+  const id = checkbox.dataset.bookingId;
+  if (checkbox.checked) selectedBookingIds.add(id);
+  else selectedBookingIds.delete(id);
+  updateBookingSelection();
+});
+bookings.addEventListener('click', event => {
+  const button = event.target.closest('[data-delete-id]');
+  if (button) deleteBookings([button.dataset.deleteId]);
+});
+deleteSelectedBtn.addEventListener('click', () => deleteBookings([...selectedBookingIds]));
 
 loginBtn.addEventListener(
   'click',
@@ -1166,7 +1239,7 @@ passwordInput.addEventListener(
 
 setInterval(() => {
 
-  if (doctor) {
+  if (doctor && !mutationBusy) {
 
     loadAppointments()
       .catch(error => {
