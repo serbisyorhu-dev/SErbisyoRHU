@@ -626,6 +626,148 @@ def admin_assign_queue_atomic():
         )
 
 
+# Ini naga-call sang next waiting patient sang selected doctor halin sa admin atomically.
+@data_bp.route('/api/admin/call-next', methods=['POST'])
+def admin_call_next_atomic():
+    token = get_bearer_token()
+
+    if not token:
+        return json_response(
+            {
+                'error': 'Not authenticated. Please log in.'
+            },
+            401
+        )
+
+    body = (
+        request.get_json(
+            silent=True
+        )
+        or {}
+    )
+
+    doctor_id = body.get(
+        'doctor_id'
+    )
+
+    try:
+        doctor_id = int(
+            doctor_id
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+        return json_response(
+            {
+                'error': 'A valid doctor is required.'
+            },
+            400
+        )
+
+    try:
+        # Ini naga-call sang admin RPC nga naga-lock sang same doctor queue antes mag-call next.
+        status, res = supabase_request(
+            'POST',
+            '/rest/v1/rpc/admin_doctor_call_next_atomic',
+            {
+                'p_doctor_id': doctor_id
+            },
+            token
+        )
+
+        if status >= 400:
+            message = (
+                'Could not call the next patient.'
+            )
+
+            if isinstance(
+                res,
+                dict
+            ):
+                message = (
+                    res.get('message')
+                    or res.get('error')
+                    or message
+                )
+
+            normalized_message = (
+                str(message)
+                .strip()
+                .lower()
+            )
+
+            conflict_messages = (
+                'doctor record not found',
+                'selected staff member is not a doctor',
+                'current patient must be completed first',
+                'no waiting patients',
+            )
+
+            if any(
+                text in normalized_message
+                for text in conflict_messages
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    409
+                )
+
+            if (
+                'not authenticated' in normalized_message
+                or 'not authorized' in normalized_message
+                or 'staff account' in normalized_message
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    403
+                )
+
+            return json_response(
+                {
+                    'error': message
+                },
+                400
+            )
+
+        rows = (
+            res
+            if isinstance(res, list)
+            else []
+        )
+
+        if not rows:
+            return json_response(
+                {
+                    'error': 'No waiting patients.'
+                },
+                409
+            )
+
+        return json_response(
+            rows[0],
+            200
+        )
+
+    except Exception as error:
+        print(
+            'ADMIN ATOMIC CALL NEXT ERROR:',
+            error
+        )
+
+        return json_response(
+            {
+                'error': 'Could not call the next patient.'
+            },
+            500
+        )
+
+
 # Ini naga-call sang next waiting patient sang logged-in doctor sa isa lang ka atomic transaction.
 @data_bp.route('/api/doctor/call-next', methods=['POST'])
 def doctor_call_next_atomic():
