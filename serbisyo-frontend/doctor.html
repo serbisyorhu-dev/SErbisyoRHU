@@ -935,17 +935,17 @@ function normalize(value) {
 /* Ini nagakuha sang local date subong sa YYYY-MM-DD format para today's queue lang ang makita. */
 
 function doctorToday() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date());
 
-  const d = new Date();
+  const value = type =>
+    parts.find(part => part.type === type)?.value || '';
 
-  const y = d.getFullYear();
-
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-
-  const day = String(d.getDate()).padStart(2, '0');
-
-  return `${y}-${m}-${day}`;
-
+  return `${value('year')}-${value('month')}-${value('day')}`;
 }
 
 /* Ini nagacheck kon today's appointment gid ang record. */
