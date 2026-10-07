@@ -61,7 +61,7 @@
       <!-- Ini ang My Queue page: current/serving patient lang ang ara diri. -->
       <div id="page-queue" class="doctor-page">
         <div class="page-head"><h1>Doctor Queue</h1><p>Manage only the patient currently assigned to your queue.</p></div>
-        <section id="current" class="card current-card"><div class="queue-label">● NOW SERVING</div><div class="queue" id="currentNum">—</div><h3 id="currentPatient">No patient currently being served</h3><p class="muted" id="currentService"></p><p class="muted" id="currentSchedule"></p><div class="current-actions"><button class="btn primary" id="callNextBtn" type="button">Call Next Patient</button><button class="btn outline hidden" id="recallBtn" type="button">Recall Patient</button><button class="btn success hidden" id="doneBtn" type="button">✓ Patient Done</button></div><p id="queueMessage" class="muted"></p></section>
+        <section id="current" class="card current-card"><div class="queue-label">● NOW SERVING</div><div class="queue" id="currentNum">—</div><h3 id="currentPatient">No patient currently being served</h3><p class="muted" id="currentService"></p><p class="muted" id="currentSchedule"></p><div class="current-actions"><button class="btn primary" id="callNextBtn" type="button">Call Next Patient</button><button class="btn outline" id="recallBtn" type="button">Recall Patient</button><button class="btn success hidden" id="doneBtn" type="button">✓ Patient Done</button></div><p id="queueMessage" class="muted"></p></section>
       </div>
 
       <!-- Ini ang separate Waiting Patients page. -->
@@ -632,8 +632,8 @@ function render() {
 ========================================================= */
 
 function renderCurrentPatient() {
-  recallBtn.classList.toggle('hidden', !getCurrentPatient());
-  recallBtn.disabled = mutationBusy;
+  recallBtn.classList.remove('hidden');
+  recallBtn.disabled = mutationBusy || !getCurrentPatient();
 
   const current =
     getCurrentPatient();
@@ -667,9 +667,8 @@ function renderCurrentPatient() {
       'hidden'
     );
 
-    callNextBtn.classList.add(
-      'hidden'
-    );
+    callNextBtn.classList.remove('hidden');
+    callNextBtn.disabled = true;
 
     queueMessage.textContent =
       'Finish the current patient before calling the next patient.';
@@ -1000,7 +999,7 @@ async function callNextPatient() {
     callNextBtn.textContent =
       'Call Next Patient';
 
-    callNextBtn.disabled = !getWaitingPatients().length;
+    callNextBtn.disabled = !!getCurrentPatient() || !getWaitingPatients().length;
   }
 }
 
