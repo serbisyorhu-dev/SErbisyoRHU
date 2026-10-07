@@ -526,7 +526,8 @@ function initials(name){ return (name||'?').split(' ').filter(Boolean).slice(0,2
    a brand-new install starts completely empty until real records are added. */
 let DB = {
   patients: [], appointments: [], staff: [], schedules: [], announcements: [], services: [],
-  queue: { currentNumber:'A-0', currentPatient:'—', currentService:'—', nextNumber:'A-1', waiting:0, paused:false, stations:[], activity:[] }
+  /* Per-doctor live queue comes from appointments; diri stations kag activity na lang ang queue cache. */
+  queue: { stations:[], activity:[] }
 };
 let currentUser = null;
 
@@ -646,11 +647,10 @@ function mapAppointmentRows(rows){
 }
 
 async function loadAllData(){
-  const [patients, appointments, staff, queueStateArr, stations, activity, schedules, announcements, services] = await Promise.all([
+  const [patients, appointments, staff, stations, activity, schedules, announcements, services] = await Promise.all([
     api('patients', 'GET', { order:'created_at.desc' }),
     api('appointments', 'GET', { order:'created_at.desc' }),
     api('staff', 'GET', { order:'created_at.desc' }),
-    api('queue_state', 'GET', { eq:'id.1' }),
     api('queue_stations', 'GET', { order:'sort_order.asc' }),
     api('queue_activity', 'GET', { order:'created_at.desc', limit:8 }),
     api('schedules', 'GET', { order:'date.asc' }),
@@ -680,13 +680,7 @@ async function loadAllData(){
   }));
   DB.services = (services||[]).map(r=>({ dbId:r.id, name:r.name, status:r.status }));
 
-  const q = (queueStateArr && queueStateArr[0]) || {};
-  DB.queue.currentNumber = q.current_number || 'A-1';
-  DB.queue.currentPatient = q.current_patient || '—';
-  DB.queue.currentService = q.current_service || '—';
-  DB.queue.nextNumber = q.next_number || 'A-2';
-  DB.queue.waiting = q.waiting ?? 0;
-  DB.queue.paused = !!q.paused;
+  /* Ang live queue wala na nagasalig sa old global queue_state; appointments per doctor na ang source of truth. */
   DB.queue.stations = (stations||[]).map(r=>({ dbId:r.id, name:r.name, status:r.status, doctorId:r.doctor_id||null, doctorName:r.doctor_name||'' }));
   DB.queue.activity = (activity||[]).map(r=>({ label:r.label, meta:r.meta, type:r.type }));
 }
@@ -1201,9 +1195,9 @@ async function setApptStatus(dbId, status){
 
 /**
  * The real "check-in" action — confirms the patient arrived AND assigns
- * them an actual queue number, pulled from the live queue_state ticker.
- * This is what makes "your number" mean something specific to a patient,
- * instead of just watching a shared counter with no connection to them.
+ * an actual queue number for the assigned doctor's TODAY queue.
+ * The appointments table is the source of truth for waiting/serving state,
+ * so the old clinic-wide queue_state counter is no longer used here.
  */
 
 /* Ini nagahimo sang permanent A, B, C ... AA prefix gamit ang staff ID sang doctor. */
@@ -1300,8 +1294,7 @@ async function confirmArrivalAndAssignQueue(dbId){
     const assignedNumber=nextDoctorQueueNumber(a.doctor);
     await api('appointments','PATCH',{id:dbId,body:{status:'Approved',queue_number:assignedNumber}});
     a.status='Approved'; a.queueNumber=assignedNumber;
-    DB.queue.waiting=(DB.queue.waiting||0)+1;
-    try{ await updateQueueState({waiting:DB.queue.waiting}); }catch(e){}
+    /* Waiting count is now derived automatically from today's Approved appointments for this doctor. */
     toast(`Checked in — ${assignedNumber} · ${a.doctor}.`); navigate(currentPage);
   }catch(err){toast('Error: '+err.message,true);}
 }
@@ -2179,12 +2172,6 @@ function openPatientModal(){ toast('Patients are added automatically when they c
 /* =========================================================
    QUEUE CONTROLS
    ========================================================= */
-function incQueueNum(code){
-  const m = code.match(/^([A-Za-z]+)-(\d+)$/);
-  if(!m) return code;
-  const n = String(Number(m[2])+1).padStart(m[2].length,'0');
-  return `${m[1]}-${n}`;
-}
 /* Ini nagapangita sang room/station nga gin-assign sa isa ka doctor. */
 function stationForDoctor(doctor){
   const st=DB.queue.stations.find(x=>String(x.doctorName||'').trim().toLowerCase()===String(doctor||'').trim().toLowerCase());
@@ -2264,47 +2251,7 @@ async function addActivity(label, type){
   DB.queue.activity.unshift({ label, meta, type });
   DB.queue.activity = DB.queue.activity.slice(0,8);
 }
-async function updateQueueState(fields){
-  try{ await api('queue_state','PATCH',{ eq:'id.1', body: fields }); return true; }
-  catch(err){ toast('Error: '+err.message, true); return false; }
-}
-async function queueNext(){
-  const q = DB.queue;
-  const newCurrent = q.nextNumber;
-  const newNext = incQueueNum(q.nextNumber);
-  const newWaiting = Math.max(0, q.waiting - 1);
-  const ok = await updateQueueState({ current_number:newCurrent, next_number:newNext, waiting:newWaiting });
-  if(!ok) return;
-  await addActivity(`${q.currentNumber} Completed`, 'ok');
-  q.currentNumber = newCurrent; q.nextNumber = newNext; q.waiting = newWaiting;
-  toast(`Now serving ${q.currentNumber}.`); navigate('queue');
-}
-function queueRecall(){ toast(`Recalling ${DB.queue.currentNumber}...`); }
-async function queueNoShow(){
-  const q = DB.queue;
-  const newCurrent = q.nextNumber;
-  const newNext = incQueueNum(q.nextNumber);
-  const newWaiting = Math.max(0, q.waiting - 1);
-  const ok = await updateQueueState({ current_number:newCurrent, next_number:newNext, waiting:newWaiting });
-  if(!ok) return;
-  await addActivity(`${q.currentNumber} No Show`, 'warn');
-  q.currentNumber = newCurrent; q.nextNumber = newNext; q.waiting = newWaiting;
-  toast('Marked as no-show. Moved to next patient.'); navigate('queue');
-}
-async function queuePause(){
-  const ok = await updateQueueState({ paused: !DB.queue.paused });
-  if(!ok) return;
-  DB.queue.paused = !DB.queue.paused;
-  toast(DB.queue.paused ? 'Queue paused.' : 'Queue resumed.'); navigate('queue');
-}
-async function queueReset(){
-  if(!confirm('Reset the queue back to A-0?')) return;
-  const ok = await updateQueueState({ current_number:'A-1', next_number:'A-2', waiting:0 });
-  if(!ok) return;
-  DB.queue.currentNumber='A-0'; DB.queue.nextNumber='A-1'; DB.queue.waiting=0;
-  await addActivity('Queue Reset', 'warn');
-  toast('Queue has been reset.'); navigate('queue');
-}
+/* Ang old clinic-wide queue_state controls gin-remove na; per-doctor appointments na ang active queue source. */
 async function toggleStation(dbId){
   const s = DB.queue.stations.find(x=>x.dbId===dbId); if(!s) return;
   const newStatus = s.status==='ACTIVE' ? 'CLOSED' : 'ACTIVE';
