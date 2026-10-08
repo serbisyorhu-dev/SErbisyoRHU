@@ -1191,6 +1191,178 @@ def admin_call_next_atomic():
         )
 
 
+# Ini nagahimo sang family-member patient record nga naka-link sa logged-in account.
+@data_bp.route('/api/family-member', methods=['POST'])
+def add_family_member_atomic():
+    token = get_bearer_token()
+
+    if not token:
+        return json_response(
+            {
+                'error': 'Not authenticated. Please log in.'
+            },
+            401
+        )
+
+    body = (
+        request.get_json(
+            silent=True
+        )
+        or {}
+    )
+
+    name = str(
+        body.get('name')
+        or ''
+    ).strip()
+
+    relationship = str(
+        body.get('relationship')
+        or ''
+    ).strip()
+
+    contact = str(
+        body.get('contact')
+        or ''
+    ).strip()
+
+    try:
+        age = int(
+            body.get('age')
+        )
+
+    except (
+        TypeError,
+        ValueError
+    ):
+        return json_response(
+            {
+                'error': 'Enter a valid age.'
+            },
+            400
+        )
+
+    if not name:
+        return json_response(
+            {
+                'error': 'Family member name is required.'
+            },
+            400
+        )
+
+    if not relationship:
+        return json_response(
+            {
+                'error': 'Relationship is required.'
+            },
+            400
+        )
+
+    if age < 0 or age > 130:
+        return json_response(
+            {
+                'error': 'Enter a valid age.'
+            },
+            400
+        )
+
+    try:
+        # Ini naga-call sang SECURITY DEFINER RPC para owner_user_id amo gid ang auth.uid().
+        status, res = supabase_request(
+            'POST',
+            '/rest/v1/rpc/add_family_member_atomic',
+            {
+                'p_name': name,
+                'p_relationship': relationship,
+                'p_age': age,
+                'p_contact': contact
+            },
+            token
+        )
+
+        if status >= 400:
+            message = (
+                'Could not add family member.'
+            )
+
+            if isinstance(
+                res,
+                dict
+            ):
+                message = (
+                    res.get('message')
+                    or res.get('error')
+                    or message
+                )
+
+            normalized_message = (
+                str(message)
+                .strip()
+                .lower()
+            )
+
+            if (
+                'not authenticated' in normalized_message
+                or 'not authorized' in normalized_message
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    403
+                )
+
+            if (
+                'duplicate' in normalized_message
+                or 'already exists' in normalized_message
+            ):
+                return json_response(
+                    {
+                        'error': message
+                    },
+                    409
+                )
+
+            return json_response(
+                {
+                    'error': message
+                },
+                400
+            )
+
+        rows = (
+            res
+            if isinstance(res, list)
+            else []
+        )
+
+        if not rows:
+            return json_response(
+                {
+                    'error': 'Family member was not created.'
+                },
+                500
+            )
+
+        return json_response(
+            rows[0],
+            201
+        )
+
+    except Exception as error:
+        print(
+            'ADD FAMILY MEMBER ERROR:',
+            error
+        )
+
+        return json_response(
+            {
+                'error': 'Could not add family member.'
+            },
+            500
+        )
+
+
 # Ini nagabalik lang sang appointments nga assigned sa logged-in doctor.
 @data_bp.route('/api/doctor/appointments', methods=['GET'])
 def doctor_appointments_secure():
