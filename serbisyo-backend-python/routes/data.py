@@ -2144,6 +2144,129 @@ def admin_release_appointment_atomic():
         )
 
 
+# Ini naga-record sang successful staff LOGIN ukon LOGOUT sa permanent audit log.
+@data_bp.route('/api/admin/audit-log', methods=['POST'])
+def record_staff_audit_log():
+    token = get_bearer_token()
+
+    if not token:
+        return json_response(
+            {'error': 'Not authenticated. Please log in.'},
+            401
+        )
+
+    body = request.get_json(silent=True) or {}
+    action = str(body.get('action') or '').strip().upper()
+
+    if action not in ('LOGIN', 'LOGOUT'):
+        return json_response(
+            {'error': 'Audit action must be LOGIN or LOGOUT.'},
+            400
+        )
+
+    try:
+        # Ini sa database naga-resolve sang actual auth.uid() para indi ma-fake ang user name/email.
+        status, res = supabase_request(
+            'POST',
+            '/rest/v1/rpc/record_staff_activity',
+            {'p_action': action},
+            token
+        )
+
+        if status >= 400:
+            message = 'Could not record staff activity.'
+
+            if isinstance(res, dict):
+                message = (
+                    res.get('message')
+                    or res.get('error')
+                    or message
+                )
+
+            normalized = str(message).strip().lower()
+
+            if (
+                'not authenticated' in normalized
+                or 'not authorized' in normalized
+                or 'staff account' in normalized
+            ):
+                return json_response({'error': message}, 403)
+
+            return json_response({'error': message}, 400)
+
+        rows = res if isinstance(res, list) else []
+
+        if not rows:
+            return json_response(
+                {'error': 'Staff activity was not recorded.'},
+                500
+            )
+
+        return json_response(rows[0], 201)
+
+    except Exception as error:
+        print('STAFF AUDIT LOG ERROR:', error)
+
+        return json_response(
+            {'error': 'Could not record staff activity.'},
+            500
+        )
+
+
+# Ini nagabalik sang LOGIN/LOGOUT records para subong nga adlaw sa Asia/Manila.
+@data_bp.route('/api/admin/audit-logs', methods=['GET'])
+def get_staff_audit_logs_today():
+    token = get_bearer_token()
+
+    if not token:
+        return json_response(
+            {'error': 'Not authenticated. Please log in.'},
+            401
+        )
+
+    try:
+        status, res = supabase_request(
+            'POST',
+            '/rest/v1/rpc/get_staff_activity_logs_today',
+            {},
+            token
+        )
+
+        if status >= 400:
+            message = 'Could not load staff activity logs.'
+
+            if isinstance(res, dict):
+                message = (
+                    res.get('message')
+                    or res.get('error')
+                    or message
+                )
+
+            normalized = str(message).strip().lower()
+
+            if (
+                'not authenticated' in normalized
+                or 'not authorized' in normalized
+                or 'staff account' in normalized
+            ):
+                return json_response({'error': message}, 403)
+
+            return json_response({'error': message}, 400)
+
+        return json_response(
+            res if isinstance(res, list) else [],
+            200
+        )
+
+    except Exception as error:
+        print('STAFF AUDIT LOG LOAD ERROR:', error)
+
+        return json_response(
+            {'error': 'Could not load staff activity logs.'},
+            500
+        )
+
+
 @data_bp.route('/api/data', methods=['GET', 'POST', 'PUT', 'PATCH', 'DELETE'])
 def data_proxy():
     token = get_bearer_token()
