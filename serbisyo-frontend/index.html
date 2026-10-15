@@ -526,6 +526,7 @@ function initials(name){ return (name||'?').split(' ').filter(Boolean).slice(0,2
    a brand-new install starts completely empty until real records are added. */
 let DB = {
   patients: [], appointments: [], staff: [], schedules: [], announcements: [], services: [],
+  auditLogs: [],
   /* Per-doctor live queue comes from appointments; diri stations kag activity na lang ang queue cache. */
   queue: { stations:[], activity:[] }
 };
@@ -612,6 +613,69 @@ async function authApi(payload){
   if(!res.ok){ throw new Error(data.error || 'Request failed.'); }
   return data;
 }
+
+/* Ini naga-record kag naga-load sang permanent staff LOGIN/LOGOUT audit history. */
+async function recordStaffAudit(action){
+  const token=getToken();
+  if(!token) return null;
+
+  const res=await safeFetch(`${BACKEND_URL}/api/admin/audit-log`,{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'Authorization':`Bearer ${token}`
+    },
+    body:JSON.stringify({action})
+  });
+
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error||data.message||`Request failed (${res.status})`);
+  return data;
+}
+
+async function loadStaffAuditLogs(){
+  const token=getToken();
+  if(!token){
+    DB.auditLogs=[];
+    return [];
+  }
+
+  const res=await safeFetch(`${BACKEND_URL}/api/admin/audit-logs`,{
+    headers:{'Authorization':`Bearer ${token}`}
+  });
+
+  const data=await res.json().catch(()=>[]);
+  if(!res.ok){
+    const message=(data&&data.error)||`Request failed (${res.status})`;
+    throw new Error(message);
+  }
+
+  DB.auditLogs=(Array.isArray(data)?data:[]).map(r=>({
+    id:r.id,
+    userId:r.user_id||'',
+    staffId:r.staff_id||null,
+    name:r.name||r.email||'Unknown Staff',
+    email:r.email||'',
+    action:String(r.action||'').toUpperCase(),
+    createdAt:r.created_at||''
+  }));
+
+  return DB.auditLogs;
+}
+
+function auditTime(value){
+  if(!value) return '—';
+  const d=new Date(value);
+  if(Number.isNaN(d.getTime())) return '—';
+
+  return new Intl.DateTimeFormat('en-US',{
+    timeZone:'Asia/Manila',
+    hour:'2-digit',
+    minute:'2-digit',
+    second:'2-digit'
+  }).format(d);
+}
+
 
 /* ---------- toast ---------- */
 let toastTimer;
@@ -795,6 +859,7 @@ document.getElementById('login-form').addEventListener('submit', async (e)=>{
         setRefreshToken(data.refresh_token);
         localStorage.setItem('serbisyo_user', JSON.stringify(data.user));
         await ensureStaffRecord(name,email,currentUser.id,staffJobRole,staffPosition);
+        try{ await recordStaffAudit('LOGIN'); }catch(err){ console.warn('Could not record login audit:',err.message); }
         showMsg('Account created! Signing you in…','ok');
         await enterApp();
       } else {
@@ -811,6 +876,7 @@ document.getElementById('login-form').addEventListener('submit', async (e)=>{
     setToken(data.access_token);
     setRefreshToken(data.refresh_token);
     localStorage.setItem('serbisyo_user', JSON.stringify(data.user));
+    try{ await recordStaffAudit('LOGIN'); }catch(err){ console.warn('Could not record login audit:',err.message); }
     await enterApp();
   } catch(err){
     showMsg(err.message || 'Something went wrong. Please try again.', 'err');
@@ -862,6 +928,8 @@ async function enterApp(){
 }
 
 document.getElementById('logout-btn').addEventListener('click', async ()=>{
+  /* LOGOUT audit must be written before Supabase invalidates the access token. */
+  try{ await recordStaffAudit('LOGOUT'); }catch(err){ console.warn('Could not record logout audit:',err.message); }
   try{ await authApi({ action:'logout' }); } catch(e){ /* ignore */ }
   clearToken();
   currentUser = null;
@@ -3136,6 +3204,56 @@ function renderReports(){
             ${r.intake.map(x=>`<div class="bar-col"><div class="bar" style="height:${(x.v/maxIntake*100)}%;"></div><span class="bar-label">${x.m}</span></div>`).join('')}
           </div>` : `<div class="empty-state small">No appointments yet — this chart will fill in as you schedule them.</div>`}
         </div>
+
+        <!-- Separate security container: indi ini sulod sang Patient Intake Trends. -->
+        <div class="card audit-log-card" style="padding:22px; margin-top:18px;">
+          <div class="row between" style="gap:12px; flex-wrap:wrap; margin-bottom:14px;">
+            <div>
+              <h4 style="font-size:15px; margin-bottom:2px;">System Access Activity</h4>
+              <p class="small muted">Successful staff login and logout history for today · Asia/Manila.</p>
+            </div>
+            <span class="pill pill-blue">${DB.auditLogs.length} event${DB.auditLogs.length===1?'':'s'}</span>
+          </div>
+
+          ${DB.auditLogs.length ? `
+            <div style="overflow:auto; max-height:360px;">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Staff</th>
+                    <th>Action</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${DB.auditLogs.map(log=>`
+                    <tr>
+                      <td>
+                        <div class="name-cell">
+                          <div class="avatar-sm" style="background:${colorFor(log.name)}">${initials(log.name)}</div>
+                          <div class="meta">
+                            <b>${log.name}</b>
+                            <span>${log.email||'Staff account'}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span class="pill ${log.action==='LOGIN'?'pill-green':'pill-gray'}">
+                          ${log.action==='LOGIN'?'↪ LOGIN':'↩ LOGOUT'}
+                        </span>
+                      </td>
+                      <td style="font-family:var(--font-mono);">${auditTime(log.createdAt)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          ` : `
+            <div class="empty-state small" style="padding:28px 12px;">
+              No staff login/logout activity has been recorded today.
+            </div>
+          `}
+        </div>
       </div>
       <div>
         <div class="card" style="padding:20px; text-align:center;">
@@ -3191,6 +3309,30 @@ function renderReports(){
 /* =========================================================
    POST-RENDER HOOKS
    ========================================================= */
+function bindReportControls(){
+  document.querySelectorAll('#report-period-tabs button').forEach(b=>{
+    b.addEventListener('click', ()=>{ reportPeriod=b.dataset.p; navigate('reports'); });
+  });
+
+  const prevBtn=document.getElementById('report-prev-btn');
+  if(prevBtn) prevBtn.addEventListener('click', ()=>{
+    reportAnchorDate=shiftPeriod(reportPeriod,reportAnchorDate,-1);
+    navigate('reports');
+  });
+
+  const nextBtn=document.getElementById('report-next-btn');
+  if(nextBtn) nextBtn.addEventListener('click', ()=>{
+    reportAnchorDate=shiftPeriod(reportPeriod,reportAnchorDate,1);
+    navigate('reports');
+  });
+
+  const todayBtn=document.getElementById('report-today-btn');
+  if(todayBtn) todayBtn.addEventListener('click', ()=>{
+    reportAnchorDate=new Date();
+    navigate('reports');
+  });
+}
+
 function afterRender(page){
   if(page==='dashboard'){
     document.querySelectorAll('#dashboard-period-tabs button').forEach(b=>{
@@ -3201,15 +3343,15 @@ function afterRender(page){
     });
   }
   if(page==='reports'){
-    document.querySelectorAll('#report-period-tabs button').forEach(b=>{
-      b.addEventListener('click', ()=>{ reportPeriod = b.dataset.p; navigate('reports'); });
-    });
-    const prevBtn = document.getElementById('report-prev-btn');
-    if(prevBtn) prevBtn.addEventListener('click', ()=>{ reportAnchorDate = shiftPeriod(reportPeriod, reportAnchorDate, -1); navigate('reports'); });
-    const nextBtn = document.getElementById('report-next-btn');
-    if(nextBtn) nextBtn.addEventListener('click', ()=>{ reportAnchorDate = shiftPeriod(reportPeriod, reportAnchorDate, 1); navigate('reports'); });
-    const todayBtn = document.getElementById('report-today-btn');
-    if(todayBtn) todayBtn.addEventListener('click', ()=>{ reportAnchorDate = new Date(); navigate('reports'); });
+    /* Ini naga-refresh sang today's security access log kada open sang Reports. */
+    loadStaffAuditLogs().then(()=>{
+      if(currentPage==='reports'){
+        document.getElementById('page-content').innerHTML=renderReports();
+        bindReportControls();
+      }
+    }).catch(err=>console.warn('Could not load audit logs:',err.message));
+
+    bindReportControls();
   }
   if(page==='appointments'){
     document.querySelectorAll('#appt-tabs button').forEach(b=>{
