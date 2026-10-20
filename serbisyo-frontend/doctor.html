@@ -46,7 +46,7 @@
 
 .danger{background:var(--red);color:#fff}.bookings-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0}.status-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.booking-select{width:18px;height:18px;accent-color:var(--blue)}
 
-.delete-booking-btn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;background:#fff;border:1px solid var(--line);border-radius:14px;color:var(--ink-soft);cursor:pointer;flex-shrink:0}.delete-booking-btn:hover{background:#fff5f4;border-color:var(--red);color:var(--red)}.delete-booking-btn:focus-visible{outline:2px solid var(--blue);outline-offset:3px}.delete-booking-btn:disabled{opacity:.5;cursor:not-allowed}.delete-booking-btn svg{width:18px;height:18px;pointer-events:none}
+.delete-booking-btn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;background:#fff;border:1px solid var(--line);border-radius:14px;color:var(--ink-soft);cursor:pointer;flex-shrink:0}.delete-booking-btn:hover{background:#fff5f4;border-color:var(--red);color:var(--red)}.delete-booking-btn:focus-visible{outline:2px solid var(--blue);outline-offset:3px}.delete-booking-btn:disabled{opacity:.5;cursor:not-allowed}.delete-booking-btn svg{width:18px;height:18px;pointer-events:none}.priority-pill{display:inline-flex;align-items:center;padding:5px 10px;border-radius:999px;font-size:11px;font-weight:800}.priority-regular{background:#eef1f4;color:#5b6b7a}.priority-special{background:#fff3d9;color:#996400}.priority-emergency{background:#fbe9e8;color:var(--red)}.conflict-note{margin-top:12px;padding:12px 14px;border-radius:12px;background:#fff3d9;border:1px solid #f1d69a;color:#7d5a09;font-size:13px;line-height:1.5}.requeue{background:#fff3d9;color:#8a6200;border:1px solid #ebcf8b}
 
 </style>
 
@@ -122,7 +122,7 @@
 
         <div class="page-head"><h1>Doctor Queue</h1><p>Manage only the patient currently assigned to your queue.</p></div>
 
-        <section id="current" class="card current-card"><div class="queue-label">● NOW SERVING</div><div class="queue" id="currentNum">—</div><h3 id="currentPatient">No patient currently being served</h3><p class="muted" id="currentService"></p><p class="muted" id="currentSchedule"></p><div class="current-actions"><button class="btn primary" id="callNextBtn" type="button">Call Next Patient</button><button class="btn outline" id="recallBtn" type="button">Recall Patient</button><button class="btn success hidden" id="doneBtn" type="button">✓ Patient Done</button></div><p id="queueMessage" class="muted"></p></section>
+        <section id="current" class="card current-card"><div class="queue-label">● NOW SERVING</div><div class="queue" id="currentNum">—</div><h3 id="currentPatient">No patient currently being served</h3><p class="muted" id="currentService"></p><p class="muted" id="currentSchedule"></p><div id="currentPriority" style="margin-top:10px;"></div><div id="currentConflictNote" class="conflict-note hidden"></div><div class="current-actions"><button class="btn primary" id="callNextBtn" type="button">Call Next Patient</button><button class="btn outline" id="recallBtn" type="button">Recall Patient</button><button class="btn requeue hidden" id="noShowBtn" type="button">No Show</button><button class="btn success hidden" id="doneBtn" type="button">✓ Patient Done</button></div><p id="queueMessage" class="muted"></p></section>
 
       </div>
 
@@ -132,7 +132,7 @@
 
         <div class="page-head"><h1>Waiting Patients</h1><p>Checked-in patients assigned to your doctor account.</p></div>
 
-        <section id="waiting" class="card section-card"><h3>My Waiting Queue</h3><p class="muted">Only checked-in patients assigned to you are shown here.</p><div class="table-wrap"><table><thead><tr><th>Queue</th><th>Patient</th><th>Service</th><th>Date</th><th>Time</th><th>Status</th></tr></thead><tbody id="waitingQueue"></tbody></table></div></section>
+        <section id="waiting" class="card section-card"><h3>My Waiting Queue</h3><p class="muted">Priority patients are shown first. A note appears when the patient is currently being served in another appointment.</p><div class="table-wrap"><table><thead><tr><th>Queue</th><th>Patient</th><th>Priority</th><th>Service</th><th>Date</th><th>Time</th><th>Note</th><th>Status</th></tr></thead><tbody id="waitingQueue"></tbody></table></div></section>
 
       </div>
 
@@ -176,15 +176,25 @@ let doctor = null;
 
 let appointments = [];
 
+let queueContext = new Map();
+
 let assignedStation = null;
 
 let isLoading = false;
 
 let mutationBusy = false;
 
+let autoRoomRequeueBusy = false;
+
 const selectedBookingIds = new Set();
 
 const recallBtn = document.getElementById('recallBtn');
+
+const noShowBtn = document.getElementById('noShowBtn');
+
+const currentPriority = document.getElementById('currentPriority');
+
+const currentConflictNote = document.getElementById('currentConflictNote');
 
 const selectAllBookings = document.getElementById('selectAllBookings');
 
@@ -892,6 +902,32 @@ async function loadAppointments() {
 
       });
 
+    await loadQueueContext();
+
+    /* Kon ang gin-call nga patient ara pa sa iban nga room/appointment, automatic siya ibalik sa pinaka-ulihi. */
+    const current = getCurrentPatient();
+    const context = getQueueContext(current);
+    if (current && context?.other_serving && !autoRoomRequeueBusy) {
+      autoRoomRequeueBusy = true;
+      try {
+        const moved = await req('/api/doctor/requeue-current', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({appointment_id: current.id})
+        });
+        const refreshedRows = await req('/api/doctor/appointments');
+        appointments = (Array.isArray(refreshedRows) ? refreshedRows : [])
+          .filter(appointment => normalize(appointment.doctor_name) === doctorNameNormalized);
+        await loadQueueContext();
+        queueMessage.textContent = `Queue ${current.queue_number || '—'} was automatically moved to the end as ${moved.queue_number || 'a new queue number'} because the patient is still in another room.`;
+      } catch (error) {
+        console.error('Automatic other-room requeue failed:', error);
+        queueMessage.textContent = error.message || 'Patient is in another room, but the automatic move-to-end failed.';
+      } finally {
+        autoRoomRequeueBusy = false;
+      }
+    }
+
     render();
 
   } catch (error) {
@@ -914,6 +950,24 @@ async function loadAppointments() {
 
   }
 
+}
+
+/* Ini nagakuha sang limited cross-room context para makita kon ang patient ara sa iban nga doctor appointment. */
+async function loadQueueContext() {
+  try {
+    const rows = await req('/api/doctor/queue-context');
+    queueContext = new Map(
+      (Array.isArray(rows) ? rows : []).map(row => [String(row.appointment_id), row])
+    );
+  } catch (error) {
+    console.error('Failed to load patient queue context:', error);
+    queueContext = new Map();
+  }
+}
+
+function getQueueContext(appointment) {
+  if (!appointment) return null;
+  return queueContext.get(String(appointment.id)) || null;
 }
 
 /* =========================================================
@@ -1046,16 +1100,27 @@ function queueValue(queueNumber) {
 
 }
 
+function priorityRank(value) {
+  const p = normalize(value || 'Regular');
+  if (p === 'critical') return 0;
+  if (p === 'emergency') return 1;
+  if (['pwd', 'senior citizen', 'pregnant'].includes(p)) return 2;
+  return 3;
+}
+
+function priorityBadge(appointment) {
+  const value = String(appointment?.priority_type || 'Regular');
+  const rank = priorityRank(value);
+  const cls = rank <= 1 ? 'priority-emergency' : rank === 2 ? 'priority-special' : 'priority-regular';
+  return `<span class="priority-pill ${cls}">${escapeHTML(value)}</span>`;
+}
+
 function sortQueue(a, b) {
-
-  return (
-
-    queueValue(a.queue_number) -
-
-    queueValue(b.queue_number)
-
-  );
-
+  const deferredDiff = Number(!!a.queue_deferred) - Number(!!b.queue_deferred);
+  if (deferredDiff !== 0) return deferredDiff;
+  const priorityDiff = priorityRank(a.priority_type) - priorityRank(b.priority_type);
+  if (priorityDiff !== 0) return priorityDiff;
+  return queueValue(a.queue_number) - queueValue(b.queue_number);
 }
 
 function getWaitingPatients() {
@@ -1192,6 +1257,21 @@ function renderCurrentPatient() {
 
       .join(' • ');
 
+    currentPriority.innerHTML = priorityBadge(current);
+
+    const conflict = getQueueContext(current);
+    if (conflict?.other_serving) {
+      const details = [conflict.other_doctor, conflict.other_service, conflict.other_station].filter(Boolean).join(' · ');
+      currentConflictNote.textContent = 'Patient is currently being served in another appointment' + (details ? `: ${details}.` : '.') + ' The system will automatically move this queue number to the end.';
+      currentConflictNote.classList.remove('hidden');
+    } else {
+      currentConflictNote.textContent = '';
+      currentConflictNote.classList.add('hidden');
+    }
+
+    noShowBtn.classList.remove('hidden');
+    noShowBtn.disabled = mutationBusy;
+
     doneBtn.classList.remove(
 
       'hidden'
@@ -1219,6 +1299,12 @@ function renderCurrentPatient() {
   currentService.textContent = '';
 
   currentSchedule.textContent = '';
+
+  currentPriority.innerHTML = '';
+  currentConflictNote.textContent = '';
+  currentConflictNote.classList.add('hidden');
+  noShowBtn.classList.add('hidden');
+  noShowBtn.disabled = true;
 
   doneBtn.classList.add(
 
@@ -1267,115 +1353,30 @@ function renderCurrentPatient() {
 \========================================================= */
 
 function renderWaitingQueue() {
-
-  const waiting =
-
-    getWaitingPatients();
+  const waiting = getWaitingPatients();
 
   if (!waiting.length) {
-
-    waitingQueue.innerHTML = `
-
-      <tr>
-
-        <td
-
-          colspan="6"
-
-          class="empty"
-
-        >
-
-          No patients are currently waiting.
-
-        </td>
-
-      </tr>
-
-    `;
-
+    waitingQueue.innerHTML = `<tr><td colspan="8" class="empty">No patients are currently waiting.</td></tr>`;
     return;
-
   }
 
-  waitingQueue.innerHTML =
+  waitingQueue.innerHTML = waiting.map(appointment => {
+    const context = getQueueContext(appointment);
+    const note = context?.other_serving
+      ? `In another appointment${context.other_doctor ? ' with ' + context.other_doctor : ''}${context.other_station ? ' · ' + context.other_station : ''}`
+      : (appointment.queue_deferred ? 'Moved to end of queue' : '—');
 
-    waiting
-
-      .map(appointment => `
-
-        <tr>
-
-          <td>
-
-            <strong>
-
-              ${escapeHTML(
-
-                appointment.queue_number
-
-              )}
-
-            </strong>
-
-          </td>
-
-          <td>
-
-            ${escapeHTML(
-
-              appointment.patient || '—'
-
-            )}
-
-          </td>
-
-          <td>
-
-            ${escapeHTML(
-
-              appointment.service || '—'
-
-            )}
-
-          </td>
-
-          <td>
-
-            ${escapeHTML(
-
-              appointment.date || '—'
-
-            )}
-
-          </td>
-
-          <td>
-
-            ${escapeHTML(
-
-              appointment.time || '—'
-
-            )}
-
-          </td>
-
-          <td>
-
-            ${statusBadge(
-
-              appointment.status
-
-            )}
-
-          </td>
-
-        </tr>
-
-      `)
-
-      .join('');
-
+    return `<tr>
+      <td><strong>${escapeHTML(appointment.queue_number || '—')}</strong></td>
+      <td>${escapeHTML(appointment.patient || '—')}</td>
+      <td>${priorityBadge(appointment)}</td>
+      <td>${escapeHTML(appointment.service || '—')}</td>
+      <td>${escapeHTML(appointment.date || '—')}</td>
+      <td>${escapeHTML(appointment.time || '—')}</td>
+      <td>${context?.other_serving ? `<span class="status status-approved">${escapeHTML(note)}</span>` : `<span class="muted">${escapeHTML(note)}</span>`}</td>
+      <td>${statusBadge(appointment.status)}</td>
+    </tr>`;
+  }).join('');
 }
 
 /* =========================================================
@@ -1600,6 +1601,41 @@ async function recallCurrentPatient() {
   }
 }
 
+/* Ini nga No Show wala naga-cancel sang appointment; ginabalik lang ang patient sa pinaka-ulihi sang queue. */
+async function noShowCurrentPatient() {
+  if (mutationBusy || isLoading) return;
+  const current = getCurrentPatient();
+  if (!current) {
+    queueMessage.textContent = 'There is no current patient to mark as no show.';
+    return;
+  }
+
+  mutationBusy = true;
+  noShowBtn.disabled = true;
+  recallBtn.disabled = true;
+  doneBtn.disabled = true;
+  callNextBtn.disabled = true;
+
+  try {
+    const moved = await req('/api/doctor/requeue-current', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({appointment_id: current.id})
+    });
+
+    await loadAppointments();
+    queueMessage.textContent = `No show — ${current.queue_number || 'queue'} was moved to the end as ${moved.queue_number || 'a new queue number'}.`;
+  } catch (error) {
+    console.error(error);
+    queueMessage.textContent = error.message || 'Unable to move the no-show patient to the end of the queue.';
+  } finally {
+    mutationBusy = false;
+    recallBtn.disabled = false;
+    doneBtn.disabled = false;
+    render();
+  }
+}
+
 /* =========================================================
    CALL NEXT PATIENT
 
@@ -1813,6 +1849,8 @@ function logoutDoctor() {
 
   appointments = [];
 
+  queueContext = new Map();
+
   location.reload();
 
 }
@@ -1824,6 +1862,8 @@ function logoutDoctor() {
 \========================================================= */
 
 recallBtn.addEventListener('click', recallCurrentPatient);
+
+noShowBtn.addEventListener('click', noShowCurrentPatient);
 
 selectAllBookings.addEventListener('change', () => {
 
