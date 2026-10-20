@@ -1774,6 +1774,39 @@ def doctor_requeue_current_atomic():
         return json_response({'error': 'Could not move this patient to the end of the queue.'}, 500)
 
 
+# Ini naga-handle sang two-stage No Show: una requeue, ikaduha final No Show.
+@data_bp.route('/api/doctor/no-show-current', methods=['POST'])
+def doctor_no_show_current_atomic():
+    token = get_bearer_token()
+    if not token:
+        return json_response({'error': 'Not authenticated. Please log in.'}, 401)
+    body = request.get_json(silent=True) or {}
+    appointment_id = body.get('appointment_id')
+    try:
+        appointment_id = int(appointment_id)
+    except (TypeError, ValueError):
+        return json_response({'error': 'A valid appointment is required.'}, 400)
+    try:
+        status, res = supabase_request('POST','/rest/v1/rpc/doctor_no_show_current_atomic',{'p_appointment_id': appointment_id},token)
+        if status >= 400:
+            message = 'Could not process this no-show patient.'
+            if isinstance(res, dict):
+                message = res.get('message') or res.get('error') or message
+            normalized = str(message).strip().lower()
+            if any(text in normalized for text in ('appointment not found','not assigned to this doctor','not for today','not currently serving')):
+                return json_response({'error': message}, 409)
+            if 'not authenticated' in normalized or 'not authorized' in normalized or 'doctor account' in normalized:
+                return json_response({'error': message}, 403)
+            return json_response({'error': message}, 400)
+        rows = res if isinstance(res, list) else []
+        if not rows:
+            return json_response({'error': 'No-show update returned no result.'}, 500)
+        return json_response(rows[0], 200)
+    except Exception as error:
+        print('DOCTOR TWO-STAGE NO SHOW ERROR:', error)
+        return json_response({'error': 'Could not process this no-show patient.'}, 500)
+
+
 # Ini naga-complete sang current Serving appointment sang logged-in doctor atomically.
 @data_bp.route('/api/doctor/complete-current', methods=['POST'])
 def doctor_complete_current_atomic():
