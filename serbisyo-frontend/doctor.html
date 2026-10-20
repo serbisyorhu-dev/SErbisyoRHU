@@ -1115,6 +1115,17 @@ function priorityBadge(appointment) {
   return `<span class="priority-pill ${cls}">${escapeHTML(value)}</span>`;
 }
 
+function missedCallCount(appointment) {
+  const count = Number(appointment?.missed_call_count || 0);
+  return Number.isFinite(count) && count > 0 ? count : 0;
+}
+
+function noShowButtonLabel(appointment) {
+  return missedCallCount(appointment) >= 1
+    ? 'No Show (2/2 · Final)'
+    : 'No Show (1/2)';
+}
+
 function sortQueue(a, b) {
   const deferredDiff = Number(!!a.queue_deferred) - Number(!!b.queue_deferred);
   if (deferredDiff !== 0) return deferredDiff;
@@ -1271,6 +1282,7 @@ function renderCurrentPatient() {
 
     noShowBtn.classList.remove('hidden');
     noShowBtn.disabled = mutationBusy;
+    noShowBtn.textContent = noShowButtonLabel(current);
 
     doneBtn.classList.remove(
 
@@ -1362,9 +1374,17 @@ function renderWaitingQueue() {
 
   waitingQueue.innerHTML = waiting.map(appointment => {
     const context = getQueueContext(appointment);
+    const missed = missedCallCount(appointment);
+
     const note = context?.other_serving
+
       ? `In another appointment${context.other_doctor ? ' with ' + context.other_doctor : ''}${context.other_station ? ' · ' + context.other_station : ''}`
-      : (appointment.queue_deferred ? 'Moved to end of queue' : '—');
+
+      : missed > 0
+
+        ? `Missed call ${Math.min(missed, 2)}/2 · moved to end`
+
+        : (appointment.queue_deferred ? 'Moved to end of queue' : '—');
 
     return `<tr>
       <td><strong>${escapeHTML(appointment.queue_number || '—')}</strong></td>
@@ -1601,9 +1621,10 @@ async function recallCurrentPatient() {
   }
 }
 
-/* Ini nga No Show wala naga-cancel sang appointment; ginabalik lang ang patient sa pinaka-ulihi sang queue. */
+/* Ini nga No Show may duha ka chance: una ibalik sa ulihi, ikaduha final No Show na. */
 async function noShowCurrentPatient() {
   if (mutationBusy || isLoading) return;
+
   const current = getCurrentPatient();
   if (!current) {
     queueMessage.textContent = 'There is no current patient to mark as no show.';
@@ -1617,17 +1638,22 @@ async function noShowCurrentPatient() {
   callNextBtn.disabled = true;
 
   try {
-    const moved = await req('/api/doctor/requeue-current', {
+    const result = await req('/api/doctor/no-show-current', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({appointment_id: current.id})
     });
 
     await loadAppointments();
-    queueMessage.textContent = `No show — ${current.queue_number || 'queue'} was moved to the end as ${moved.queue_number || 'a new queue number'}.`;
+
+    if (String(result.status || '').toLowerCase() === 'no show') {
+      queueMessage.textContent = `${current.queue_number || 'Queue'} missed the second call and is now marked Final No Show.`;
+    } else {
+      queueMessage.textContent = `Missed call 1/2 — ${current.queue_number || 'queue'} was moved to the end as ${result.queue_number || 'a new queue number'}.`;
+    }
   } catch (error) {
     console.error(error);
-    queueMessage.textContent = error.message || 'Unable to move the no-show patient to the end of the queue.';
+    queueMessage.textContent = error.message || 'Unable to process the no-show patient.';
   } finally {
     mutationBusy = false;
     recallBtn.disabled = false;
