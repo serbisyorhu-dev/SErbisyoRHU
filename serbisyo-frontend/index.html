@@ -706,6 +706,7 @@ function mapAppointmentRows(rows){
     dbId:r.id, patient:r.patient, date:r.date, time:r.time, service:r.service, status:r.status,
     scheduleId:r.schedule_id, doctor:r.doctor_name||'', bookedAt:r.created_at, confirmationCode:r.confirmation_code||'',
     queueNumber:r.queue_number||'', userId:r.user_id||'', patientId:r.patient_id||null, bookedByUserId:r.booked_by_user_id||r.user_id||'',
+    priorityType:r.priority_type||'Regular', queueDeferred:!!r.queue_deferred,
     lastCalledAt:r.last_called_at||'', rating:r.rating||null, ratingComment:r.rating_comment||''
   }));
 }
@@ -1325,6 +1326,30 @@ function isTodayAppointment(a){
   return String(a?.date||'')===queueToday();
 }
 
+/* Ini nagahatag sang priority order: Critical/Emergency anay, sunod PWD/Senior/Pregnant, dayon Regular. */
+function priorityRank(value){
+  const p=String(value||'Regular').trim().toLowerCase();
+  if(p==='critical')return 0;
+  if(p==='emergency')return 1;
+  if(['pwd','senior citizen','pregnant'].includes(p))return 2;
+  return 3;
+}
+function priorityPillClass(value){
+  const p=String(value||'Regular').trim().toLowerCase();
+  if(p==='critical'||p==='emergency')return 'pill-red';
+  if(['pwd','senior citizen','pregnant'].includes(p))return 'pill-amber';
+  return 'pill-gray';
+}
+function appointmentQueueSort(a,b){
+  const deferredA=a.queueDeferred?1:0;
+  const deferredB=b.queueDeferred?1:0;
+  if(deferredA!==deferredB)return deferredA-deferredB;
+  const priorityDiff=priorityRank(a.priorityType)-priorityRank(b.priorityType);
+  if(priorityDiff!==0)return priorityDiff;
+  return (parseInt(String(a.queueNumber||'').split('-').pop(),10)||999999)-
+    (parseInt(String(b.queueNumber||'').split('-').pop(),10)||999999);
+}
+
 /* Ini naga-list sang Approved patients sang sini nga doctor para TODAY lang. */
 function doctorQueueList(doctor){
   return DB.appointments
@@ -1334,10 +1359,7 @@ function doctorQueueList(doctor){
       a.status==='Approved' &&
       a.queueNumber
     )
-    .sort((a,b)=>
-      (parseInt(String(a.queueNumber).split('-').pop(),10)||0) -
-      (parseInt(String(b.queueNumber).split('-').pop(),10)||0)
-    );
+    .sort(appointmentQueueSort);
 }
 
 /* Ini nagakuha sang current Serving patient sang doctor para TODAY lang. */
@@ -1376,7 +1398,7 @@ function queueDoctors(){
   return [...new Set(DB.staff.filter(x=>isDoctorRole(x.role)).map(x=>x.name).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
 }
 
-async function confirmArrivalAndAssignQueue(dbId){
+async function confirmArrivalAndAssignQueue(dbId, priorityType='Regular'){
   verifyRefreshGeneration++;
   verifyRefreshPromise=null;
 
@@ -1402,7 +1424,8 @@ async function confirmArrivalAndAssignQueue(dbId){
         ...(token?{'Authorization':`Bearer ${token}`}:{})
       },
       body:JSON.stringify({
-        appointment_id:dbId
+        appointment_id:dbId,
+        priority_type:priorityType
       })
     });
 
@@ -1415,6 +1438,8 @@ async function confirmArrivalAndAssignQueue(dbId){
     a.status=row.status||'Approved';
     a.queueNumber=row.queue_number||a.queueNumber||'';
     a.doctor=row.doctor_name||a.doctor;
+    a.priorityType=row.priority_type||priorityType||'Regular';
+    a.queueDeferred=!!row.queue_deferred;
 
     toast(`Checked in — ${a.queueNumber||'Queue assigned'} · ${a.doctor}.`);
     navigate(currentPage);
@@ -1738,8 +1763,30 @@ function renderVerifyCodeResult(){
         </div>
       ` : ''}
 
+      ${match.status==='Pending'?`
+        <div style="margin-top:16px; padding:14px; background:#fff; border:1px solid var(--line); border-radius:12px;">
+          <label style="display:block; font-size:11px; font-weight:700; letter-spacing:.5px; color:#7c8a97; text-transform:uppercase; margin-bottom:7px;">Patient Priority</label>
+          <select id="verify-priority-select" style="width:100%; padding:10px 12px; border-radius:10px; border:1.5px solid var(--line); background:#f7f9fb;">
+            <option value="Regular">Regular</option>
+            <option value="PWD">PWD</option>
+            <option value="Senior Citizen">Senior Citizen</option>
+            <option value="Pregnant">Pregnant</option>
+            <option value="Emergency">Emergency</option>
+            <option value="Critical">Critical</option>
+          </select>
+          <p class="small muted" style="margin-top:7px;">Critical and emergency cases are placed first, followed by PWD, senior citizen, and pregnant patients.</p>
+        </div>
+      `:''}
+
+      ${match.status!=='Pending'?`
+        <div style="margin-top:12px;">
+          <span class="small muted">Priority:</span>
+          <span class="pill ${priorityPillClass(match.priorityType)}">${match.priorityType||'Regular'}</span>
+        </div>
+      `:''}
+
       <div class="row gap8" style="margin-top:16px;">
-        ${match.status==='Pending'?`<button class="btn btn-sm btn-primary" onclick="confirmArrivalAndAssignQueue(${match.dbId}); document.getElementById('verify-code-input').value='';">Confirm Arrival</button>`:''}
+        ${match.status==='Pending'?`<button class="btn btn-sm btn-primary" onclick="confirmArrivalAndAssignQueue(${match.dbId},document.getElementById('verify-priority-select').value); document.getElementById('verify-code-input').value='';">Confirm Arrival</button>`:''}
         ${match.status==='Approved'?`<span class="small muted">Waiting for the doctor to call this queue number.</span>`:''}
         ${match.status==='Serving'?`<span class="small muted">This queue number is currently being served.</span>`:''}
       </div>
@@ -2335,6 +2382,16 @@ async function deleteAnnouncement(dbId){
    PATIENT RECORDS
    ========================================================= */
 let patientSearch = '';
+
+function patientCurrentPriority(patient){
+  const matches=DB.appointments.filter(a=>{
+    if(!isTodayAppointment(a)||!['Pending','Approved','Serving'].includes(a.status))return false;
+    if(a.patientId&&String(a.patientId)===String(patient.dbId))return true;
+    return String(a.patient||'').trim().toLowerCase()===String(patient.name||'').trim().toLowerCase();
+  }).sort((a,b)=>priorityRank(a.priorityType)-priorityRank(b.priorityType));
+  return matches.length?(matches[0].priorityType||'Regular'):'—';
+}
+
 function renderPatients(){
   const rows = DB.patients.filter(p=>{
     if(!patientSearch) return true;
@@ -2353,19 +2410,20 @@ function renderPatients(){
       </div>
       <div class="row between" style="margin-bottom:10px;"><h4 style="font-size:14px;">Recent Admissions</h4><span class="muted small">Showing ${rows.length} of ${DB.patients.length}</span></div>
       <table class="table">
-        <thead><tr><th>Full Name</th><th>Age</th><th>Contact</th><th>Email</th><th>Action</th></tr></thead>
+        <thead><tr><th>Full Name</th><th>Age</th><th>Priority</th><th>Contact</th><th>Email</th><th>Action</th></tr></thead>
         <tbody>
           ${rows.length ? rows.map(p=>`
             <tr>
               <td><div class="name-cell"><div class="avatar-sm" style="background:${colorFor(p.name)}">${initials(p.name)}</div>
                 <div class="meta"><b>${p.name}</b><span>ID: ${p.id}</span></div></div></td>
               <td>${p.age} yrs</td>
+              <td>${patientCurrentPriority(p)==='—'?'<span class="muted small">—</span>':`<span class="pill ${priorityPillClass(patientCurrentPriority(p))}">${patientCurrentPriority(p)}</span>`}</td>
               <td>${p.contact}</td>
               <td>${p.email}</td>
               <td>
                 <button class="btn btn-sm btn-outline" onclick="viewPatient(${p.dbId})">Details</button>
               </td>
-            </tr>`).join('') : `<tr><td colspan="5"><div class="empty-state">${DB.patients.length ? 'No patients match your search.' : 'No patient accounts yet.'}</div></td></tr>`}
+            </tr>`).join('') : `<tr><td colspan="6"><div class="empty-state">${DB.patients.length ? 'No patients match your search.' : 'No patient accounts yet.'}</div></td></tr>`}
         </tbody>
       </table>
     </div>
