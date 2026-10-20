@@ -507,6 +507,26 @@ def admin_assign_queue_atomic():
         'appointment_id'
     )
 
+    priority_type = str(
+        body.get('priority_type')
+        or 'Regular'
+    ).strip()
+
+    allowed_priorities = (
+        'Regular',
+        'PWD',
+        'Senior Citizen',
+        'Pregnant',
+        'Emergency',
+        'Critical',
+    )
+
+    if priority_type not in allowed_priorities:
+        return json_response(
+            {'error': 'Invalid patient priority.'},
+            400
+        )
+
     try:
         appointment_id = int(
             appointment_id
@@ -527,9 +547,10 @@ def admin_assign_queue_atomic():
         # Ini naga-call sang RPC nga naga-lock kag naga-assign sang next daily queue number.
         status, res = supabase_request(
             'POST',
-            '/rest/v1/rpc/admin_assign_queue_atomic',
+            '/rest/v1/rpc/admin_assign_queue_priority_atomic',
             {
-                'p_appointment_id': appointment_id
+                'p_appointment_id': appointment_id,
+                'p_priority_type': priority_type
             },
             token
         )
@@ -811,7 +832,7 @@ def admin_no_show_next_atomic():
         # Ini naga-call sang RPC nga naga-lock sang doctor queue antes mag-No Show kag Call Next.
         status, res = supabase_request(
             'POST',
-            '/rest/v1/rpc/admin_no_show_next_atomic',
+            '/rest/v1/rpc/admin_no_show_next_priority_atomic',
             {
                 'p_doctor_id': doctor_id
             },
@@ -1093,7 +1114,7 @@ def admin_call_next_atomic():
         # Ini naga-call sang admin RPC nga naga-lock sang same doctor queue antes mag-call next.
         status, res = supabase_request(
             'POST',
-            '/rest/v1/rpc/admin_doctor_call_next_atomic',
+            '/rest/v1/rpc/admin_doctor_call_next_priority_atomic',
             {
                 'p_doctor_id': doctor_id
             },
@@ -1466,7 +1487,7 @@ def doctor_call_next_atomic():
     try:
         status, res = supabase_request(
             'POST',
-            '/rest/v1/rpc/doctor_call_next_atomic',
+            '/rest/v1/rpc/doctor_call_next_priority_atomic',
             {},
             token
         )
@@ -1696,6 +1717,61 @@ def doctor_recall_current_atomic():
             },
             500
         )
+
+
+# Ini nagabalik sang limited note kon ang patient ara subong sa iban nga Serving appointment.
+@data_bp.route('/api/doctor/queue-context', methods=['GET'])
+def doctor_queue_context_secure():
+    token = get_bearer_token()
+    if not token:
+        return json_response({'error': 'Not authenticated. Please log in.'}, 401)
+    try:
+        status, res = supabase_request('POST','/rest/v1/rpc/doctor_queue_context_secure',{},token)
+        if status >= 400:
+            message = 'Could not load patient queue context.'
+            if isinstance(res, dict):
+                message = res.get('message') or res.get('error') or message
+            normalized = str(message).strip().lower()
+            if 'not authenticated' in normalized or 'not authorized' in normalized or 'doctor account' in normalized:
+                return json_response({'error': message}, 403)
+            return json_response({'error': message}, 400)
+        return json_response(res if isinstance(res, list) else [], 200)
+    except Exception as error:
+        print('DOCTOR QUEUE CONTEXT ERROR:', error)
+        return json_response({'error': 'Could not load patient queue context.'}, 500)
+
+
+# Ini naga-requeue sang current Serving patient sa pinaka-ulihi sang doctor queue.
+@data_bp.route('/api/doctor/requeue-current', methods=['POST'])
+def doctor_requeue_current_atomic():
+    token = get_bearer_token()
+    if not token:
+        return json_response({'error': 'Not authenticated. Please log in.'}, 401)
+    body = request.get_json(silent=True) or {}
+    appointment_id = body.get('appointment_id')
+    try:
+        appointment_id = int(appointment_id)
+    except (TypeError, ValueError):
+        return json_response({'error': 'A valid appointment is required.'}, 400)
+    try:
+        status, res = supabase_request('POST','/rest/v1/rpc/doctor_requeue_current_atomic',{'p_appointment_id': appointment_id},token)
+        if status >= 400:
+            message = 'Could not move this patient to the end of the queue.'
+            if isinstance(res, dict):
+                message = res.get('message') or res.get('error') or message
+            normalized = str(message).strip().lower()
+            if any(text in normalized for text in ('appointment not found','not assigned to this doctor','not for today','not currently serving')):
+                return json_response({'error': message}, 409)
+            if 'not authenticated' in normalized or 'not authorized' in normalized or 'doctor account' in normalized:
+                return json_response({'error': message}, 403)
+            return json_response({'error': message}, 400)
+        rows = res if isinstance(res, list) else []
+        if not rows:
+            return json_response({'error': 'Patient was not moved.'}, 500)
+        return json_response(rows[0], 200)
+    except Exception as error:
+        print('DOCTOR REQUEUE CURRENT ERROR:', error)
+        return json_response({'error': 'Could not move this patient to the end of the queue.'}, 500)
 
 
 # Ini naga-complete sang current Serving appointment sang logged-in doctor atomically.
