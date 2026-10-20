@@ -47,6 +47,18 @@
 .danger{background:var(--red);color:#fff}.bookings-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:16px 0}.status-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.booking-select{width:18px;height:18px;accent-color:var(--blue)}
 
 .delete-booking-btn{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;background:#fff;border:1px solid var(--line);border-radius:14px;color:var(--ink-soft);cursor:pointer;flex-shrink:0}.delete-booking-btn:hover{background:#fff5f4;border-color:var(--red);color:var(--red)}.delete-booking-btn:focus-visible{outline:2px solid var(--blue);outline-offset:3px}.delete-booking-btn:disabled{opacity:.5;cursor:not-allowed}.delete-booking-btn svg{width:18px;height:18px;pointer-events:none}.priority-pill{display:inline-flex;align-items:center;padding:5px 10px;border-radius:999px;font-size:11px;font-weight:800}.priority-regular{background:#eef1f4;color:#5b6b7a}.priority-special{background:#fff3d9;color:#996400}.priority-emergency{background:#fbe9e8;color:var(--red)}.conflict-note{margin-top:12px;padding:12px 14px;border-radius:12px;background:#fff3d9;border:1px solid #f1d69a;color:#7d5a09;font-size:13px;line-height:1.5}.requeue{background:#fff3d9;color:#8a6200;border:1px solid #ebcf8b}
+.priority-queue-card{border-left:5px solid var(--amber)}
+.priority-queue-card h3{color:#8a6200}
+.regular-queue-card{border-left:5px solid var(--blue)}
+.queue-count{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:800;background:#eef2f6;color:var(--navy)}
+.priority-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.urgent-popup{position:fixed;top:22px;right:22px;z-index:9999;width:min(380px,calc(100vw - 32px));padding:16px 18px;border-radius:14px;background:#fff;border:1px solid #efc1bd;border-left:5px solid var(--red);box-shadow:0 16px 40px -16px rgba(0,0,0,.35);animation:urgentIn .22s ease-out}
+.urgent-popup.critical{border-left-color:#9f1d18;background:#fff8f7}
+.urgent-popup .urgent-title{font-weight:800;color:var(--red);font-size:14px}
+.urgent-popup .urgent-body{margin-top:6px;font-size:13px;line-height:1.5;color:var(--ink)}
+.urgent-popup .urgent-close{position:absolute;right:10px;top:8px;border:none;background:transparent;color:var(--ink-soft);font-size:18px;cursor:pointer}
+@keyframes urgentIn{from{transform:translateY(-8px);opacity:0}to{transform:translateY(0);opacity:1}}
+
 
 </style>
 
@@ -132,7 +144,9 @@
 
         <div class="page-head"><h1>Waiting Patients</h1><p>Checked-in patients assigned to your doctor account.</p></div>
 
-        <section id="waiting" class="card section-card"><h3>My Waiting Queue</h3><p class="muted">Priority patients are shown first. A note appears when the patient is currently being served in another appointment.</p><div class="table-wrap"><table><thead><tr><th>Queue</th><th>Patient</th><th>Priority</th><th>Service</th><th>Date</th><th>Time</th><th>Note</th><th>Status</th></tr></thead><tbody id="waitingQueue"></tbody></table></div></section>
+        <section id="priorityWaitingCard" class="card section-card priority-queue-card"><div class="priority-head"><div><h3>Priority Queue</h3><p class="muted">PWD, Senior Citizen, Pregnant, Emergency, and Critical patients.</p></div><span class="queue-count" id="priorityQueueCount">0</span></div><div class="table-wrap"><table><thead><tr><th>Queue</th><th>Patient</th><th>Priority</th><th>Service</th><th>Date</th><th>Time</th><th>Note</th><th>Status</th></tr></thead><tbody id="priorityWaitingQueue"></tbody></table></div></section>
+
+        <section id="regularWaitingCard" class="card section-card regular-queue-card"><div class="priority-head"><div><h3>Regular Queue</h3><p class="muted">Regular patients follow the normal queue-number order.</p></div><span class="queue-count" id="regularQueueCount">0</span></div><div class="table-wrap"><table><thead><tr><th>Queue</th><th>Patient</th><th>Priority</th><th>Service</th><th>Date</th><th>Time</th><th>Note</th><th>Status</th></tr></thead><tbody id="regularWaitingQueue"></tbody></table></div></section>
 
       </div>
 
@@ -151,6 +165,8 @@
   </div>
 
 </div>
+
+<div id="urgentPopupRoot"></div>
 
 <script>
 
@@ -187,6 +203,9 @@ let mutationBusy = false;
 let autoRoomRequeueBusy = false;
 
 const selectedBookingIds = new Set();
+
+const urgentAlertedAppointmentIds = new Set();
+let urgentPopupTimer = null;
 
 const recallBtn = document.getElementById('recallBtn');
 
@@ -278,9 +297,11 @@ const queueMessage =
 
   document.getElementById('queueMessage');
 
-const waitingQueue =
-
-  document.getElementById('waitingQueue');
+const priorityWaitingQueue = document.getElementById('priorityWaitingQueue');
+const regularWaitingQueue = document.getElementById('regularWaitingQueue');
+const priorityQueueCount = document.getElementById('priorityQueueCount');
+const regularQueueCount = document.getElementById('regularQueueCount');
+const urgentPopupRoot = document.getElementById('urgentPopupRoot');
 
 const bookings =
 
@@ -1115,6 +1136,26 @@ function priorityBadge(appointment) {
   return `<span class="priority-pill ${cls}">${escapeHTML(value)}</span>`;
 }
 
+function isPriorityPatient(appointment) { return priorityRank(appointment?.priority_type) < 3; }
+function isRegularPatient(appointment) { return priorityRank(appointment?.priority_type) === 3; }
+function showUrgentPriorityPopup(appointment) {
+  if (!appointment || !urgentPopupRoot) return;
+  const priority = String(appointment.priority_type || 'Regular');
+  const normalizedPriority = normalize(priority);
+  if (!['emergency','critical'].includes(normalizedPriority)) return;
+  const key = String(appointment.id || appointment.queue_number || '');
+  if (!key || urgentAlertedAppointmentIds.has(key)) return;
+  urgentAlertedAppointmentIds.add(key); clearTimeout(urgentPopupTimer);
+  urgentPopupRoot.innerHTML = `<div class="urgent-popup ${normalizedPriority === 'critical' ? 'critical' : ''}"><button class="urgent-close" type="button" aria-label="Close urgent notification">×</button><div class="urgent-title">⚠ ${escapeHTML(priority)} Patient</div><div class="urgent-body"><b>${escapeHTML(appointment.patient || 'Patient')}</b> · Queue <b>${escapeHTML(appointment.queue_number || '—')}</b><br>${escapeHTML(appointment.service || 'Service')}</div></div>`;
+  const closeBtn = urgentPopupRoot.querySelector('.urgent-close');
+  if (closeBtn) closeBtn.addEventListener('click',()=>{clearTimeout(urgentPopupTimer);urgentPopupRoot.innerHTML='';});
+  urgentPopupTimer=setTimeout(()=>{urgentPopupRoot.innerHTML='';},6500);
+}
+function notifyUrgentWaitingPatients() {
+  getWaitingPatients().filter(a=>['emergency','critical'].includes(normalize(a.priority_type))).forEach(showUrgentPriorityPopup);
+  const current=getCurrentPatient(); if(current) showUrgentPriorityPopup(current);
+}
+
 function missedCallCount(appointment) {
   const count = Number(appointment?.missed_call_count || 0);
   return Number.isFinite(count) && count > 0 ? count : 0;
@@ -1215,6 +1256,8 @@ function render() {
   renderWaitingQueue();
 
   renderBookings();
+
+  notifyUrgentWaitingPatients();
 
 }
 
@@ -1364,39 +1407,19 @@ function renderCurrentPatient() {
 
 \========================================================= */
 
+function waitingRowHTML(appointment) {
+  const context=getQueueContext(appointment); const missed=missedCallCount(appointment);
+  const note=context?.other_serving ? `In another appointment${context.other_doctor ? ' with ' + context.other_doctor : ''}${context.other_station ? ' · ' + context.other_station : ''}` : missed>0 ? `Missed call ${Math.min(missed,2)}/2 · moved to end` : (appointment.queue_deferred ? 'Moved to end of queue' : '—');
+  return `<tr><td><strong>${escapeHTML(appointment.queue_number || '—')}</strong></td><td>${escapeHTML(appointment.patient || '—')}</td><td>${priorityBadge(appointment)}</td><td>${escapeHTML(appointment.service || '—')}</td><td>${escapeHTML(appointment.date || '—')}</td><td>${escapeHTML(appointment.time || '—')}</td><td>${context?.other_serving ? `<span class="status status-approved">${escapeHTML(note)}</span>` : `<span class="muted">${escapeHTML(note)}</span>`}</td><td>${statusBadge(appointment.status)}</td></tr>`;
+}
+
 function renderWaitingQueue() {
-  const waiting = getWaitingPatients();
-
-  if (!waiting.length) {
-    waitingQueue.innerHTML = `<tr><td colspan="8" class="empty">No patients are currently waiting.</td></tr>`;
-    return;
-  }
-
-  waitingQueue.innerHTML = waiting.map(appointment => {
-    const context = getQueueContext(appointment);
-    const missed = missedCallCount(appointment);
-
-    const note = context?.other_serving
-
-      ? `In another appointment${context.other_doctor ? ' with ' + context.other_doctor : ''}${context.other_station ? ' · ' + context.other_station : ''}`
-
-      : missed > 0
-
-        ? `Missed call ${Math.min(missed, 2)}/2 · moved to end`
-
-        : (appointment.queue_deferred ? 'Moved to end of queue' : '—');
-
-    return `<tr>
-      <td><strong>${escapeHTML(appointment.queue_number || '—')}</strong></td>
-      <td>${escapeHTML(appointment.patient || '—')}</td>
-      <td>${priorityBadge(appointment)}</td>
-      <td>${escapeHTML(appointment.service || '—')}</td>
-      <td>${escapeHTML(appointment.date || '—')}</td>
-      <td>${escapeHTML(appointment.time || '—')}</td>
-      <td>${context?.other_serving ? `<span class="status status-approved">${escapeHTML(note)}</span>` : `<span class="muted">${escapeHTML(note)}</span>`}</td>
-      <td>${statusBadge(appointment.status)}</td>
-    </tr>`;
-  }).join('');
+  const waiting=getWaitingPatients();
+  const priorityPatients=waiting.filter(isPriorityPatient).sort(sortQueue);
+  const regularPatients=waiting.filter(isRegularPatient).sort((a,b)=>queueValue(a.queue_number)-queueValue(b.queue_number));
+  priorityQueueCount.textContent=String(priorityPatients.length); regularQueueCount.textContent=String(regularPatients.length);
+  priorityWaitingQueue.innerHTML=priorityPatients.length ? priorityPatients.map(waitingRowHTML).join('') : `<tr><td colspan="8" class="empty">No priority patients are currently waiting.</td></tr>`;
+  regularWaitingQueue.innerHTML=regularPatients.length ? regularPatients.map(waitingRowHTML).join('') : `<tr><td colspan="8" class="empty">No regular patients are currently waiting.</td></tr>`;
 }
 
 /* =========================================================
@@ -1876,6 +1899,10 @@ function logoutDoctor() {
   appointments = [];
 
   queueContext = new Map();
+
+  urgentAlertedAppointmentIds.clear();
+  clearTimeout(urgentPopupTimer);
+  if (urgentPopupRoot) urgentPopupRoot.innerHTML = '';
 
   location.reload();
 
