@@ -1729,6 +1729,13 @@ function renderVerifyCodeResult(){
   }
 
   const match = matches[0];
+
+  /* Ini nagapreserve sang napilian nga priority bisan naga-auto-refresh ang Verify Code kada 5 seconds. */
+  const currentPrioritySelection =
+    document.getElementById('verify-priority-select')?.value ||
+    match.priorityType ||
+    'Regular';
+
   const statusColor = {
     Pending:'pill-amber',
     Approved:'pill-green',
@@ -1767,12 +1774,12 @@ function renderVerifyCodeResult(){
         <div style="margin-top:16px; padding:14px; background:#fff; border:1px solid var(--line); border-radius:12px;">
           <label style="display:block; font-size:11px; font-weight:700; letter-spacing:.5px; color:#7c8a97; text-transform:uppercase; margin-bottom:7px;">Patient Priority</label>
           <select id="verify-priority-select" style="width:100%; padding:10px 12px; border-radius:10px; border:1.5px solid var(--line); background:#f7f9fb;">
-            <option value="Regular">Regular</option>
-            <option value="PWD">PWD</option>
-            <option value="Senior Citizen">Senior Citizen</option>
-            <option value="Pregnant">Pregnant</option>
-            <option value="Emergency">Emergency</option>
-            <option value="Critical">Critical</option>
+            <option value="Regular" ${currentPrioritySelection==='Regular'?'selected':''}>Regular</option>
+            <option value="PWD" ${currentPrioritySelection==='PWD'?'selected':''}>PWD</option>
+            <option value="Senior Citizen" ${currentPrioritySelection==='Senior Citizen'?'selected':''}>Senior Citizen</option>
+            <option value="Pregnant" ${currentPrioritySelection==='Pregnant'?'selected':''}>Pregnant</option>
+            <option value="Emergency" ${currentPrioritySelection==='Emergency'?'selected':''}>Emergency</option>
+            <option value="Critical" ${currentPrioritySelection==='Critical'?'selected':''}>Critical</option>
           </select>
           <p class="small muted" style="margin-top:7px;">Critical and emergency cases are placed first, followed by PWD, senior citizen, and pregnant patients.</p>
         </div>
