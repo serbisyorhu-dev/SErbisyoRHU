@@ -52,6 +52,13 @@
 .regular-queue-card{border-left:5px solid var(--blue)}
 .queue-count{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:800;background:#eef2f6;color:var(--navy)}
 .priority-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.queue-lanes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+.queue-lane{padding:14px;border:1px solid var(--line);border-radius:14px;background:#f9fbfd}
+.queue-lane.priority{background:#fffaf0;border-color:#f0d89d}
+.queue-lane-title{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--ink-soft)}
+.queue-lane-number{font:800 27px var(--font-head);color:var(--navy);margin-top:3px}
+.queue-lane-name{font-size:12px;color:var(--ink-soft);margin-top:2px}
+@media(max-width:620px){.queue-lanes{grid-template-columns:1fr}}
 .urgent-popup{position:fixed;top:22px;right:22px;z-index:9999;width:min(380px,calc(100vw - 32px));padding:16px 18px;border-radius:14px;background:#fff;border:1px solid #efc1bd;border-left:5px solid var(--red);box-shadow:0 16px 40px -16px rgba(0,0,0,.35);animation:urgentIn .22s ease-out}
 .urgent-popup.critical{border-left-color:#9f1d18;background:#fff8f7}
 .urgent-popup .urgent-title{font-weight:800;color:var(--red);font-size:14px}
@@ -134,7 +141,11 @@
 
         <div class="page-head"><h1>Doctor Queue</h1><p>Manage only the patient currently assigned to your queue.</p></div>
 
-        <section id="current" class="card current-card"><div class="queue-label">● NOW SERVING</div><div class="queue" id="currentNum">—</div><h3 id="currentPatient">No patient currently being served</h3><p class="muted" id="currentService"></p><p class="muted" id="currentSchedule"></p><div id="currentPriority" style="margin-top:10px;"></div><div id="currentConflictNote" class="conflict-note hidden"></div><div class="current-actions"><button class="btn primary" id="callNextBtn" type="button">Call Next Patient</button><button class="btn outline" id="recallBtn" type="button">Recall Patient</button><button class="btn requeue hidden" id="noShowBtn" type="button">No Show</button><button class="btn success hidden" id="doneBtn" type="button">✓ Patient Done</button></div><p id="queueMessage" class="muted"></p></section>
+        <section id="current" class="card current-card">
+          <div class="queue-label">● NOW SERVING</div><div class="queue" id="currentNum">—</div><h3 id="currentPatient">No patient currently being served</h3><p class="muted" id="currentService"></p><p class="muted" id="currentSchedule"></p><div id="currentPriority" style="margin-top:10px;"></div><div id="currentConflictNote" class="conflict-note hidden"></div>
+          <div class="queue-lanes"><div class="queue-lane priority"><div class="queue-lane-title">Next Priority</div><div class="queue-lane-number" id="nextPriorityNum">—</div><div class="queue-lane-name" id="nextPriorityPatient">No priority patient waiting</div></div><div class="queue-lane"><div class="queue-lane-title">Next Regular</div><div class="queue-lane-number" id="nextRegularNum">—</div><div class="queue-lane-name" id="nextRegularPatient">No regular patient waiting</div></div></div>
+          <div class="current-actions"><button class="btn requeue" id="callPriorityBtn" type="button">Call Priority Patient</button><button class="btn primary" id="callNextBtn" type="button">Call Regular Patient</button><button class="btn outline" id="recallBtn" type="button">Recall Patient</button><button class="btn requeue hidden" id="noShowBtn" type="button">No Show</button><button class="btn success hidden" id="doneBtn" type="button">✓ Patient Done</button></div><p id="queueMessage" class="muted"></p>
+        </section>
 
       </div>
 
@@ -288,6 +299,12 @@ const currentSchedule =
 const callNextBtn =
 
   document.getElementById('callNextBtn');
+
+const callPriorityBtn=document.getElementById('callPriorityBtn');
+const nextPriorityNum=document.getElementById('nextPriorityNum');
+const nextPriorityPatient=document.getElementById('nextPriorityPatient');
+const nextRegularNum=document.getElementById('nextRegularNum');
+const nextRegularPatient=document.getElementById('nextRegularPatient');
 
 const doneBtn =
 
@@ -1185,6 +1202,9 @@ function getWaitingPatients() {
 
 }
 
+function getPriorityWaitingPatients(){return getWaitingPatients().filter(isPriorityPatient).sort(sortQueue);}
+function getRegularWaitingPatients(){return getWaitingPatients().filter(isRegularPatient).sort((a,b)=>queueValue(a.queue_number)-queueValue(b.queue_number));}
+
 function getCurrentPatient() {
 
   return (
@@ -1281,6 +1301,15 @@ function renderCurrentPatient() {
 
     getWaitingPatients();
 
+  const priorityWaiting=getPriorityWaitingPatients();
+  const regularWaiting=getRegularWaitingPatients();
+  const nextPriority=priorityWaiting[0]||null;
+  const nextRegular=regularWaiting[0]||null;
+  nextPriorityNum.textContent=nextPriority?.queue_number||'—';
+  nextPriorityPatient.textContent=nextPriority?`${nextPriority.patient||'Patient'} · ${nextPriority.priority_type||'Priority'}`:'No priority patient waiting';
+  nextRegularNum.textContent=nextRegular?.queue_number||'—';
+  nextRegularPatient.textContent=nextRegular?`${nextRegular.patient||'Patient'} · Regular`:'No regular patient waiting';
+
   if (current) {
 
     currentNum.textContent =
@@ -1333,9 +1362,10 @@ function renderCurrentPatient() {
 
     );
 
+    callPriorityBtn.classList.remove('hidden');
     callNextBtn.classList.remove('hidden');
-
-    callNextBtn.disabled = true;
+    callPriorityBtn.disabled=true;
+    callNextBtn.disabled=true;
 
     queueMessage.textContent =
 
@@ -1367,37 +1397,13 @@ function renderCurrentPatient() {
 
   );
 
-  callNextBtn.classList.remove(
-
-    'hidden'
-
-  );
-
-  if (waiting.length > 0) {
-
-    callNextBtn.disabled = false;
-
-    queueMessage.textContent =
-
-      `${waiting.length} patient${
-
-        waiting.length === 1
-
-          ? ''
-
-          : 's'
-
-      } waiting in your queue.`;
-
-  } else {
-
-    callNextBtn.disabled = true;
-
-    queueMessage.textContent =
-
-      'No checked-in patients are waiting.';
-
-  }
+  callPriorityBtn.classList.remove('hidden');
+  callNextBtn.classList.remove('hidden');
+  callPriorityBtn.disabled=mutationBusy||priorityWaiting.length===0;
+  callNextBtn.disabled=mutationBusy||regularWaiting.length===0||priorityWaiting.length>0;
+  if(priorityWaiting.length>0){queueMessage.textContent=`${priorityWaiting.length} priority patient${priorityWaiting.length===1?'':'s'} waiting. Call the priority lane first.`;}
+  else if(regularWaiting.length>0){queueMessage.textContent=`${regularWaiting.length} regular patient${regularWaiting.length===1?'':'s'} waiting.`;}
+  else{queueMessage.textContent='No checked-in patients are waiting.';}
 
 }
 
@@ -1685,6 +1691,17 @@ async function noShowCurrentPatient() {
   }
 }
 
+/* Ini naga-call sang priority lane; ang existing backend priority-aware na. */
+async function callPriorityPatient(){
+  if(mutationBusy||isLoading)return;
+  if(getCurrentPatient()){queueMessage.textContent='Complete the current patient first.';return;}
+  if(!getPriorityWaitingPatients().length){queueMessage.textContent='No priority patient is waiting.';return;}
+  mutationBusy=true;callPriorityBtn.disabled=true;callNextBtn.disabled=true;callPriorityBtn.textContent='Calling Priority...';
+  try{const called=await req('/api/doctor/call-next',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});await loadAppointments();queueMessage.textContent=`Priority queue ${called.queue_number||'patient'} is now serving.`;}
+  catch(error){console.error(error);queueMessage.textContent=error.message||'Unable to call the priority patient.';}
+  finally{mutationBusy=false;recallBtn.disabled=false;callPriorityBtn.textContent='Call Priority Patient';render();}
+}
+
 /* =========================================================
    CALL NEXT PATIENT
 
@@ -1715,6 +1732,9 @@ async function callNextPatient() {
     return;
 
   }
+
+  if(getPriorityWaitingPatients().length>0){queueMessage.textContent='A priority patient is waiting. Call the priority lane first.';return;}
+  if(!getRegularWaitingPatients().length){queueMessage.textContent='No regular patient is waiting.';return;}
 
   mutationBusy = true;
 
@@ -1784,13 +1804,9 @@ async function callNextPatient() {
 
     callNextBtn.textContent =
 
-      'Call Next Patient';
+      'Call Regular Patient';
 
-    callNextBtn.disabled =
-
-      !!getCurrentPatient() ||
-
-      !getWaitingPatients().length;
+    callNextBtn.disabled = !!getCurrentPatient() || getPriorityWaitingPatients().length>0 || !getRegularWaitingPatients().length;
 
   }
 
@@ -1991,6 +2007,8 @@ doctorNavItems.forEach(item => {
 });
 
 showDoctorPage('queue');
+
+callPriorityBtn.addEventListener('click',callPriorityPatient);
 
 callNextBtn.addEventListener(
 
